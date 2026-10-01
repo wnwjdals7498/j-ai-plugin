@@ -56,7 +56,7 @@ SQLite 쓰기는 짧은 트랜잭션과 제한된 재시도로 처리한다. 쓰
 4. 읽기·쓰기와 훅 활성화 확인.
 5. 기존 모델 정책·실행 연결부를 유지한 채 선택한 저장소 사용.
 
-플러그인 코드와 데이터는 분리하고 업데이트로 DB를 교체하지 않는다. 제품별 설치·훅 규약에 맞춘 연결부를 둔다. [Codex 플러그인](https://developers.openai.com/plugins/build/plugins), [Claude Code 플러그인](https://code.claude.com/docs/en/plugins), [OpenCode 플러그인](https://opencode.ai/v2/docs/build/plugins/).
+1단계에서 검증한 플러그인에 hosted 연결을 추가한다. 코드와 데이터는 분리하고 업데이트로 DB를 교체하지 않는다. 제품별 설치·훅 규약에 맞춘 연결부를 유지한다. [Codex 플러그인](https://developers.openai.com/plugins/build/plugins), [Claude Code 플러그인](https://code.claude.com/docs/en/plugins), [OpenCode stable 플러그인](https://opencode.ai/docs/plugins/).
 
 ## 이관·단절·복원
 
