@@ -1,0 +1,15 @@
+{
+  "fixture_version": "phase1-cli-v1",
+  "protocol_version": 1,
+  "actor": "main",
+  "operations": {
+    "create_scope": {"kind": "project", "slug": "fixture 프로젝트"},
+    "save_change": {
+      "kind": "item",
+      "title": "fixture 작업",
+      "body": {"criteria": ["C1"], "workspace": ".", "next": "검증"},
+      "reason": "격리 CLI fixture"
+    }
+  },
+  "notes": "IDs and session_id are generated per test; this file contains no user data."
+}

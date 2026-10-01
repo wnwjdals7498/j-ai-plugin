@@ -1,0 +1,8 @@
+{
+  "session_id": "claude-session-fixture",
+  "turn_id": "claude-turn-fixture",
+  "hook_event_name": "Stop",
+  "stop_hook_active": false,
+  "transcript_path": "C:/private/transcript.jsonl",
+  "last_assistant_message": "must never be copied"
+}

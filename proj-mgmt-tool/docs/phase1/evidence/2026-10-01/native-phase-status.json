@@ -1,0 +1,142 @@
+{
+  "date": "2026-10-01",
+  "phase": "PMT phase 1",
+  "overall_status": "pass",
+  "core_tests": {
+    "status": "pass",
+    "tests": 149,
+    "passed": 147,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 2,
+    "skip_reason": "Windows symlink privilege unavailable; junction boundary case passed."
+  },
+  "guard_regressions": {
+    "status": "pass",
+    "passed": 54,
+    "failed": 0,
+    "skipped": 0
+  },
+  "packaging_tests": {
+    "status": "pass",
+    "passed": 8,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "native_installations": {
+    "codex": {
+      "status": "pass",
+      "version": "0.156.1",
+      "plugin_versions": [
+        "0.1.0",
+        "0.1.1",
+        "0.1.0"
+      ],
+      "real_llm": false,
+      "observed": "install, new-session context and events, update, rollback, remove/reinstall, backup/restore, explicit finish"
+    },
+    "claude_code": {
+      "status": "pass",
+      "version": "2.1.283",
+      "plugin_versions": [
+        "0.1.0",
+        "0.1.1",
+        "0.1.0"
+      ],
+      "real_llm": false,
+      "observed": "install lifecycle, data preservation, backup/restore integrity, explicit finish"
+    },
+    "opencode": {
+      "status": "pass",
+      "version": "1.18.34",
+      "plugin_versions": [
+        "0.1.0",
+        "0.1.1"
+      ],
+      "real_llm": false,
+      "observed": "six-session native matrix, idle followed by explicit finish, CLI operations, backup/restore with artifact references and integrity checks"
+    }
+  },
+  "release_archives": {
+    "codex": {
+      "0.1.0": "3a2378c168474cd98851e1d4536032b3a38a967d41b51ce77f24e478a7eee516",
+      "0.1.1": "299de4a816bb41a885792d38b589eeb9f86fe664d918f95c0039229d37403564"
+    },
+    "claude": {
+      "0.1.0": "933575af10a8d1f68239b59b9b76ee7d91e76504d4b06734ed7e5a1ed7317d6e",
+      "0.1.1": "4a2b12e8296ead0b228bf77285876f545c24a1054c8b3f705330640095e78efb"
+    },
+    "opencode": {
+      "0.1.0": "4ca6165e572ef978bcd1e2def2c3e44c6362f1aac616f543649ff15482e558f8",
+      "0.1.1": "16c9d4742f539eda67d6084c366c93b372e7f5863d761d963c30d9c3a2d5aa83"
+    }
+  },
+  "evidence_sources": [
+    {
+      "file": ".pmt-test/final-suite.xml",
+      "sha256": "28f19ae5e8d46461c075e2595f4d989aafcca705b5b00962537997e332a62b70"
+    },
+    {
+      "file": ".pmt-test/core-guards-final/manifest.json",
+      "sha256": "37f53250b171fd84b81db11f8fc27bd883b6e12d53b55eceb113257374d8e622"
+    },
+    {
+      "file": ".pmt-test/pkg-winerror-retry-20261001/results.xml",
+      "sha256": "c199387e9ffd1766e2cb3d5692b79889409a844cda88658a5175043dc67674bc"
+    },
+    {
+      "file": ".pmt-test/native-codex/state.json",
+      "sha256": "28be802763d98bf73756c2b7dea428313a38ee08eee96bb7654823eb4d3a4679"
+    },
+    {
+      "file": ".pmt-test/native-claude/runs/d80117cf7eed4880/evidence.json",
+      "sha256": "0db0d8de8b175bab0d6f4a15c5e83a8fd2f2b1972085fbe5ed1f27cff4b615c7"
+    },
+    {
+      "file": ".pmt-test/native-claude/runs/d80117cf7eed4880/preservation.json",
+      "sha256": "4755d77db7f497b02959dd7db4e634a8fd12015d3e61a2754b73f9ec4750bee4"
+    },
+    {
+      "file": ".pmt-test/native-opencode/run-37c76c4192ff466fb640792aadf6d064/final-release-evidence.json",
+      "sha256": "4170c1ba599321a57dfe1f7c9a1754cbf8be3aabe170c7ffb8e67e6c2e42092c"
+    }
+  ],
+  "limits": [
+    "All native products used deterministic local model fixtures; no real LLM performance was measured.",
+    "Two Windows symlink tests were skipped due to account privileges; no POSIX symlink result is claimed.",
+    "No hosted/server mode or automatic garbage collection was tested or implemented."
+  ],
+  "release_archives_rechecked_by_main": true,
+  "release_archive_checks": [
+    {
+      "product": "codex",
+      "version": "0.1.0",
+      "sha256": "3a2378c168474cd98851e1d4536032b3a38a967d41b51ce77f24e478a7eee516"
+    },
+    {
+      "product": "codex",
+      "version": "0.1.1",
+      "sha256": "299de4a816bb41a885792d38b589eeb9f86fe664d918f95c0039229d37403564"
+    },
+    {
+      "product": "claude",
+      "version": "0.1.0",
+      "sha256": "933575af10a8d1f68239b59b9b76ee7d91e76504d4b06734ed7e5a1ed7317d6e"
+    },
+    {
+      "product": "claude",
+      "version": "0.1.1",
+      "sha256": "4a2b12e8296ead0b228bf77285876f545c24a1054c8b3f705330640095e78efb"
+    },
+    {
+      "product": "opencode",
+      "version": "0.1.0",
+      "sha256": "4ca6165e572ef978bcd1e2def2c3e44c6362f1aac616f543649ff15482e558f8"
+    },
+    {
+      "product": "opencode",
+      "version": "0.1.1",
+      "sha256": "16c9d4742f539eda67d6084c366c93b372e7f5863d761d963c30d9c3a2d5aa83"
+    }
+  ]
+}

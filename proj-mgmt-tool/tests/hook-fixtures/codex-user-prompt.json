@@ -1,0 +1,8 @@
+{
+  "session_id": "codex-session-fixture",
+  "turn_id": "codex-turn-fixture",
+  "hook_event_name": "UserPromptSubmit",
+  "cwd": "D:/private/project",
+  "transcript_path": "D:/private/transcript.jsonl",
+  "prompt": "must never be copied"
+}

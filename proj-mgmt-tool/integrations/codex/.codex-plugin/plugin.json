@@ -1,0 +1,7 @@
+{
+  "name": "pmt-lifecycle",
+  "version": "0.1.0",
+  "description": "Record minimal Codex lifecycle events in PMT.",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

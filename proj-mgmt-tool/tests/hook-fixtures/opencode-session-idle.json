@@ -1,0 +1,9 @@
+{
+  "properties": {
+    "sessionID": "opencode-session-fixture",
+    "status": "idle",
+    "time": "2026-10-01T00:00:00Z",
+    "prompt": "must never be copied",
+    "info": { "id": "ignored-when-sessionID-exists", "title": "must never be copied" }
+  }
+}
