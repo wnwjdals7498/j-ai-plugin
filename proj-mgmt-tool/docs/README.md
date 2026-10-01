@@ -6,7 +6,7 @@
 
 - 작성일: 2026-09-30
 - 상세계획 갱신: 2026-10-01
-- 상태: [1단계 구현·검증 완료](phase1/implementation-status.md). 2단계 graph·트리 종료·절약형 배정·lock·Git 최신화·전체 수용 시험 확정, 구현 전. 3단계는 설계 계획.
+- 상태: [1단계 구현·검증 완료](phase1/implementation-status.md), [2단계 구현·실측 현황](phase2/implementation-status.md). 2단계는 직접 API 제외·서브에이전트/Claude·Codex CLI 범위를 적용했다. 3단계는 설계 계획.
 - 목적: 회사·집·노트북과 여러 AI 세션에서 작업 상태·결정·근거를 공유하고, 중복 작업과 검증을 줄인다.
 
 ## 구현 순서

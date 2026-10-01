@@ -2,7 +2,7 @@
 
 ## 폴더 구성
 
-아래에서 `예정`은 2단계의 책임 배치다. 실제 패키지 분리는 구현 시 결합도에 맞춰 조정하되 공개 계약과 책임 경계를 유지한다.
+아래는 현재 2단계 코드 배치다. 공개 계약과 책임 경계를 유지하며 [실측 범위](../phase2/implementation-status.md)를 확인한다.
 
 ```text
 proj-mgmt-tool/
@@ -16,18 +16,20 @@ proj-mgmt-tool/
 │  ├─ resources.py            리소스·백업·복원
 │  ├─ hooks.py / diagnostics.py 이벤트 정규화·진단
 │  ├─ errors.py / util.py      공통 오류·최소 공통 함수
-│  ├─ planning/       [예정]  두 트리·기능 명세·문서/graph 생성
-│  ├─ routing/        [예정]  가용 자원·모델/실행 경로 선택
-│  ├─ execution/      [예정]  Queue·시도·결과·취소·범위 점유
-│  ├─ runners/        [예정]  subagent·CLI/SDK·API 연결
-│  └─ reconciliation/ [예정]  Git 변화·문서/계획 영향 분석
+│  ├─ planning/               두 트리·기능 명세·문서/graph 생성
+│  ├─ routing/                가용 자원·모델/실행 경로 선택
+│  ├─ execution/              Queue·시도·결과·취소·범위 점유
+│  ├─ runners/                subagent·Claude/Codex CLI 연결
+│  ├─ reconciliation/         Git 변화·문서/계획 영향 분석
+│  ├─ steps.py / operations.py 지시·검토·운영·보존
+│  └─ phase2*.py              operation 연결·공통 경계·이관 DDL
 ├─ integrations/{codex,claude,opencode}/ 제품별 훅·설치 연결
 ├─ skills/proj-mgmt-tool/      에이전트의 사용 절차·참조
 ├─ scripts/                   패키징·검증 도구
 ├─ tests/                     계약·통합·장애·설치 시험
 └─ docs/
    ├─ 01~03 단계 문서         요구·범위·완료 조건
-   ├─ phase1/                기존 상세 계약·검증 기록
+   ├─ phase1/phase2/         단계별 상세 계약·검증 기록
    └─ pmt-docs/               공통 구조·규칙·프로젝트 graph
 ```
 
@@ -44,7 +46,7 @@ proj-mgmt-tool/
 | JavaScript 제품 연결부 | 현재 OpenCode 플러그인 진입점 | 업무 규칙은 Python 본체로 위임 |
 | pytest / setuptools | 기존 시험·Python 패키징 방식 유지 | 시험 의존성과 운영 의존성 분리 |
 
-2단계는 웹 프레임워크·ORM·graph 서버·메시지 브로커를 필수로 도입하지 않는다. 현재 `pyproject.toml`의 런타임 의존성은 없다. 제품 SDK/API를 추가할 경우 해당 runner의 선택 의존성으로 격리하고 지원 버전·인증·배포 시험을 명시한다. [3단계](../03-hosted-storage.md)는 Python·FastAPI/Pydantic·Uvicorn과 HTTPS JSON 저장 API를 계획한다. 본체 재사용·입출력 검사·API 계약 관리 목적이며, 2단계의 필수 의존성은 아니다.
+2단계는 Python 표준 라이브러리·SQLite를 유지하며 런타임 의존성을 추가하지 않았다. 최신 사용자 결정에 따라 실행은 네이티브 서브에이전트·Claude/Codex CLI에 한정한다. SDK·직접 모델 API는 후속 제안이다. [3단계](../03-hosted-storage.md)는 Python·FastAPI/Pydantic·Uvicorn과 HTTPS JSON 저장 API를 계획한다.
 
 ## 기능별 책임과 입출력
 

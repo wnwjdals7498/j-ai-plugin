@@ -2,11 +2,14 @@
 import json
 import logging
 import sys
+import re
 from .util import utc_now
 
 FIELDS = ("request_id", "operation", "session_id", "source", "scope_id", "record_id", "event_id",
           "outcome", "error_code", "retryable", "duration_ms", "exit_code", "old_revision",
-          "new_revision", "transaction_outcome", "ownership_result", "correlation_id")
+          "new_revision", "transaction_outcome", "ownership_result", "correlation_id",
+          "work_id", "item_id", "step_id", "job_id", "run_id", "resource_id", "model", "route",
+          "directive_version", "last_seen", "last_changed", "wait_reason")
 SENSITIVE_KEYS = {"token", "claim_token", "authorization", "secret", "transcript", "payload", "body"}
 
 def _safe(value, depth=0):
@@ -18,6 +21,8 @@ def _safe(value, depth=0):
     if isinstance(value, (list, tuple)):
         return [_safe(v, depth + 1) for v in value[:50]]
     if isinstance(value, str):
+        value = re.sub(r"(?i)bearer\s+[^\s,;]+", "Bearer <redacted>", value)
+        value = re.sub(r"\bsk-[A-Za-z0-9_-]{8,}", "<redacted>", value)
         return value[:500]
     if value is None or isinstance(value, (bool, int, float)):
         return value
@@ -39,7 +44,8 @@ class ObservableStreamHandler(logging.StreamHandler):
 
 class DiagnosticLogger:
     def __init__(self, logger=None):
-        self.logger = logger or logging.getLogger("pmt")
+        self.logger = logger or logging.Logger("pmt")
+        self.sink_unavailable = False
         if not self.logger.handlers:
             handler = ObservableStreamHandler(sys.stderr)
             handler.setFormatter(JsonFormatter())
@@ -51,7 +57,7 @@ class DiagnosticLogger:
         extra = {key: fields.get(key) for key in FIELDS}
         try:
             self.logger.log(level, event_name, extra=extra)
-            return True
+            return not self.sink_unavailable
         except Exception:
             try:
                 sys.stderr.write(json.dumps({"at_utc": utc_now(), "level": "WARNING", "component": "pmt",

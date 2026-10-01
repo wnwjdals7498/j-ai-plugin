@@ -251,7 +251,7 @@ def _runtime_manifest() -> dict[str, Any]:
 def _snapshot(db, conn, target_id: str, definition_id: str, definition_version: str,
               command: Any, inputs: Any = None, inputs_fingerprint: str | None = None) -> tuple[dict[str, Any], str, list[str], dict[str, str], str]:
     record, scope, body = _record_and_scope(conn, target_id)
-    criterion_hashes = _criteria(body) if record and record["kind"] == "item" else {}
+    criterion_hashes = _criteria(body) if record and record["kind"] in {"work", "item", "step"} else {}
     workspace, reasons = _resolve_workspace(db, conn, record, scope, body)
     workspace_files = []
     if workspace is not None:
@@ -521,7 +521,7 @@ def verify_completion(db, conn, record_dict_or_Row, verification_ids) -> dict[st
         return {"valid": False, "covered_criteria": [], "evidence_ids": [], "reasons": ["record_scope_missing"]}
     verification_scope_id = _verification_scope_id(conn, current_scope_row)
     try:
-        criterion_hashes = _criteria(body) if record.get("kind") == "item" else {}
+        criterion_hashes = _criteria(body) if record.get("kind") in {"work", "item", "step"} else {}
     except PmtError as exc:
         return {"valid": False, "covered_criteria": [], "evidence_ids": [], "reasons": [exc.code]}
     covered: dict[str, str] = {}

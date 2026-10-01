@@ -34,7 +34,7 @@ def test_backup_restore_roundtrip_preserves_database_and_blobs(tmp_path):
     backup, code = execute(db, _request("backup", {"destination_root": str(backup_dir)}))
     assert code == 0 and backup["ok"]
     manifest = json.loads((backup_dir / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["schema_version"] == 2 and len(manifest["artifacts"]) == 1
+    assert manifest["schema_version"] == 3 and len(manifest["artifacts"]) == 1
     restore_dir = tmp_path / "restored"
     restore_request = _request("restore", {"backup_path": str(backup_dir), "destination_root": str(restore_dir)})
     restored, code = execute(db, restore_request)

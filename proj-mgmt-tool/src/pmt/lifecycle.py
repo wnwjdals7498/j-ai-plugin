@@ -193,7 +193,7 @@ def save_change(db, conn, request):
                 if active_children:
                     raise PmtError("active_children", "Stop owned child tasks before canceling their parent", 3)
                 unfinished_children = conn.execute(
-                    "SELECT 1 FROM records WHERE parent_id=? AND kind IN ('work','item') AND state NOT IN ('Done','Canceled') LIMIT 1",
+                    "SELECT 1 FROM records WHERE parent_id=? AND kind IN ('work','item','step') AND state NOT IN ('Done','Canceled') LIMIT 1",
                     (row["id"],)
                 ).fetchone()
                 if unfinished_children:
@@ -454,7 +454,7 @@ def finish_task(db, conn, request):
     row = _claim_record(conn, request)
     claim = _owned_claim(conn, request, row)
     payload = _payload(request)
-    unfinished = conn.execute("SELECT id FROM records WHERE parent_id=? AND kind IN ('work','item') AND state NOT IN ('Done','Canceled')",
+    unfinished = conn.execute("SELECT id FROM records WHERE parent_id=? AND kind IN ('work','item','step') AND state NOT IN ('Done','Canceled')",
                               (row["id"],)).fetchall()
     if unfinished:
         raise PmtError("unfinished_children", "Task has unfinished child tasks", 2,

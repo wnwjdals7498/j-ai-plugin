@@ -13,8 +13,9 @@ from .diagnostics import DiagnosticLogger
 from .errors import PmtError
 from .paths import resolve_roots
 from .util import canonical_json, fingerprint, new_id, utc_now
+from .phase2_schema import SCHEMA as PHASE2_SCHEMA, SCHEMA_VERSION as PHASE2_SCHEMA_VERSION
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = PHASE2_SCHEMA_VERSION
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS scopes (
@@ -73,6 +74,12 @@ class Database:
         self.diagnostics = logger if isinstance(logger, DiagnosticLogger) else DiagnosticLogger(logger)
         self.environment_id = self._load_profile_id()
         self._initialize()
+        try:
+            from .operations import configure_logger
+            configure_logger(self)
+        except (OSError, PmtError, sqlite3.Error):
+            self.diagnostics.sink_unavailable = True
+            self.diagnostics.emit("diagnostic_log_unavailable", level=logging.WARNING)
 
     def _load_profile_id(self):
         path = self.config_root / "profile.json"
@@ -131,7 +138,7 @@ class Database:
                 if version > SCHEMA_VERSION:
                     raise PmtError("schema_version_unsupported", "Database schema is newer than this runtime", 2, False,
                                    {"schema_version": version, "supported": SCHEMA_VERSION})
-                if version not in (0, 1, SCHEMA_VERSION):
+                if version not in (0, 1, 2, SCHEMA_VERSION):
                     raise PmtError("schema_migration_unsupported", "No migration is available for this schema version", 2, False,
                                    {"schema_version": version})
                 if version == SCHEMA_VERSION:
@@ -141,21 +148,65 @@ class Database:
                     # process holds the maintenance barrier for backup.
                     return
                 conn.execute("PRAGMA journal_mode = WAL")
-                conn.execute("BEGIN IMMEDIATE")
-                for statement in SCHEMA.split(";"):
-                    if statement.strip():
-                        conn.execute(statement)
-                if version == 1:
-                    columns = {row[1] for row in conn.execute("PRAGMA table_info(requests)")}
-                    if "actor" not in columns:
-                        conn.execute("ALTER TABLE requests ADD COLUMN actor TEXT")
-                    if "session_id" not in columns:
-                        conn.execute("ALTER TABLE requests ADD COLUMN session_id TEXT")
-                self._put_meta(conn, "schema_version", str(SCHEMA_VERSION))
-                self._put_meta(conn, "db_id", self._meta_value(conn, "db_id") or new_id())
-                self._put_meta(conn, "environment_id", self.environment_id)
-                self._put_meta(conn, "maintenance_owner", self._meta_value(conn, "maintenance_owner") or "")
-                conn.commit()
+                backup_path = None
+                if version == 2:
+                    self.diagnostics.emit("schema_migration_started", schema_version=3,
+                                          transaction_outcome="started")
+                    owner = "schema3-" + new_id()
+                    conn.execute("BEGIN IMMEDIATE")
+                    current_owner = self._meta_value(conn, "maintenance_owner") or ""
+                    if current_owner:
+                        conn.rollback()
+                        raise PmtError("maintenance_active", "Database is in maintenance", 4, True)
+                    self._put_meta(conn, "maintenance_owner", owner)
+                    conn.commit()
+                    backup_path = self.root / ("pmt-schema2-" + new_id() + ".sqlite3")
+                    try:
+                        with self.connect() as source, sqlite3.connect(str(backup_path)) as target:
+                            source.backup(target)
+                            target.execute("UPDATE meta SET value='' WHERE key='maintenance_owner'")
+                            target.commit()
+                        conn.execute("BEGIN IMMEDIATE")
+                        if self._meta_value(conn, "maintenance_owner") != owner:
+                            raise PmtError("maintenance_lost", "Schema migration maintenance gate was lost", 4, True)
+                        for statement in PHASE2_SCHEMA.split(";"):
+                            if statement.strip():
+                                conn.execute(statement)
+                        self._put_meta(conn, "schema_version", "3")
+                        self._put_meta(conn, "maintenance_owner", "")
+                        conn.commit()
+                        self.diagnostics.emit("schema_migration_completed", schema_version=3,
+                                              transaction_outcome="commit")
+                    except Exception:
+                        if conn.in_transaction:
+                            conn.rollback()
+                        try:
+                            with conn:
+                                self._put_meta(conn, "maintenance_owner", "")
+                        except sqlite3.Error:
+                            pass
+                        self.diagnostics.emit("schema_migration_failed", level=logging.ERROR,
+                                              schema_version=3, transaction_outcome="rollback")
+                        raise
+                else:
+                    conn.execute("BEGIN IMMEDIATE")
+                    for statement in SCHEMA.split(";"):
+                        if statement.strip():
+                            conn.execute(statement)
+                    if version == 1:
+                        columns = {row[1] for row in conn.execute("PRAGMA table_info(requests)")}
+                        if "actor" not in columns:
+                            conn.execute("ALTER TABLE requests ADD COLUMN actor TEXT")
+                        if "session_id" not in columns:
+                            conn.execute("ALTER TABLE requests ADD COLUMN session_id TEXT")
+                    for statement in PHASE2_SCHEMA.split(";"):
+                        if statement.strip():
+                            conn.execute(statement)
+                    self._put_meta(conn, "schema_version", str(SCHEMA_VERSION))
+                    self._put_meta(conn, "db_id", self._meta_value(conn, "db_id") or new_id())
+                    self._put_meta(conn, "environment_id", self.environment_id)
+                    self._put_meta(conn, "maintenance_owner", self._meta_value(conn, "maintenance_owner") or "")
+                    conn.commit()
             self.diagnostics.emit("database_init_succeeded", duration_ms=int((time.monotonic()-started)*1000),
                                   schema_version=SCHEMA_VERSION)
         except Exception as exc:

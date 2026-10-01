@@ -122,9 +122,11 @@ def check_artifact(db, conn, artifact_id: str) -> dict:
 
 
 def _register_handler(conn, req, *, artifact_id, digest, size, relative, retention, scope_id, owner_record_id):
-    existing = conn.execute("SELECT id FROM artifacts WHERE scope_id IS ? AND sha256=? AND relative_path=?",
+    existing = conn.execute("SELECT id,state FROM artifacts WHERE scope_id IS ? AND sha256=? AND relative_path=?",
                             (scope_id, digest, relative)).fetchone()
     if existing:
+        if existing[1] != "ready":
+            raise PmtError("resource_not_ready", "Resource is reserved or unavailable", 3)
         artifact_id = existing[0]
     else:
         conn.execute("INSERT INTO artifacts(id,scope_id,sha256,size_bytes,relative_path,state,retention_until,created_at) VALUES(?,?,?,?,?,?,?,?)",
@@ -480,8 +482,8 @@ def _validate_backup(backup_path: str):
         raise PmtError("backup_manifest_invalid", "Backup manifest is missing or invalid") from exc
     if not isinstance(manifest, dict) or manifest.get("format_version") != 1 or manifest.get("state", "ready") != "ready":
         raise PmtError("backup_manifest_invalid", "Backup manifest format is unsupported")
-    if manifest.get("schema_version") != SCHEMA_VERSION:
-        raise PmtError("backup_schema_unsupported", "Backup schema does not match this runtime")
+    if manifest.get("schema_version") not in {2, SCHEMA_VERSION}:
+        raise PmtError("backup_schema_unsupported", "Backup schema is not supported by this runtime")
     db_info = manifest.get("database")
     if not isinstance(db_info, dict) or db_info.get("path") != _DB_FILE:
         raise PmtError("backup_manifest_invalid", "Backup database entry is invalid")
@@ -551,7 +553,7 @@ def _restore(db, req):
             integrity = check.execute("PRAGMA integrity_check").fetchone()[0]
             foreign_key_issue = check.execute("PRAGMA foreign_key_check").fetchone()
             version = check.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
-            if integrity != "ok" or foreign_key_issue or not version or int(version[0]) != SCHEMA_VERSION:
+            if integrity != "ok" or foreign_key_issue or not version or int(version[0]) != manifest["schema_version"]:
                 raise PmtError("restore_database_invalid", "Restored database integrity or schema check failed")
             for table, col in (("artifacts", "id"), ("scopes", "id"), ("records", "id"), ("artifact_refs", "artifact_id")):
                 check.execute(f"SELECT {col} FROM {table} LIMIT 0")
@@ -569,6 +571,9 @@ def _restore(db, req):
                 expected_rel = f"resources/objects/{item['id']}"
                 if not row or row[0] != item["sha256"] or row[1] != item["size_bytes"] or row[2] != expected_rel or row[3] != "ready":
                     raise PmtError("restore_manifest_mismatch", "Artifact manifest and database differ")
+        if manifest["schema_version"] < SCHEMA_VERSION:
+            from .db import Database
+            Database(stage, db.config_root)
         # Publish the verified root with one same-volume rename; never expose a partial restore.
         dest.rmdir()
         os.replace(stage, dest)

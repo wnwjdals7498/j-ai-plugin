@@ -61,7 +61,7 @@ def test_data_02_v1_migrates_and_future_schema_is_read_guarded(roots):
         conn.execute("UPDATE meta SET value='1' WHERE key='schema_version'")
     migrated = Database(db.root, db.config_root, busy_timeout_ms=500)
     with migrated.connect() as conn:
-        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "2"
+        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "3"
         assert conn.execute("SELECT value FROM meta WHERE key='db_id'").fetchone()[0] == db_id
         assert conn.execute("SELECT response_json FROM requests WHERE request_id=?", (old_req["request_id"],)).fetchone()[0] == json.dumps(response, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         assert {row[1] for row in conn.execute("PRAGMA table_info(requests)")} >= {"actor", "session_id"}

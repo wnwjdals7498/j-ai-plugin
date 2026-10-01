@@ -10,6 +10,7 @@ from . import __version__
 from .db import Database
 from .errors import PmtError
 from .util import canonical_json
+from .phase2 import OPERATIONS as PHASE2_OPERATIONS
 
 ALLOWED = {"protocol_version", "operation", "request_id", "actor", "session_id",
            "scope_id", "record_id", "expected_revision", "payload", "context_refs",
@@ -21,6 +22,7 @@ OPERATIONS = {"setup", "create_scope", "read_context", "save_change", "save_deci
 LIFECYCLE = {"create_scope", "save_change", "save_decision", "record_event", "claim_task",
              "release_claim", "recover_claim", "finish_task"}
 READ = {"read_context", "lookup_verification", "get_request_result", "diagnose"}
+OPERATIONS |= PHASE2_OPERATIONS
 
 
 def response(request_id, *, result=None, error=None, warnings=None):
@@ -108,6 +110,8 @@ def execute(db: Database, value):
                 raise PmtError("request_lookup_unavailable", "Ownership-aware request lookup is unavailable", 5)
             return response(request_id, result={"found": found is not None, "response": found[0] if found else None,
                                                 "exit_code": found[1] if found else None}), 0
+        if op in PHASE2_OPERATIONS:
+            return import_module("pmt.phase2").execute(db, req)
         if op in LIFECYCLE:
             handler = import_module("pmt.lifecycle").handle
             return db.run_request(req, lambda conn, request: handler(db, conn, request))

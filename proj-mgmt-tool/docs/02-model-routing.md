@@ -1,5 +1,7 @@
 # 2단계: 모델 선정·전달·병렬 실행
 
+**현재 구현 범위 갱신:** [사용자 범위 결정](phase2/scope-decisions.md)에 따라 직접 API 없이 네이티브 서브에이전트·Claude/Codex CLI를 구현한다. 아래의 직접 API/SDK·OpenCode HTTP 내용은 후속 설계다.
+
 구현자가 따를 폴더·기술·모듈·통신·코드·운영 규칙은 [공통 참조문서](pmt-docs/README.md)에 정리한다. 이 문서는 요구와 범위의 기준을 유지한다.
 
 `gpt-6-luna` 병렬 구현의 목적·변경 범위·goal/non-goal·입출력·기술·시험·로그·의존성은 [2단계 상세계획](phase2/README.md)에 정리한다.

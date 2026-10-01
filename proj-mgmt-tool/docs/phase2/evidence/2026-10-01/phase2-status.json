@@ -1,0 +1,199 @@
+{
+  "recorded_at_utc": "2026-10-01T10:04:19.612294+00:00",
+  "core_version": "0.2.0",
+  "package_version": "0.2.2",
+  "schema_version": 3,
+  "runtime": {
+    "python": "3.13.13",
+    "sqlite": "3.50.4"
+  },
+  "scope": {
+    "direct_api": false,
+    "sdk": false,
+    "opencode_http_runner": false,
+    "native_subagents": true,
+    "cli_agents": [
+      "codex",
+      "claude"
+    ],
+    "claude_external_model_test": "not_run_user_selected_local_verification"
+  },
+  "full_pytest": {
+    "passed": 231,
+    "skipped": 2,
+    "failed": 0,
+    "exit_code": 0,
+    "command": ".venv/Scripts/python.exe -m pytest -q --basetemp .pmt-test/phase2-final-evidence",
+    "skip_reason": "Existing Windows symlink creation privilege limitation"
+  },
+  "actual_native_model": {
+    "model": "gpt-6-luna",
+    "agent": "codex",
+    "invocation": "collaboration.spawn_agent",
+    "run_id": "1560df3a-1733-4ced-a1d0-c79fa8b248c5",
+    "step_id": "5750be1e-f62f-4e2d-8f95-7533856941f2",
+    "graph_validation": {
+      "valid": true,
+      "complete": true,
+      "schema_version": 1,
+      "project_id": "7fb744f3-df68-49f8-8ef8-85a01a36c6d8",
+      "graph_version": 1,
+      "node_count": 9,
+      "relation_count": 10,
+      "sha256": "4c80668c596c035afe04dc2b9f5765fc9d19d0a4b4143dedf8997ec6eedd912f"
+    },
+    "criterion": "linked-plan",
+    "verification_id": "e1f66326-4773-4b13-af56-69d62f066f0b",
+    "step_state": "Done",
+    "item_state": "Done",
+    "work_state": "Done",
+    "valid_verification_reused_for_parent_reviews": true,
+    "result": "pass"
+  },
+  "local_product_tests": {
+    "claude": {
+      "status": "pass",
+      "product": "claude",
+      "product_session": {
+        "status": "pass",
+        "exit_code": 0,
+        "elapsed_seconds": 3.62,
+        "configured_model": "pmt-native-fixture",
+        "reported_model": null,
+        "response_marker_seen": true,
+        "response_bytes": 1585,
+        "session_ref_sha256": "48d03b2be9f196001907b5d5830468f29237b02f24e9365956b20c3389a42fa0",
+        "fixture": {
+          "real_llm": false,
+          "requests": [
+            {
+              "route": "/v1/messages",
+              "context_seen": true
+            }
+          ]
+        },
+        "raw_response_saved": false
+      },
+      "native_hook_observation": {
+        "hooks_observed": true,
+        "session_started_events": 1,
+        "hook_requests_for_session": 4,
+        "session_context_reads_expected": true
+      },
+      "package": {
+        "plugin_version": "0.2.2",
+        "core_version": "0.2.0",
+        "schema_version": 3,
+        "manifest_sha256": "01c655aeac2ee04923567656990a9a750d4b0a3c671b3a765e3d0033ac9d8f3c"
+      },
+      "pmt_phase2_operation": {
+        "operation": "read_routing_policy",
+        "exit_code": 0,
+        "configured": false,
+        "revision": 0,
+        "request_id": "8e573c89-df14-4930-a2fe-9e44d11a1008",
+        "session_ref_sha256": "48d03b2be9f196001907b5d5830468f29237b02f24e9365956b20c3389a42fa0"
+      },
+      "environment": {
+        "isolated_home": true,
+        "isolated_data_and_config": true,
+        "auth_and_proxy_environment_inherited": false,
+        "api_key_used": true,
+        "api_key_kind": "dummy-loopback-only",
+        "loopback_model_fixture": true,
+        "real_llm": false,
+        "raw_prompt_or_response_saved": false
+      }
+    },
+    "codex": {
+      "status": "pass",
+      "product": "codex",
+      "product_session": {
+        "status": "pass",
+        "exit_code": 0,
+        "elapsed_seconds": 0.946,
+        "thread_ref_sha256": "1fa31799bea401f5c84fe4f7886b0ab72f9ba8d63601eeebcca7bd7028d6d496",
+        "event_types": [
+          "thread.started",
+          "item.completed",
+          "turn.started",
+          "item.completed",
+          "turn.completed"
+        ],
+        "fixture": {
+          "real_llm": false,
+          "requests": [
+            {
+              "route": "/v1/responses",
+              "context_seen": false
+            }
+          ]
+        },
+        "raw_response_saved": false,
+        "note": "Codex plugin hooks were not installed or trust-approved in this session."
+      },
+      "native_hook_observation": {
+        "hooks_observed": false,
+        "session_started_events": 0,
+        "hook_requests_for_session": 0
+      },
+      "package": {
+        "plugin_version": "0.2.2",
+        "core_version": "0.2.0",
+        "schema_version": 3,
+        "manifest_sha256": "1c47a0227f6075684cde161dbf6b7e4214934330232296babb313959be888b7e"
+      },
+      "pmt_phase2_operation": {
+        "operation": "read_routing_policy",
+        "exit_code": 0,
+        "configured": false,
+        "revision": 0,
+        "request_id": "1e379bcb-60f0-4902-abbe-b42716e6908f",
+        "session_ref_sha256": "1fa31799bea401f5c84fe4f7886b0ab72f9ba8d63601eeebcca7bd7028d6d496"
+      },
+      "environment": {
+        "isolated_home": true,
+        "isolated_data_and_config": true,
+        "auth_and_proxy_environment_inherited": false,
+        "api_key_used": false,
+        "api_key_kind": null,
+        "loopback_model_fixture": true,
+        "real_llm": false,
+        "raw_prompt_or_response_saved": false
+      }
+    }
+  },
+  "packages": {
+    "codex": {
+      "plugin_version": "0.2.2",
+      "core_version": "0.2.0",
+      "schema_version": 3,
+      "manifest_sha256": "1c47a0227f6075684cde161dbf6b7e4214934330232296babb313959be888b7e",
+      "zip_sha256": "46e4f7f0f1487b5e3f06f8652b55e0731090cdacd429506c910fc99c85c7f0cf"
+    },
+    "claude": {
+      "plugin_version": "0.2.2",
+      "core_version": "0.2.0",
+      "schema_version": 3,
+      "manifest_sha256": "01c655aeac2ee04923567656990a9a750d4b0a3c671b3a765e3d0033ac9d8f3c",
+      "zip_sha256": "23325364300bcead2c7254c6012102f8a0f3f26222a62faef481193ddab7e373"
+    },
+    "opencode": {
+      "plugin_version": "0.2.2",
+      "core_version": "0.2.0",
+      "schema_version": 3,
+      "manifest_sha256": "620daab8d4370506f33cf434b9f9b6814b404a6da9d1e863052628f9d2646323",
+      "zip_sha256": "9d96e6756c2ff99b7cbb46b4f79e1a4de03dc355f57c08ca1cc6fbaff1677c72"
+    }
+  },
+  "unverified": [
+    "Codex 0.2.2 plugin installation/trust/hook lifecycle not executed; native model and CLI sessions were checked separately",
+    "Remote Claude model quality not tested; user selected local fixture verification"
+  ],
+  "sources": [
+    "https://learn.chatgpt.com/docs/non-interactive-mode",
+    "https://code.claude.com/docs/en/headless",
+    "https://docs.python.org/3.13/library/sqlite3.html",
+    "https://www.sqlite.org/backup.html"
+  ]
+}

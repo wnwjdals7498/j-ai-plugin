@@ -257,6 +257,9 @@ def build_plugins(output_dir: str | Path, version: str | None = None,
         core_version_match = re.search(r"__version__\s*=\s*['\"]([^'\"]+)", from_src)
         schema_text = (root / "src" / "pmt" / "db.py").read_text(encoding="utf-8")
         schema_match = re.search(r"^SCHEMA_VERSION\s*=\s*(\d+)", schema_text, re.MULTILINE)
+        if not schema_match and "SCHEMA_VERSION = PHASE2_SCHEMA_VERSION" in schema_text:
+            schema_text = (root / "src" / "pmt" / "phase2_schema.py").read_text(encoding="utf-8")
+            schema_match = re.search(r"^SCHEMA_VERSION\s*=\s*(\d+)", schema_text, re.MULTILINE)
         if not core_version_match or not schema_match or core_version_match.group(1) != core_version:
             raise ValueError
         source_info = {"core_version": core_version, "schema_version": int(schema_match.group(1))}
