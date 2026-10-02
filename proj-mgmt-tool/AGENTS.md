@@ -8,7 +8,7 @@
 2. [데이터·문서 계약](docs/pmt-docs/data-contracts.md): 원본·트리·graph·Git 최신화.
 3. [실행·통신 계약](docs/pmt-docs/execution-contracts.md): 모델·runner·Queue·lock·동작 레퍼런스.
 4. [개발·검증](docs/pmt-docs/development.md)과 [운영·로그](docs/pmt-docs/operations.md): 배정·입출력·시험·증거·보존.
-5. 해당 단계의 상세계획: [1단계](docs/phase1/README.md), [2단계 상세 배정](docs/phase2/README.md)과 [요구 기준](docs/02-model-routing.md), [3단계](docs/03-hosted-storage.md). 기존 API 변경이면 [1단계 계약](docs/phase1/contracts.md), 설치 변경이면 [제품·패키징 규약](docs/phase1/adapters-packaging.md)도 확인한다.
+5. 해당 단계의 상세계획: [1단계](docs/phase1/README.md), [2단계 상세 배정](docs/phase2/README.md)과 [요구 기준](docs/02-model-routing.md), [3단계 기능 명세](docs/phase3/README.md)와 [전체 범위](docs/03-hosted-storage.md). 기존 API 변경이면 [1단계 계약](docs/phase1/contracts.md), 설치 변경이면 [제품·패키징 규약](docs/phase1/adapters-packaging.md)도 확인한다.
 
 전체 자료를 반복 통독하지 않고 배정 범위·의존 계약·관련 근거를 읽는다. 서로 다른 규약을 발견하면 상세 공통 계약을 기준으로 차이를 메인에게 보고한다. 사용자 지시가 문서보다 우선한다.
 

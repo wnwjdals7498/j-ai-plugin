@@ -4,6 +4,8 @@
 
 2단계 병렬 배정과 기능별 상세 인계는 [상세 구현 계획](phase2/README.md)에 정리했다.
 
+3단계 F0~F15의 목적·범위·입출력·구현/기술·시험/로그·완료·인계는 [기능 명세](phase3/README.md)를 따른다.
+
 - 작성일: 2026-09-30
 - 상세계획 갱신: 2026-10-02
 - 상태: [1단계 구현·검증 완료](phase1/implementation-status.md), [2단계 구현·실측 현황](phase2/implementation-status.md). 직접 모델 API 제외 원칙을 유지한다. 3단계는 Python 문서·문맥 효율화와 Host 연결 계획.

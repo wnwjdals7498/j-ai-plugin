@@ -6,7 +6,7 @@ Python 기반 정형 입력·트리/연관 graph·부분 문서 생성으로 문
 
 입출력·원본·영향 분석·토큰 절약·측정의 상세 계약은 [문서·문맥 효율화](phase3/01-document-context-efficiency.md)를 따른다.
 
-명세 작성에 앞서 확정한 [기능 목록·의존성·구현 순서](phase3/README.md)를 작업 분해의 기준으로 삼는다. 작업별 상세 명세는 다음 단계다.
+[기능 목록·의존성·구현 순서와 기능 명세](phase3/README.md)를 작업 분해의 기준으로 삼는다. [공통 계약](phase3/contracts.md)과 [시험·인계 명세](phase3/verification.md)에 기능별 입출력·시험·로그·완료 기준을 연결했다.
 
 ## 처리 흐름
 
