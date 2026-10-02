@@ -5,8 +5,8 @@
 2단계 병렬 배정과 기능별 상세 인계는 [상세 구현 계획](phase2/README.md)에 정리했다.
 
 - 작성일: 2026-09-30
-- 상세계획 갱신: 2026-10-01
-- 상태: [1단계 구현·검증 완료](phase1/implementation-status.md), [2단계 구현·실측 현황](phase2/implementation-status.md). 2단계는 직접 API 제외·서브에이전트/Claude·Codex CLI 범위를 적용했다. 3단계는 설계 계획.
+- 상세계획 갱신: 2026-10-02
+- 상태: [1단계 구현·검증 완료](phase1/implementation-status.md), [2단계 구현·실측 현황](phase2/implementation-status.md). 직접 모델 API 제외 원칙을 유지한다. 3단계는 Python 문서·문맥 효율화와 Host 연결 계획.
 - 목적: 회사·집·노트북과 여러 AI 세션에서 작업 상태·결정·근거를 공유하고, 중복 작업과 검증을 줄인다.
 
 ## 구현 순서
@@ -15,7 +15,7 @@
 |---|---|---|
 | [1. 로컬 기록](01-local-storage.md) | 구현 → 본체 검증 → 플러그인화 → 설치 검증 | 로컬 SQLite |
 | [2. 모델 분배](02-model-routing.md) | 자연어 요구 트리 → 구현 요구 트리·기능 명세 → Step 지시 → 병렬 실행·제품 단계별 판정 | 1단계 저장소 + 내부 지시 리소스 |
-| [3. 서버 연결](03-hosted-storage.md) | 저장 API·플러그인 setup·환경 간 공유 | 로컬 또는 Host SQLite |
+| [3. 문서·문맥 효율화와 서버 연결](03-hosted-storage.md) | 정형 변경·관계 영향·부분 생성·문맥/재사용/제어 최적화 → 저장 API·환경 간 공유 | Git 원본 + 로컬 또는 Host SQLite |
 
 각 단계의 완료 기준을 실제로 확인한 뒤 다음 단계로 진행한다. 2단계까지는 PMT 서버 없이 사용할 수 있어야 한다. 3단계에서도 모델 분배·코드 실행은 각 작업 환경에 유지한다.
 
@@ -40,7 +40,7 @@
 | 경계 | 최소 기능 | 다음 단계에서 유지할 것 |
 |---|---|---|
 | 저장 연결부 | `read_context`, `save_change`, `claim_task`, `finish_task` | 3단계에서 `LocalStore`를 `HttpStore`로 교체 가능 |
-| 실행 연결부 | `start`, `status`, `result`, `cancel` | 서브에이전트·CLI/SDK·직접 API의 공통 입출력 |
+| 실행 연결부 | `start`, `status`, `result`, `cancel` | 네이티브 서브에이전트·Claude/Codex CLI의 공통 입출력 |
 | 데이터 | 고정 ID·revision·출처·증거 참조 | 경로·환경·실행 제품이 바뀌어도 관계 유지 |
 | 실행 이력 | 작업 ID와 실행 시도 ID 분리 | 재시도·실패·부분 결과를 별도 추적 |
 
