@@ -14,7 +14,7 @@
 
 - **1단계 구현됨:** 로컬 SQLite, CLI, 훅, 검증 재사용, 리소스·백업, 제품별 패키징. 실제 확인 범위는 [구현·검증 기록](../phase1/implementation-status.md)을 따른다.
 - **2단계 구현:** 두 요구사항 트리, 프로젝트 문서 생성, Step, 모델 분배, Queue, 범위 lock, Git 최신화. [실측 상태](../phase2/implementation-status.md)와 [최신 범위](../phase2/scope-decisions.md)를 확인한다. 이 폴더의 후속 API/SDK 연결 제안을 현재 지원 기능으로 간주하지 않는다.
-- **3단계 후속:** Host 저장 서버. 2단계까지는 서버 없이 동작한다.
+- **3단계 구현·검증:** Python 정형 변경·부분 문서·bounded context·재사용·실행 제어·묶음, 선택적 Host 저장·HTTP·설정·이관·pending. [현재 실측](../phase3/implementation-status.md)을 따른다. 로컬 모드는 서버 없이 동작한다.
 
 [2단계 요구사항](../02-model-routing.md)은 기능 범위·사용자 결정의 기준이다. 이 폴더는 그 요구를 기술·책임·검증 계약으로 연결한다. [1단계 계약](../phase1/contracts.md)은 현재 공개 동작의 기준이므로 새 설계가 기존 동작을 자동으로 바꾸지 않는다. 불일치는 메인이 원인과 소비자 영향을 확인하고 함께 수정한다.
 

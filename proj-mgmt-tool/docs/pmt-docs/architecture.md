@@ -2,7 +2,7 @@
 
 ## 폴더 구성
 
-아래는 현재 2단계 코드 배치다. 공개 계약과 책임 경계를 유지하며 [실측 범위](../phase2/implementation-status.md)를 확인한다.
+아래는 2단계와 현재 3단계 코드 배치다. 공개 계약과 책임 경계를 유지하며 [2단계 실측 범위](../phase2/implementation-status.md), [3단계 실측 상태](../phase3/implementation-status.md)를 구분해 확인한다.
 
 ```text
 proj-mgmt-tool/
@@ -17,19 +17,27 @@ proj-mgmt-tool/
 │  ├─ hooks.py / diagnostics.py 이벤트 정규화·진단
 │  ├─ errors.py / util.py      공통 오류·최소 공통 함수
 │  ├─ planning/               두 트리·기능 명세·문서/graph 생성
-│  ├─ routing/                가용 자원·모델/실행 경로 선택
+│  ├─ routing/                가용 자원·모델/실행 경로·client settings
 │  ├─ execution/              Queue·시도·결과·취소·범위 점유
 │  ├─ runners/                subagent·Claude/Codex CLI 연결
 │  ├─ reconciliation/         Git 변화·문서/계획 영향 분석
 │  ├─ steps.py / operations.py 지시·검토·운영·보존
-│  └─ phase2*.py              operation 연결·공통 경계·이관 DDL
+│  ├─ phase2*.py              Phase 2 operation 연결·공통 경계·이관 DDL
+│  ├─ phase3.py / phase3_schema.py Phase 3 로컬 registry·schema 4
+│  ├─ store.py / http_store.py LocalStore·인증 HTTPS operation port
+│  ├─ storage_config.py       단일 저장소 선택·환경/checkout 매핑
+│  ├─ workspace.py / hosted_runtime.py 현재 Host 권한으로 로컬 파일·실행 접근
+│  ├─ hosted_files.py         로컬 graph/문서 효과·Host metadata/복구 연결
+│  ├─ migration.py / pending.py 이관·백업·복원·생성 결과 재조정
+│  ├─ host/                   auth·저장 allowlist·source/resource/plan·HTTP·Host CLI
+│  └─ efficiency/             SourcePin·graph·문서·context·reuse·result·control·batch
 ├─ integrations/{codex,claude,opencode}/ 제품별 훅·설치 연결
 ├─ skills/proj-mgmt-tool/      에이전트의 사용 절차·참조
 ├─ scripts/                   패키징·검증 도구
 ├─ tests/                     계약·통합·장애·설치 시험
 └─ docs/
    ├─ 01~03 단계 문서         요구·범위·완료 조건
-   ├─ phase1/phase2/         단계별 상세 계약·검증 기록
+   ├─ phase1/phase2/phase3/   단계별 상세 계약·검증 기록
    └─ pmt-docs/               공통 구조·규칙·프로젝트 graph
 ```
 
@@ -45,8 +53,9 @@ proj-mgmt-tool/
 | Markdown + Git | 사람이 읽는 원칙·구조·결정, 변경 비교·기준 커밋 | 실행 상태 저장·작업 lock의 대체 수단으로 사용하지 않음 |
 | JavaScript 제품 연결부 | 현재 OpenCode 플러그인 진입점 | 업무 규칙은 Python 본체로 위임 |
 | pytest / setuptools | 기존 시험·Python 패키징 방식 유지 | 시험 의존성과 운영 의존성 분리 |
+| 선택 설치 FastAPI/Pydantic·Uvicorn | Host 저장 API의 형식 검증·OpenAPI·ASGI 실행 | 클라이언트 기본 의존성이 아님; Git/runner 원격 호출 금지 |
 
-2단계는 Python 표준 라이브러리·SQLite를 유지하며 런타임 의존성을 추가하지 않았다. 최신 사용자 결정에 따라 실행은 네이티브 서브에이전트·Claude/Codex CLI에 한정한다. SDK·직접 모델 API는 후속 제안이다. [3단계](../03-hosted-storage.md)는 Python·FastAPI/Pydantic·Uvicorn과 HTTPS JSON 저장 API를 계획한다.
+클라이언트 기본 런타임은 Python 표준 라이브러리·SQLite다. Host는 `host` extra로 FastAPI/Pydantic·Uvicorn을 설치한다. Phase 3 schema 4는 기존 schema 3 이관을 포함한다. 로컬 실행은 승인된 native handoff와 확인된 Claude/Codex CLI 경로에 한정한다. SDK·직접 모델 API·원격 runner는 제외한다. [Host 연결 계약](../phase3/host-api-contract.md)은 실제 endpoint와 인증·파일/프로세스 경계를 설명한다. 현재 검증은 Windows 로컬 HTTPS이며 외부/Linux/proxy 수용을 뜻하지 않는다.
 
 ## 기능별 책임과 입출력
 
@@ -61,6 +70,11 @@ proj-mgmt-tool/
 | runners | 실행 요청 → handle·상태·결과·취소 확인 | 제품별 기술 차이만 변환; 목표 변경·Done 판정·독자 재배정 금지 |
 | reconciliation | 기준 커밋·현재 Git·관련 문서/계획 → 영향·갱신·검토 기준 | 점유 후 실행 직전 최신화; planning/verification에 무효화 범위 전달 |
 | diagnostics | 허용된 관찰 필드 → 구조화 로그·쓰기 실패 신호 | 비밀/본문 제외; 업무 이력과 분리 |
+| Phase 3 efficiency | SourcePin·delta·manifest/ref → 로컬 graph/document/context/reuse/result/control 상태 | `phase3.py`는 별도 로컬 CLI registry이며 Host API allowlist가 아님; SQLite 업무 상태와 Git 원본을 분리 |
+| Host·HttpStore | 인증된 저장 intent·source/resource refs → 현재 권한으로 판정한 envelope/receipt | Host가 공유 Queue·lock·결과·metadata의 권위 원본; 클라이언트 DB fallback 금지 |
+| 연결·로컬 실행 | 기기별 profile/mapping·Host run/context → 로컬 실제 관찰·native 요청·opaque handle | 파일 접근 전 현재 권한/SourcePin 확인; argv/PID/환경변수는 로컬 |
+| client 모델 설정·plan metadata | 로컬 정책/가용 능력·F4 완료 refs → route·current published plan ref | ConfigRoot 전용 모델 설정과 Host review 게시를 분리; 구현 Step은 현재 plan을 요구 |
+| 이관·pending | 고정 version/hash 세트 또는 이미 생성된 결과 → 복원/재처리/충돌 근거 | 원본 보존·빈 target·exact request replay; 신규 offline 점유 금지 |
 
 의존 방향은 `adapter → service → 업무 모듈 → 저장/리소스`다. 업무 모듈은 제품별 훅 형식을 알지 않는다. 2단계에서는 execution이 routing·runner·reconciliation을 조합하며, runner에서 execution을 재귀 호출하지 않는다. 같은 프로세스의 모듈 간에는 명시적인 Python 함수/타입 계약을 사용하고 내부 HTTP 호출을 만들지 않는다.
 
@@ -69,5 +83,5 @@ proj-mgmt-tool/
 - 새 제품: capability 조회·훅 변환·runner 구현·적합성 시험을 추가한다. 저장 규칙을 제품마다 복제하지 않는다.
 - 새 모델: provider/model/인증/지원 기능을 등록한다. 역할과 모델명을 코드에 고정하지 않는다.
 - 새 작업 종류: 종류별 검증·완료 조건을 확장한다. Work/Item/Step 의미와 실행 시도 식별자는 유지한다.
-- 저장 서버: 서비스 유스케이스를 저장 연결 경계로 감싼다. 아직 없는 `LocalStore/HttpStore` 추상화를 구현 완료로 표현하지 않는다. 원격에서도 revision·멱등성·점유 판정은 서버가 권위 있게 처리해야 한다.
+- 저장 서버: `LocalStore`와 `HttpStore`가 같은 operation 결과·조회·호환 포트를 제공한다. 저장 위치는 profile의 단일 mode로 선택한다. Host는 별도 allowlist와 현재 인증·scope·revision·요청 지문을 검증한다. 연결 실패는 오류이며 다른 DB로 자동 전환하지 않는다.
 - 계약/스키마 변경: 버전·이관·구버전 입력 처리·백업/복원·소비자 시험을 함께 변경한다. 만능 플러그인 시스템을 먼저 만들지 않고 실제 두 번째 구현이 필요한 경계부터 분리한다.

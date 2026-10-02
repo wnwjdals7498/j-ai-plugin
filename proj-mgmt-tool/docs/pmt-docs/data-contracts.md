@@ -5,7 +5,7 @@
 | 내용 | 원본 | 다른 곳에 남길 값 |
 |---|---|---|
 | 프로젝트 대전제·구조·현재 결정·두 트리 graph | Git의 프로젝트 문서 | 기준 commit·문서/노드 ID·버전·hash |
-| 상태·이력·점유·Queue·실행 시도 | 로컬 SQLite | 사용자에게 필요한 요약·추적 ID |
+| 상태·이력·점유·Queue·실행 시도 | 선택한 local/Host의 단일 SQLite | 사용자에게 필요한 요약·추적 ID |
 | 하위 모델 Step 지시 원문 | PMT 내부 리소스 | Step ID·지시 버전/참조·hash·결과/증거 참조 |
 | 테스트 로그·이미지 등 근거 | PMT 리소스 + manifest | 검증 ID·대상/환경 지문·참조 |
 | 에이전트·모델·연결 설정 | 로컬 설정 | 비밀을 제외한 실제 실행 식별 정보 |
@@ -54,3 +54,21 @@ AI가 데이터셋의 세부 표현을 선택하되 다음 의미를 보존한�
 - Git 없는 프로젝트는 그 사실과 문서/대상 지문을 기록한다.
 
 업무 `revision`, 요구 버전, 계획 버전, Step 지시 버전을 구분한다. 점유·상태만 바뀌었다고 같은 계획의 검증을 모두 무효화하지 않는다. 1단계 schema 2에 Step·Queue·범위 lock을 추가할 때는 이관·복원·구버전 요청 시험이 필요하다.
+
+## 현재 3단계 데이터 계약
+
+현재 코드는 package `0.3.0`, SQLite schema 4를 사용한다. schema 0–3과 기존 2단계 의미를 보존하며 schema 3에서 4로 이관할 때 백업·자료 보존을 검증한다. `LocalStore`/`HttpStore.execute(request)`는 `(envelope, exit_code)`를 반환한다. 결과 조회는 actor/session·현재 권한과 선택적 기대 요청 지문을 확인하며 미존재는 `None`이다. `check_compatibility()`는 core·DB·graph·protocol을 대조한다. Host auth schema와 HTTP API version은 별개다.
+
+Phase 3 SQLite에는 graph/document 원문 복제본 대신 stable ID, SourcePin, revision, hash, 상태, manifest·이력·intent·outbox 같은 파생 메타데이터와 실행 상태를 둔다. Git 문서와 graph가 업무 원본이다. `request_id` 재전송은 같은 논리 요청만 재생하고, 새 행동은 새 요청·이벤트 식별자를 사용한다. 변경은 기대 revision/source hash에 대한 CAS로 적용하며, 불일치는 성공처럼 합치지 않고 conflict로 돌려준다.
+
+SourcePin은 project/repository/workspace와 원본 지문을 묶는다. Git source는 commit/ref와 dirty 상태를 구별하고, 실제 Git이 없다고 확인된 경우에만 non-Git pin을 쓴다. 검사 실패를 non-Git으로 바꾸지 않는다. graph index와 문서 manifest는 캡처한 source hash/version에 고정된다. 현재 작업에서 소비하려면 실제 source와 권한·claim을 다시 확인한다. 미등록·불완전한 coverage는 “영향 없음”을 뜻하지 않으며 unknown/검토로 남긴다.
+
+문서 기준선은 결정적 segment ID·template/dependency 버전·의존 node/field/relation·generated/manual 표시·hash manifest로 추적한다. 부분 갱신은 검증된 F3 영향과 적용 receipt가 같은 change ID, before/after pin 및 예상 graph hash/revision을 가리킬 때만 허용한다. 수기 구간과 영향 없는 segment는 보존하고, 손으로 변경된 generated 구간이나 불완전한 manifest는 덮어쓰지 않고 conflict/unknown으로 처리한다. 파일 게시와 복구는 공통 guarded publication을 사용해 이전본·후보를 보존하고 현재 실제 hash를 대조한다.
+
+구조화 JSON의 Git clean 여부는 canonical graph 내용과 실제 Git status를 대조하므로 clean LF/CRLF checkout은 같은 SourcePin을 가진다. dirty 상태는 실제 working bytes/status 지문을 보존한다. 관리 Markdown은 UTF-8/LF로 생성하고 CRLF 입력도 해석한다. 준비 전에 사용자가 바꾼 수기 내용은 반영·보존하며 준비 후 변경은 raw target hash CAS로 거절한다. 생성 구간의 실제 내용 변경은 계속 conflict다.
+
+F5 문맥은 권한과 현재 run/source를 재검증한 bounded projection 참조다. 필수 항목 누락·불확실성은 숨기지 않는다. F6 재사용은 소유·scope·source 및 evidence 참조가 맞는 경우만 재사용 가능성을 돌려준다. F7은 결과 리소스의 실제 hash와 제한된 상세를 제공하고, 기준 충족 여부를 모델의 성공 주장으로 판정하지 않는다. 문맥 예산은 bytes/lines로 제한하며 token 수·비용 절감은 측정되지 않았다.
+
+Host의 graph/검증 snapshot은 인증된 클라이언트가 제출한 immutable hash 리소스와 현재 pointer다. Git 원본의 독립 수정본이 아니며 `provenance=client_snapshot`, `host_git_verified=false`를 구별한다. 실제 checkout은 클라이언트에서 검사한다. private Step/context는 현재 run·지시 버전·source·scope·기기/세션 소유권으로 제한한다.
+
+Host 논리 workspace는 repository UUID와 branch key SHA-256으로 만든다. 클라이언트 절대 경로는 profile에만 보관한다. backup은 업무 ID·관계·증거를 보존하고 기기 인증·모델 설정·claim/handle·live replay·derived context/cache를 제외한다. 새 target은 별도 인증/namespace를 유지하고 이관된 검증은 current pass로 재사용하지 않는다. pending은 실제 생성된 종료 결과만 원 request/body/source/owner와 함께 보관하며 동일 요청 조회·현재 기준 확인 후 재조정한다.

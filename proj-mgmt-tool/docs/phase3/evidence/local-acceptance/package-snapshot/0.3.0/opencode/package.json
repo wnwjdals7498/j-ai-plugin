@@ -1,0 +1,8 @@
+{
+  "name": "pmt-lifecycle-opencode",
+  "version": "0.3.0",
+  "description": "Local PMT lifecycle event bridge for OpenCode.",
+  "type": "module",
+  "main": "./integrations/opencode/pmt.js",
+  "exports": "./integrations/opencode/pmt.js"
+}

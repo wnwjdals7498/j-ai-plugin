@@ -2,6 +2,8 @@
 
 이 폴더는 여러 환경·AI 세션의 작업·결정·근거를 공유하는 PMT다. 로컬 저장·훅·플러그인 검증이 1단계, 두 요구사항 트리·모델 분배가 2단계, Python 문서·문맥 효율화와 Host 저장 연결이 3단계다. 2단계는 [사용자 범위 결정](docs/phase2/scope-decisions.md)을 적용해 구현했다. 실제 확인 범위는 [구현 상태](docs/phase2/implementation-status.md)를 따른다. 문서의 계획·예정 시험을 구현 완료·실측 성공으로 표현하지 않는다.
 
+현재 코드 버전은 0.3.0, SQLite schema는 4다. 로컬 graph·문서·문맥·재사용·실행 제어·묶음과 Host 저장·HTTP·설정·이관·pending을 구현했다. 실제 연결·설치 완료 여부는 [3단계 구현 상태](docs/phase3/implementation-status.md)를 따른다. Phase 3 CLI registry는 Host API allowlist가 아니다. Host 시험은 사용자 결정에 따라 격리된 로컬 환경으로 한정한다.
+
 ## 착수 전에 읽을 것
 
 1. [구조·기술·폴더·모듈](docs/pmt-docs/architecture.md): 전체 방향과 담당 책임.

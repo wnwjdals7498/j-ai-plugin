@@ -1,0 +1,59 @@
+{
+  "core_version": "0.3.0",
+  "db_schema": 4,
+  "kind": "phase3-f15-final-package-snapshot",
+  "manifest_sha256": "246aca993d291470942c3797e0fd90ac3fdf6e702b935c2acaafbe61151b09e5",
+  "output": "docs/phase3/evidence/local-acceptance/package-snapshot/0.3.0",
+  "package_version": "0.3.0",
+  "products": {
+    "claude": {
+      "file_count": 81,
+      "manifest_sha256": "db1a7df3d76edf6379deb61aa8645f4b487d875b0b67199ab267dab803702baf",
+      "zip_sha256": "bcbbf8095cd62103efdfb61777a236b25b4feb59ee1047ddec2949a7d9be0e74"
+    },
+    "codex": {
+      "file_count": 82,
+      "manifest_sha256": "76139d6410aa7817f4ef7e3c542da1d48bc1d8efb58bed858d83699e71cf3780",
+      "zip_sha256": "f56d8f6e10d3f23c555309d46d605aaac08f2a4422ec2e7c529f15b7ce923f3b"
+    },
+    "opencode": {
+      "file_count": 81,
+      "manifest_sha256": "f09e7e94341700b798130da4a920fce0343800b1554ead1c6c45a6cae81576d3",
+      "zip_sha256": "46da8e4cc6a66ccf312a3948e8ba1dcee26f6b750bd6c03191850ea137bf8860"
+    }
+  },
+  "schema_version": 1,
+  "source_commit": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+  "source_sha256": {
+    "pyproject.toml": "1d6c2c39ab698a886931cab67ff943f516f9644cc7374ec5ee88244e01346da0",
+    "scripts/build_plugins.py": "9ce2cb154090a93c7b7791d155a845aeef898c294fa375c7f6ee12ac37cd84dc",
+    "src/pmt/__init__.py": "3174c4a1fb3b0e4a24c27187104f1c74910f8a934c95219c89e84c0980ba40dc",
+    "src/pmt/db.py": "32ce79a72a8cfb1b08f91ebc2eca8ed5b3533c10850c06f10822fc975bad41ec"
+  },
+  "unpacked_cli_smoke": {
+    "claude": {
+      "core_version": "0.3.0",
+      "cwd": "unrelated isolated directory",
+      "db_identity_created": true,
+      "schema_version": 4,
+      "status": "passed",
+      "stdout_json_envelopes": 1
+    },
+    "codex": {
+      "core_version": "0.3.0",
+      "cwd": "unrelated isolated directory",
+      "db_identity_created": true,
+      "schema_version": 4,
+      "status": "passed",
+      "stdout_json_envelopes": 1
+    },
+    "opencode": {
+      "core_version": "0.3.0",
+      "cwd": "unrelated isolated directory",
+      "db_identity_created": true,
+      "schema_version": 4,
+      "status": "passed",
+      "stdout_json_envelopes": 1
+    }
+  }
+}

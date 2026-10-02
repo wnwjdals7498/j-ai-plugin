@@ -49,3 +49,20 @@ INFO 기본, WARNING은 지연·차단·비필수 저장 실패, ERROR는 동작
 - 운영 시험은 디스크/로그 쓰기 실패, DB 경합, 강제 종료, callback 중복, 보존 예외, 비밀 필터, 회전 상한을 재현한다. 기준은 [P2-LOCK/RUN/CANCEL/DATA/OBS](development.md#필수-시험과-증거)다.
 
 검증 manifest에는 시험 ID·정의 버전, 실제 명령·종료 코드, 실행 시각, commit/dirty 지문, 환경/의존성/설정/입력 지문, 실행자·correlation ID, 증거 참조를 남긴다. 상세 기존 규약은 [1단계 로깅](../phase1/logging.md)을 재사용한다.
+
+## 3단계 Host·연결·복구
+
+Host만 `host` extra를 설치하고 `pmt-host`로 별도 data/config root를 선택한다. 서버는 한 프로세스로 SQLite·resource를 소유한다. 관리자 명령에서 기기를 발급·회전·폐기하고 필요한 scope/read/write/runtime/review/admin 권한을 선택한다. credential과 versioned claim key 값은 안전한 로컬 환경 설정에 둔다. HTTP JSON은 1MiB, resource는 8MiB, transfer ZIP은 64MiB 상한이다. 기본 인증서를 검증하며 redirect를 따라가지 않는다.
+
+클라이언트 `pmt storage configure`는 mode·endpoint·credential 환경변수 이름·device/namespace·workspace mapping을 받고 TLS/호환·principal·session 검증 뒤 config hash CAS로 게시한다. `probe`는 실제 연결 확인, `status`는 비밀 없는 로컬 설정 상태다. hosted 실패 시 local DB를 열지 않는다. 현재 실행/설치 수용과 외부 배포 미실행은 [실측 상태](../phase3/implementation-status.md)를 확인한다.
+
+| 관찰·복구 | 현재 기준 |
+|---|---|
+| 반복 실행 관찰 | 최근 상태와 next poll만 반환; 변화/조치가 있을 때 제어 event/notice 기록 |
+| control·native ACK | 원 요청·source/context·nonce·control/run revision·실제 opaque handle 대조; private prompt는 일반 metadata/log 제외 |
+| 응답 유실 | 원 request ID+semantic fingerprint로 현재 권한 아래 조회; 이미 반영됐으면 추가 write 없음 |
+| Host 중단 중 종료 | 이미 attached 된 own local spool의 actual receipt/output hash만 수집; 새 파일 작업/dispatch/claim 금지 |
+| pending 재연결 | 원 owner/device/env/session·source·scope·revision 확인, stale/conflict/unknown 보존; body/ID 바꾸어 우회 금지 |
+| backup·restore | quiescent 원본→sanitized manifest/SQLite/resources→빈 target import→ID/FK/hash 확인; 원본 삭제·자동 primary 전환 없음 |
+
+진단 필드는 request/run/scope/source/context/batch/hash/count·단계·코드·시각·시간을 사용한다. credential·전체 대화·native prompt·argv/env·PID·로컬 절대경로는 공유 metadata/일반 로그에 기록하지 않는다. 파일 effect와 DB commit의 중단 지점은 journal 및 실제 파일 hash로 판단한다. Windows 공유 잠금은 제한된 재시도 후 unknown으로 유지하며 복구본 삭제·다른 실행 재시작·점유 해제로 처리하지 않는다.

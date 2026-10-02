@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "phase3-f15-focused-followup",
+  "recorded_on": "2026-10-02",
+  "aggregate_ref": "f15-local-acceptance.json",
+  "aggregate_status": "failed",
+  "aggregate_group": "host_source_metadata_scope_isolation",
+  "aggregate_exit_code": 1,
+  "aggregate_counts": {"errors": 1},
+  "aggregate_failure_detail": "The F15 runner intentionally retained only the pytest summary, not the exception text or captured payload. The failed group was rerun alone; no root cause is inferred from a later pass.",
+  "focused_command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_source_metadata.py -q --tb=short --show-capture=all --basetemp=.pmt-test/f15-source-metadata-rerun",
+  "focused_exit_code": 0,
+  "focused_counts": {"passed": 1},
+  "focused_duration_seconds": 5.16,
+  "focused_tier": "isolated loopback HTTPS Host metadata fixture",
+  "disposition": "aggregate failure remains recorded; focused follow-up passed but does not promote the aggregate to pass"
+}

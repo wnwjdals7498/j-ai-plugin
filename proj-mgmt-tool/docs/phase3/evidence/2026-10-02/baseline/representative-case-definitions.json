@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "purpose": "Reusable PMT3 scenario definitions. Each case retains its own semantic input and acceptance; only cases with an observed phase2 execution are measurable baselines.",
+  "cases": [
+    {
+      "id": "new-plan-full-graph-render",
+      "scenario": "Create a complete new requirement and implementation graph, validate it, and render the full graph and documents.",
+      "baseline_ref": "phase2-planning-full-transfer.json",
+      "status": "measured_fixture",
+      "quality_tier": "fixture"
+    },
+    {
+      "id": "partial-plan-change",
+      "scenario": "Change one graph node and render only semantically affected document sections while preserving unrelated content.",
+      "baseline_ref": null,
+      "status": "not_run",
+      "reason": "No phase2 partial-render execution or source artifact is preserved."
+    },
+    {
+      "id": "resume-existing-plan",
+      "scenario": "Resume a previously saved planning graph from its pinned source and continue from the last accepted node state.",
+      "baseline_ref": null,
+      "status": "not_run",
+      "reason": "No matching phase2 resume receipt and pinned graph artifact are preserved."
+    },
+    {
+      "id": "parallel-investigation-context",
+      "scenario": "Supply the same scope and required references to independent investigation workers and include all follow-up reads.",
+      "baseline_ref": null,
+      "status": "not_run",
+      "reason": "No phase2 investigation context bundle or detailed-read receipts are preserved."
+    },
+    {
+      "id": "ambiguous-requirement",
+      "scenario": "Keep an unresolved requirement explicit, request clarification, and preserve its acceptance criteria without guessing.",
+      "baseline_ref": null,
+      "status": "not_run",
+      "reason": "No matching phase2 ambiguous-request execution and clarification history are preserved."
+    },
+    {
+      "id": "failed-operation-retry-and-rework",
+      "scenario": "Record a failed validation/render, authorized retry, repeated input, review, and resulting rework as separate costs.",
+      "baseline_ref": null,
+      "status": "not_run",
+      "reason": "No preserved phase2 retry/rework receipts exist for this scenario."
+    }
+  ]
+}

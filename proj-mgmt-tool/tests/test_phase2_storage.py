@@ -6,16 +6,22 @@ from pathlib import Path
 import pytest
 
 import pmt.db as db_module
-from pmt.db import Database
+from pmt.db import Database, SCHEMA_VERSION
 from pmt.errors import PmtError
 
 
 def _schema2(tmp_path):
     db = Database(tmp_path / "data", tmp_path / "config")
+    old_request = {"protocol_version": 1, "operation": "schema2-replay-proof",
+                   "request_id": "00000000-0000-4000-8000-000000000099", "actor": "legacy-actor",
+                   "session_id": "legacy-session", "payload": {"keep": True}, "source": {"product": "test"}}
+    old_response, old_code = db.run_request(old_request, lambda _conn, _req: {"preserved": True})
+    assert old_code == 0
     with db.connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
         for name in ("project_baselines", "operation_journal", "run_progress", "scope_locks",
-                     "execution_runs", "execution_jobs", "step_specs", "plans", "routing_settings"):
+                     "execution_runs", "execution_jobs", "step_specs", "plans", "routing_settings",
+                     "phase3_outbox", "phase3_journal", "phase3_objects"):
             conn.execute(f"DROP TABLE IF EXISTS {name}")
         conn.execute("UPDATE meta SET value='2' WHERE key='schema_version'")
         conn.execute("INSERT INTO scopes(id,kind,slug,created_at,updated_at) VALUES('scope','project','p','t','t')")
@@ -25,24 +31,42 @@ def _schema2(tmp_path):
         conn.execute("INSERT INTO artifacts(id,scope_id,sha256,size_bytes,relative_path,state,created_at) VALUES('artifact','scope','hash',0,'resource','ready','t')")
         conn.execute("INSERT INTO verifications(id,definition_id,definition_version,target_id,environment_id,input_fingerprint,outcome,completed_at) VALUES('verification','d','1','record','env','fp','pass','t')")
         conn.commit()
-    return db
+    return db, old_request, old_response
 
 
-def test_schema3_migration_preserves_schema2_and_is_repeatable(tmp_path):
-    old = _schema2(tmp_path)
+def test_schema4_migration_preserves_schema2_and_is_repeatable(tmp_path):
+    old, old_request, old_response = _schema2(tmp_path)
     migrated = Database(old.root, old.config_root)
     with migrated.connect() as conn:
-        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == '3'
+        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == str(SCHEMA_VERSION)
         assert tuple(conn.execute("SELECT id,scope_id FROM records WHERE id='record'").fetchone()) == ('record', 'scope')
         assert conn.execute("SELECT owner_session FROM claims WHERE record_id='record'").fetchone()[0] == 'session'
         assert conn.execute("SELECT id FROM verifications").fetchone()[0] == 'verification'
         assert conn.execute("SELECT event_id FROM events").fetchone()[0] == 'event'
         assert len(list(old.root.glob('pmt-schema2-*.sqlite3'))) == 1
+        assert len(list(old.root.glob('pmt-schema3-*.sqlite3'))) == 1
         assert conn.execute("SELECT value FROM meta WHERE key='maintenance_owner'").fetchone()[0] == ''
+        request_owner = conn.execute("SELECT actor,session_id FROM requests WHERE request_id=?",
+                                     (old_request["request_id"],)).fetchone()
+        assert tuple(request_owner) == ("legacy-actor", "legacy-session")
+    schema3_backup = next(old.root.glob('pmt-schema3-*.sqlite3'))
+    with sqlite3.connect(schema3_backup) as conn:
+        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == '3'
+        assert tuple(conn.execute("SELECT id,scope_id FROM records WHERE id='record'").fetchone()) == ('record', 'scope')
+        assert conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='phase3_objects'").fetchone() is None
+        request_owner = conn.execute("SELECT actor,session_id FROM requests WHERE request_id=?",
+                                     (old_request["request_id"],)).fetchone()
+        assert tuple(request_owner) == ("legacy-actor", "legacy-session")
+    replay, replay_code = migrated.run_request(old_request, lambda *_: pytest.fail("legacy request handler replayed"))
+    assert replay_code == 0 and replay == old_response
+    wrong_owner = {**old_request, "session_id": "different-session"}
+    rejected, rejected_code = migrated.run_request(wrong_owner, lambda *_: pytest.fail("wrong owner handler replayed"))
+    assert rejected_code == 3 and rejected["error"]["code"] == "request_owner_mismatch"
     Database(old.root, old.config_root)
     with migrated.connect() as conn:
         assert conn.execute("SELECT count(*) FROM plans").fetchone()[0] == 0
         assert len(list(old.root.glob('pmt-schema2-*.sqlite3'))) == 1
+        assert len(list(old.root.glob('pmt-schema3-*.sqlite3'))) == 1
 
 
 def test_phase2_relationship_checks_active_uniqueness_and_cas_fields(tmp_path):
@@ -72,7 +96,7 @@ def test_future_schema_rejected_without_mutation(tmp_path):
 
 
 def test_schema_migration_failure_rolls_back_and_keeps_backup(tmp_path, monkeypatch):
-    db = _schema2(tmp_path)
+    db, _old_request, _old_response = _schema2(tmp_path)
     monkeypatch.setattr(db_module, 'PHASE2_SCHEMA', "CREATE TABLE transient(id TEXT); SELECT invalid_sql;")
     with pytest.raises(sqlite3.OperationalError):
         Database(db.root, db.config_root)

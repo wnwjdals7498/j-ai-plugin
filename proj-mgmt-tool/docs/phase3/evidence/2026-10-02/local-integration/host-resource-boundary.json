@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "kind": "phase3-host-resource-boundary-validation",
+  "recorded_on": "2026-10-02",
+  "tier": "isolated local SQL/filesystem fixtures and loopback HTTPS",
+  "resource_api": {
+    "module": "src/pmt/host/resources.py",
+    "upload_limit_bytes": 8388608,
+    "content_addressed_path": "resources/objects/<sha256>",
+    "retry_policy": "no-replace link; retry only Windows sharing error 32/33, four attempts, total delay at most 500ms",
+    "persistent_sharing_lock": "retryable resource_io_unknown; stage and journal preserved for authenticated same-request recovery",
+    "private_directive": "P2 read_step_directive/current workspace scope grant + current run/session/version + owner/source-bound F5 context; explicit F9 child grant required",
+    "generic_context_projection_upload": "forbidden",
+    "session_environment": "registered nonempty session and environment required for publish/read/recover",
+    "core_schema_bump": false
+  },
+  "local_tests": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_host_resources.py tests/test_phase3_host_application.py tests/test_phase3_host_auth.py -q --tb=short --show-capture=no --basetemp=.pmt-test/f11-content-address-final",
+    "exit_code": 0,
+    "passed": 16,
+    "duration_seconds": 22.36,
+    "coverage": [
+      "hash-bound publish/read, replay, tamper detection and same-scope content deduplication",
+      "scope/device/session authorization, missing session/environment rejection and private-purpose downgrade protection",
+      "actual P2/F5 current-owner directive read and F9 child scope-binding read",
+      "stale context, removed scope lock, wrong owner and stale directive version rejection",
+      "bounded WinError 32 retry, persistent sharing lock recovery with same request, and no retry for other file errors",
+      "staged and published-file recovery across a simulated DB commit interruption"
+    ]
+  },
+  "loopback_https_tests": [
+    {
+      "test": "test_https_resources_are_hash_bound_private_bounded_and_tls_verified",
+      "exit_code": 0,
+      "passed": 1,
+      "duration_seconds": 3.0,
+      "observed": "8 MiB bounded upload/readback, hash check, cross-scope denial, oversize rejection and wrong-CA rejection"
+    },
+    {
+      "test": "test_real_https_source_snapshot_f2_query_and_local_only_rejection",
+      "exit_code": 0,
+      "passed": 1,
+      "duration_seconds": 2.58,
+      "observed": "graph snapshot upload/readback, Host source pointer, F2 rebuild/query, F5 bounded response validation and local-only rejection"
+    },
+    {
+      "tests": [
+        "test_real_https_two_clients_compatibility_replay_and_claim_race",
+        "test_remote_scope_and_device_revocation_apply_to_cached_requests"
+      ],
+      "exit_code": 0,
+      "passed": 2,
+      "duration_seconds": 3.91,
+      "observed": "two authenticated clients, request replay and claim race, scope filtering and device revocation on cached requests"
+    }
+  ],
+  "limitations": [
+    "Loopback HTTPS fixtures use a generated local certificate and isolated temporary databases.",
+    "No external reverse proxy, deployed Host, Linux Host or production installation was tested.",
+    "The separate Windows fixture sharing-lock and readonly-database errors remain documented in windows-fixture-errors.json; targeted runs after the fixes passed, but the failures are retained as historical fixture observations."
+  ]
+}

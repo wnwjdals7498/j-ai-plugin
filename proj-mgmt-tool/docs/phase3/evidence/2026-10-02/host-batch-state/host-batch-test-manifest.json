@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "phase3-host-f9-batch-state",
+  "recorded_on": "2026-10-02",
+  "tests": [
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_host_batch_state.py tests/test_phase3_host_data.py tests/test_phase3_batch.py::test_actual_prepare_binds_two_existing_queued_runs_and_builds_verified_f5_contexts -q --tb=short --show-capture=no --basetemp=.pmt-test/host-batch-final-verified",
+      "exit_code": 0,
+      "passed": 7,
+      "duration_seconds": 18.25,
+      "evidence_tier": "isolated actual HostApplication/DataExtension + SQLite/HostResourceStore and LocalStore F9 regression",
+      "coverage": [
+        "Two real queued P2 Steps with same canonical Host workspace, distinct scope paths, current SourcePin and Host graph snapshot",
+        "Host prepare delegates to Core F9 union claim and verified per-Step F5 contexts",
+        "read_step_batch validates owner, revision, current source, directive hashes, context refs, criteria, scope union and single slot",
+        "LocalStore read_step_batch fails closed with host_connection_required",
+        "P2 actual handle attachment is reused by the Core F9 binding hook and bind_step_batch accepts no handle input",
+        "Owner-published structured result report plus P2 stop receipt is hash-checked, linked to the bound parent run, and collected into two child results",
+        "Wrong actor access and a tampered parent report hash are rejected"
+      ],
+      "external_provider_calls": 0,
+      "runner_processes": 0
+    },
+    {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_context.py -q --tb=short --show-capture=no --basetemp=.pmt-test/host-batch-context-regression",
+      "exit_code": 1,
+      "passed": 16,
+      "errors": 1,
+      "error": "Windows fixture setup failed while persisting its initial evidence resource: SQLite reported 'attempt to write a readonly database'; affected test body did not run",
+      "coverage_note": "F5 full regression is incomplete; the targeted Host/Local F9 tests above passed."
+    }
+  ],
+  "host_f9_wire": {
+    "prepare_step_batch": "run_refs, canonical workspace URI, repository_id, relative_graph_path, expected_source, optional context_budget, event_id",
+    "bind_step_batch": "batch_ref, parent_run_id, event_id; no handle supplied by caller",
+    "collect_step_batch": "batch_ref, parent_run_id, expected_run_revision, event_id; reads the stored parent result/report itself",
+    "read_step_batch": "batch_ref, parent_run_id, expected_run_revision; returns bounded current metadata only"
+  },
+  "limits": {
+    "http_transport": "not_run",
+    "installed_products": "not_run",
+    "external_models": "not_called",
+    "linux_or_deployment": "not_run",
+    "model_quality": "not_assessed"
+  }
+}

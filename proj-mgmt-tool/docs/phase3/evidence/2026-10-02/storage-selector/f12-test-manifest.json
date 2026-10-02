@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "phase3-storage-selector-validation",
+  "recorded_on": "2026-10-02",
+  "f12_storage_tests": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_storage_config.py -q --tb=short --show-capture=no --basetemp=.pmt-test/f12-final",
+    "exit_code": 0,
+    "passed": 10,
+    "duration_seconds": 2.89,
+    "coverage": [
+      "Local and hosted profile validation, stable ConfigRoot environment UUID and expected-hash CAS",
+      "TLS/compatibility/session probe before atomic settings publication; incompatible and actor-mismatched probes preserve prior settings",
+      "hosted selector routes allowlisted requests through HttpStore and never constructs a LocalStore fallback",
+      "local absolute checkout paths are replaced by canonical workspace IDs and are absent from the outbound request",
+      "two repository/project/branch mappings resolve independently and Host rejects a cross-scope request",
+      "native hook event IDs and session are preserved while only actor=hook record_event is rebound to the authenticated actor with original_actor provenance",
+      "CLI storage configure/status return protocol JSON and create no local database in the ConfigRoot-only setup flow"
+    ]
+  },
+  "local_hook_regressions": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_hooks.py tests/test_hook_acceptance.py -q --tb=short --show-capture=no --basetemp=.pmt-test/f12-hooks-final",
+    "exit_code": 0,
+    "passed": 34,
+    "duration_seconds": 10.58,
+    "product_calls": "local fixtures only; no external model/provider calls"
+  },
+  "boundary": {
+    "local_default": "LocalStore behavior and existing hook CLI pending replay preserved",
+    "hosted_mode": "HttpStore for Host allowlisted business operations; explicit fail-closed result for unsupported client-local operations",
+    "credentials": "environment-variable reference only in storage.json; no value is stored or returned",
+    "workspace_paths": "client ConfigRoot only; canonical workspace and relative graph path on Host requests",
+    "hosted_local_runtime": "not connected; local Git/runner operations remain explicit unavailable until the hosted runtime adapter is connected",
+    "product_installation": "not_run",
+    "external_models": "not_called"
+  },
+  "limitations": [
+    "No hosted Git edit, document publish, CLI/native runner or model operation is claimed as complete.",
+    "Native hook events require PMT_SCOPE_ID to match one configured project mapping; scope-less events fail closed.",
+    "Device actor is the server compatibility actor. Business request actor mismatches are rejected."
+  ]
+}

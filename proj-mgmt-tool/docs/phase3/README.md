@@ -6,6 +6,8 @@
 
 기능별 실제 구현 배정은 [상세 구현 계획](implementation-plan.md)과 [구현 연결 규격](implementation-interfaces.md)을 기준으로 한다. `gpt-6-luna` 3개가 영역별 계획을 병렬 작성했고, 기능 명세의 48개 예정 시험과 단계별 처리·오류/복구·인계·통합 관문을 연결했다. 계획의 논리 Step ID는 실제 PMT UUID와 구별한다.
 
+실행 중 확인 범위는 [구현 상태](implementation-status.md), Host 검증 환경은 [사용자 범위 결정](scope-decisions.md)을 따른다.
+
 ## 기능 명세 안내
 
 | 기능 | 문서 |

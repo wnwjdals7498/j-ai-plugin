@@ -1,0 +1,356 @@
+{
+  "acceptance_command": [
+    "python.exe",
+    "scripts/verify_phase3_local.py",
+    "--acceptance",
+    "--source-stable"
+  ],
+  "core_version": "0.3.0",
+  "db_schema": 4,
+  "environment": {
+    "cryptography": "50.0.2",
+    "deployment_tier": "loopback HTTPS with isolated Host data/config roots",
+    "fastapi": "0.142.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.13",
+    "sqlite": "3.50.4",
+    "uvicorn": "0.54.0"
+  },
+  "exit_code": 1,
+  "external_models": "not_called",
+  "f14_hosted_local_runtime_and_outbox": "included_and_passed",
+  "kind": "phase3-f15-local-acceptance",
+  "linux_or_public_deployment": "not_run",
+  "manifest_sha256": "05dfbf700da323cf0fe19c823f524a76e46cc15bf23b25a943141435400f96e7",
+  "measurement_cost_and_tokens": {
+    "status": "not_assessed_here",
+    "tokens": {
+      "actual": null,
+      "estimate": null,
+      "status": "unknown"
+    }
+  },
+  "missing_required_groups": [],
+  "model_quality": "not_assessed",
+  "native_product_installation": "not_run",
+  "overall_acceptance": "partial_pending_native_product_remote_and_full_model_measurement",
+  "package_snapshot": {
+    "immutable_product_package": "not_built_source_still_changing",
+    "isolated_wheel_test": "temporary wheel built and installed inside pytest fixture",
+    "update_fixture": "synthetic distribution metadata revision 0.3.0.post1; runtime core remains 0.3.0"
+  },
+  "recorded_on": "2026-10-02T15:06:37.005812Z",
+  "remote_host": "not_run",
+  "schema_version": 1,
+  "source_changes_during_run": [
+    {
+      "after_test_group": "installed_package_local_and_https",
+      "changed_source_paths": [
+        "tests/test_phase3_batch.py",
+        "tests/test_phase3_host_network.py"
+      ]
+    },
+    {
+      "after_test_group": "https_backup_transfer_and_isolated_restore",
+      "changed_source_paths": [
+        "tests/test_phase3_batch.py",
+        "tests/test_phase3_host_network.py"
+      ]
+    },
+    {
+      "after_test_group": "hosted_local_file_effects_and_outbox",
+      "changed_source_paths": [
+        "tests/test_phase3_batch.py",
+        "tests/test_phase3_host_network.py"
+      ]
+    },
+    {
+      "after_test_group": "installed_hosted_runtime_cli",
+      "changed_source_paths": [
+        "tests/test_phase3_batch.py",
+        "tests/test_phase3_host_network.py"
+      ]
+    },
+    {
+      "after_test_group": "hosted_client_plan_metadata_and_local_routing",
+      "changed_source_paths": [
+        "tests/test_phase3_batch.py",
+        "tests/test_phase3_host_network.py"
+      ]
+    },
+    {
+      "after_test_group": "host_source_metadata_scope_isolation",
+      "changed_source_paths": [
+        "tests/test_phase3_batch.py",
+        "tests/test_phase3_host_network.py"
+      ]
+    }
+  ],
+  "source_commit": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+  "source_sha256": {
+    "docs/phase3/contracts.md": "b4d113c1de3b3570d85c6f5f48367fb4286d4ce4fe5d51f7fd9a88d1ea8c6ad9",
+    "docs/phase3/evidence/2026-10-02/local-integration/README.md": "cdcd3d1640ad8026f9e6cf3fa9a6103d9e0c6849b12fd547e9c045c6deae9d80",
+    "docs/phase3/evidence/local-acceptance/README.md": "08028109d90c4b4ea09b1657dd7ae714a75791baf5bc75a521a18534cdc10137",
+    "docs/phase3/implementation-plan.md": "2d6bccc38ea2be68872b8555644bf6c13f7989d6b1fcd56287d1631201f1120b",
+    "docs/phase3/implementation-status.md": "a7a0eee6e322df12e7594246a339ff5fdaec2e33cf949e17fea87d1911b3073f",
+    "docs/phase3/plan-context-execution.md": "7b1aa6a9edbfdcdbb97882df1b9b07cc926057a078d91a97076008cd656c1151",
+    "docs/phase3/plan-graph-document.md": "9281595f45bc55f08d9a860373c2f2e1d2e2eaf48a168d7110acf46bfaee30a7",
+    "docs/phase3/plan-host-integration.md": "897431d82b9e1df2f24ab7d98575759ae65ba6094eca4d9375e09e231af1fdac",
+    "docs/phase3/spec-context-execution.md": "cfbb6e6a9aa710454c1b3ede0287fda14c11d4f6d28a4d6cdd7f9ad9b0cc5376",
+    "docs/phase3/spec-graph-document.md": "4114df1ae5e8453549537cf4ca507e1d095eb8f507b694e40bcd825cc987079e",
+    "docs/phase3/spec-host-integration.md": "359a405f7b332b21477786ffb83af5a49e486394aa95ca2e57532a0077e67814",
+    "docs/phase3/spec-local-measurement.md": "f4b1132684ca81c2caf1c11dcdec098e62e3ef0963f818e806fd73a669cb9742",
+    "docs/phase3/traceability.md": "0514870c9d6cdfef0a4e57eb9ed34c4f2cd31142e552a3318062d99d1c7f7a1a",
+    "docs/phase3/verification.md": "4569d4e6eda53b8ac407ac37d4f274fe3f3e575bba42f6fc649cc4bac0e88011",
+    "pyproject.toml": "1d6c2c39ab698a886931cab67ff943f516f9644cc7374ec5ee88244e01346da0",
+    "scripts/build_plugins.py": "9ce2cb154090a93c7b7791d155a845aeef898c294fa375c7f6ee12ac37cd84dc",
+    "scripts/verify_phase3_local.py": "c2b14ef6ceb30e5cd42f932b48dce75ab9b191e4656c9fff6b15b20e82396133",
+    "src/pmt/__init__.py": "3174c4a1fb3b0e4a24c27187104f1c74910f8a934c95219c89e84c0980ba40dc",
+    "src/pmt/cli.py": "3afa13b986dc37f15ea6c914b6335502d5ec9ea2ed0f35ae03b618cece6c919d",
+    "src/pmt/db.py": "32ce79a72a8cfb1b08f91ebc2eca8ed5b3533c10850c06f10822fc975bad41ec",
+    "src/pmt/efficiency/batch.py": "cc4301db75b9a3f6f5f914565a514c177bc59645d86b2592e0bed97d71eb92e4",
+    "src/pmt/efficiency/context.py": "69a0857a19b951c94fd3cc8a20ff25cfee39e2bf871969fdea6da991920a5134",
+    "src/pmt/efficiency/control.py": "aa7c5a566035ea040beaa55f6dc80c9749eab35d1ea8f902d4c32d4af20f0854",
+    "src/pmt/efficiency/documents.py": "9e3b67b99ac9d6e330c0db73e96d5d97b59641e08a2d2aaef05c5860159e699d",
+    "src/pmt/efficiency/graph.py": "5735c409b319d59a4dec79f7ecc98ce50b22ebc8b09b41c58caa0f997257072f",
+    "src/pmt/efficiency/measurement.py": "7da46cfbd4e99cbcb6bc5655f99cc9896a3e832491235ee8c218ed0a281e376d",
+    "src/pmt/efficiency/measurement_ops.py": "8c17d920cae4a5bb7bcff4e7a11f6bc2c935da3651c41cafc6c111ba21766d2a",
+    "src/pmt/efficiency/results.py": "21829b8da41704b906ffa1a85bca21de5ca577bf8e463fde6ecf2b17c0cf0198",
+    "src/pmt/efficiency/reuse.py": "89144789ff075a89e827243d4855ea72f994d41224360d6255a3ab5efe284126",
+    "src/pmt/efficiency/source.py": "2d1d8559c8d03a88312e47a146d8aae92813295e9cb010910862d8b5936b2ea0",
+    "src/pmt/efficiency/storage.py": "6aa3b22052897dd1bfe7de6c974cf91fb3d2566e9240dfbd23a6b5b28c18bc2a",
+    "src/pmt/execution/service.py": "9d0efd085104c98310ab8d4fb860ace02bf25e24998f0dd70c8f4ef18daa8681",
+    "src/pmt/host/application.py": "3baee9de4bf713c9f64a4ae18a4930db4007726746473153a574805fe20d1b35",
+    "src/pmt/host/auth.py": "1043ec73da8e69d6bbf205ea8b0eebd90f5ef607dcec04cf50e92369340a1c8f",
+    "src/pmt/host/control_state.py": "19413d6b0f7ad3f09b8155325c1c8994b1e19849e8941cd41a938f009705df54",
+    "src/pmt/host/data.py": "16a84835029c8c46f5f7a81d8b647bf634ac7a7321679c4f8d688ba68a906e40",
+    "src/pmt/host/file_effects.py": "b31892fc5881b8bc34bfea06521aeb8cc48bbe2a79362aad623bcf75a808797c",
+    "src/pmt/host/plans.py": "486bbcea736f92fbfafe1ba6e3818a21db2a0753854178eb466a9513fdb72778",
+    "src/pmt/host/resources.py": "2e95e868ef46f28767c7d027dc0994d75a0c0f7498f2a2babc8d19c05ef0149c",
+    "src/pmt/host/server.py": "39e14afa5b5930c2ee39d9dded3bc917fb45f4c2598749e50cfa1d6efc780c9f",
+    "src/pmt/host/transfer.py": "d3c47aa4a8865d072009cd91834c682b408c0c06bccb8edfb9238e77acd7a501",
+    "src/pmt/hosted_files.py": "afdae0754b556125cb467f3bd7528954f92d94b9aad26a8c9be889f03df9521a",
+    "src/pmt/hosted_runtime.py": "ac69ba70a85f4d98b4b5db5de0c34bbbfb9ee724ea44c7607f72f9bf8c5af46e",
+    "src/pmt/http_store.py": "f7ce488ad28fc035e3b5924b74d9f2a4d0d2f1b8909b76fed0448b632df92bf6",
+    "src/pmt/migration.py": "f3955bc9b21829eda0d23ad3ff98615663244d6472365c0b14ea8af2248b817c",
+    "src/pmt/pending.py": "8095dc4ab2490dcf907f3d1799221b9b89702eb3c3465a82261126036d89f08b",
+    "src/pmt/phase2.py": "17e0c1b8cb853d94cd853e4616721e232be3f094601b5f4bf9ce6fa0cf73c3e5",
+    "src/pmt/phase2_common.py": "14205b2e0ced07b8add2c6a7d90191d070e39bd14e302fd194265eebf71cad7c",
+    "src/pmt/phase2_schema.py": "dc77dba458a9b358809909799edfa21b9d22eb24e65509e17310c0d247dfc8dc",
+    "src/pmt/phase3_schema.py": "e004753db42ec6f443ffa0908b9394a400dcff601c6f5eea97700f1b86397738",
+    "src/pmt/routing/client_config.py": "311f0297a835dc021af07f2dd50be8820515a0d696a4c5c044e396cfed74529c",
+    "src/pmt/runners/service.py": "89cd326f40f9abbe9fabcb1203e464ca43158a3b16f372d720831c8d950a3a76",
+    "src/pmt/runners/supervisor.py": "41cccaac12454e9b772d2f97e3ecbb4900c397d03c8eeb9ae2894ddf3e6c29c1",
+    "src/pmt/service.py": "eb6426e5ffb3ba5b8e995351c8e206c56cbf9dc59288ea688bb857514565167e",
+    "src/pmt/storage_config.py": "d74e3d6a34c88389717590c88a28ba0902b19d0d4b19458283dbfe51efe67c96",
+    "src/pmt/store.py": "5674b84f30422bb0764599679baa14554753ac19cee14f26128b4d0c367df903",
+    "tests/test_phase3_acceptance.py": "c1dec83b3cafbe816208d05c048f72503e1a210912aa5aca441488f6a393f418",
+    "tests/test_phase3_batch.py": "9afa84549e240cac45f1e671c388121ee2043b214d332d8bf1684492ac73255d",
+    "tests/test_phase3_context.py": "4589696a47fac9d7f9a466b6a1879d287af705b0cc9da2bd5d5202136f46ff83",
+    "tests/test_phase3_control.py": "d08e0b654e70a0276f7f44c603370fd3a491035801bce646044629e7c92225bc",
+    "tests/test_phase3_documents.py": "872e51a7b930dd85364769519f0fe2a527305e7342cf633cd026acea8bf20aeb",
+    "tests/test_phase3_graph.py": "c74d812f334258da7e57fd5b0b113e9745b9a6cef85e4a575c8fd297f9a5a9af",
+    "tests/test_phase3_host_application.py": "b5cb61d3562403191383f956b956efa1c02481cab05ea9581d6644dd390cc681",
+    "tests/test_phase3_host_auth.py": "0e63465bbf04a25fa0aed620a617f66f156c3a36994f7ccec0086955330c6162",
+    "tests/test_phase3_host_batch_state.py": "81933f628f22fd93f853088fea46e83e097115d365008a4f133b5b48d3d1a4d8",
+    "tests/test_phase3_host_control_state.py": "d5a29f659e18e58427976beac508d4f0f389c96906296237f6beba05aefa8b60",
+    "tests/test_phase3_host_data.py": "de08331ba788d8c25094d18c22cf821348ef0941253f7533a2776a47ef55db86",
+    "tests/test_phase3_host_network.py": "762d41afd8721a7e83810f4569bd9f76adbb1c7dec6a9440c3e17524299bf417",
+    "tests/test_phase3_host_resources.py": "c0dae1122ce952d06cbe2988448a6cd3960f5f4a245716fa4bd770a2a265e7a1",
+    "tests/test_phase3_hosted_cli.py": "c3099853844134511571a72e4fa39e0b2149188520a801eafe472e86a55ed0c1",
+    "tests/test_phase3_hosted_files.py": "2eebd1f0ccae915e0b266c099120ada2651f94e32272c847d3b684e23c644875",
+    "tests/test_phase3_hosted_planning.py": "a05896705a13648c115188d546295c0331b634199cee565519622855605ba2a7",
+    "tests/test_phase3_hosted_runtime.py": "bff1443fe5294abd29b612dd5ab31697c12e0551979f7bbdd1321d876209dd7e",
+    "tests/test_phase3_http_store.py": "7864afe964576f0da9b0f57f8e0dc69728643fdf853c4af0d02d889c2f4615fd",
+    "tests/test_phase3_local_integration.py": "45e1c3bb27ff90ce0cb689c9f52b50cd5da465c374619dfa579587abec39cc2c",
+    "tests/test_phase3_measurement.py": "bffbcacaaa97990938358181410c8e2b74f2bc361a87cc7b1c3c9dd960ab1206",
+    "tests/test_phase3_migration.py": "26dd479b20c412484e4125b39ee8cc901f5007becbc3250cf5435ab5bfb694f3",
+    "tests/test_phase3_pending.py": "5e51d71e0f12a43b18d8d33f31935df5a9d65628f0bdb72ae5ecd3978ae00091",
+    "tests/test_phase3_pending_http.py": "5ab6616b5419cd2b9e4e176e3bfb937b67c1195ce731e6b127d2b04f675a9742",
+    "tests/test_phase3_protocol.py": "7d4be3405b017d4a1a2fc79defead0c6ad323a3fcd686a14bb3a1429fcd49835",
+    "tests/test_phase3_quality_projection.py": "aee6c811255e7b42285533291e45485b6ed09f350afd47ac5d7850b212733aa9",
+    "tests/test_phase3_results.py": "3584fe9df2e4593b396a5f204c054034b283532a06a73560e6ed09934e48bc34",
+    "tests/test_phase3_reuse.py": "5e7757bb114fcc01e880416b385ff297965d801ca9a512340bdc5bf0cd1d594d",
+    "tests/test_phase3_source_metadata.py": "c2a8b2872bc840a2698680f3ecc447092289108954ea48d6ff71d0d632c53e7a",
+    "tests/test_phase3_storage_foundation.py": "e45933aa2813e7d5a8e6d22bbf7456bf2677acaf1bff3436ce12b31525e08066",
+    "tests/test_phase3_transfer.py": "b5316eb30791568bc3441ca4cf53f686e47a95b1c004ee2d90085f25d8a414ed",
+    "tests/test_phase3_transfer_http.py": "45fff8cc3f091686ec2f49efffc7518a90b74226e437356d8925e42e2c253ea2",
+    "tests/test_storage_config.py": "34770f1753d7ac148febbdb09ec6702d168112e80795cd9629353e1a2c60e93d"
+  },
+  "source_sha256_at_start": {
+    "docs/phase3/contracts.md": "b4d113c1de3b3570d85c6f5f48367fb4286d4ce4fe5d51f7fd9a88d1ea8c6ad9",
+    "docs/phase3/evidence/2026-10-02/local-integration/README.md": "cdcd3d1640ad8026f9e6cf3fa9a6103d9e0c6849b12fd547e9c045c6deae9d80",
+    "docs/phase3/evidence/local-acceptance/README.md": "08028109d90c4b4ea09b1657dd7ae714a75791baf5bc75a521a18534cdc10137",
+    "docs/phase3/implementation-plan.md": "2d6bccc38ea2be68872b8555644bf6c13f7989d6b1fcd56287d1631201f1120b",
+    "docs/phase3/implementation-status.md": "a7a0eee6e322df12e7594246a339ff5fdaec2e33cf949e17fea87d1911b3073f",
+    "docs/phase3/plan-context-execution.md": "7b1aa6a9edbfdcdbb97882df1b9b07cc926057a078d91a97076008cd656c1151",
+    "docs/phase3/plan-graph-document.md": "9281595f45bc55f08d9a860373c2f2e1d2e2eaf48a168d7110acf46bfaee30a7",
+    "docs/phase3/plan-host-integration.md": "897431d82b9e1df2f24ab7d98575759ae65ba6094eca4d9375e09e231af1fdac",
+    "docs/phase3/spec-context-execution.md": "cfbb6e6a9aa710454c1b3ede0287fda14c11d4f6d28a4d6cdd7f9ad9b0cc5376",
+    "docs/phase3/spec-graph-document.md": "4114df1ae5e8453549537cf4ca507e1d095eb8f507b694e40bcd825cc987079e",
+    "docs/phase3/spec-host-integration.md": "359a405f7b332b21477786ffb83af5a49e486394aa95ca2e57532a0077e67814",
+    "docs/phase3/spec-local-measurement.md": "f4b1132684ca81c2caf1c11dcdec098e62e3ef0963f818e806fd73a669cb9742",
+    "docs/phase3/traceability.md": "0514870c9d6cdfef0a4e57eb9ed34c4f2cd31142e552a3318062d99d1c7f7a1a",
+    "docs/phase3/verification.md": "4569d4e6eda53b8ac407ac37d4f274fe3f3e575bba42f6fc649cc4bac0e88011",
+    "pyproject.toml": "1d6c2c39ab698a886931cab67ff943f516f9644cc7374ec5ee88244e01346da0",
+    "scripts/build_plugins.py": "9ce2cb154090a93c7b7791d155a845aeef898c294fa375c7f6ee12ac37cd84dc",
+    "scripts/verify_phase3_local.py": "c2b14ef6ceb30e5cd42f932b48dce75ab9b191e4656c9fff6b15b20e82396133",
+    "src/pmt/__init__.py": "3174c4a1fb3b0e4a24c27187104f1c74910f8a934c95219c89e84c0980ba40dc",
+    "src/pmt/cli.py": "3afa13b986dc37f15ea6c914b6335502d5ec9ea2ed0f35ae03b618cece6c919d",
+    "src/pmt/db.py": "32ce79a72a8cfb1b08f91ebc2eca8ed5b3533c10850c06f10822fc975bad41ec",
+    "src/pmt/efficiency/batch.py": "cc4301db75b9a3f6f5f914565a514c177bc59645d86b2592e0bed97d71eb92e4",
+    "src/pmt/efficiency/context.py": "69a0857a19b951c94fd3cc8a20ff25cfee39e2bf871969fdea6da991920a5134",
+    "src/pmt/efficiency/control.py": "aa7c5a566035ea040beaa55f6dc80c9749eab35d1ea8f902d4c32d4af20f0854",
+    "src/pmt/efficiency/documents.py": "9e3b67b99ac9d6e330c0db73e96d5d97b59641e08a2d2aaef05c5860159e699d",
+    "src/pmt/efficiency/graph.py": "5735c409b319d59a4dec79f7ecc98ce50b22ebc8b09b41c58caa0f997257072f",
+    "src/pmt/efficiency/measurement.py": "7da46cfbd4e99cbcb6bc5655f99cc9896a3e832491235ee8c218ed0a281e376d",
+    "src/pmt/efficiency/measurement_ops.py": "8c17d920cae4a5bb7bcff4e7a11f6bc2c935da3651c41cafc6c111ba21766d2a",
+    "src/pmt/efficiency/results.py": "21829b8da41704b906ffa1a85bca21de5ca577bf8e463fde6ecf2b17c0cf0198",
+    "src/pmt/efficiency/reuse.py": "89144789ff075a89e827243d4855ea72f994d41224360d6255a3ab5efe284126",
+    "src/pmt/efficiency/source.py": "2d1d8559c8d03a88312e47a146d8aae92813295e9cb010910862d8b5936b2ea0",
+    "src/pmt/efficiency/storage.py": "6aa3b22052897dd1bfe7de6c974cf91fb3d2566e9240dfbd23a6b5b28c18bc2a",
+    "src/pmt/execution/service.py": "9d0efd085104c98310ab8d4fb860ace02bf25e24998f0dd70c8f4ef18daa8681",
+    "src/pmt/host/application.py": "3baee9de4bf713c9f64a4ae18a4930db4007726746473153a574805fe20d1b35",
+    "src/pmt/host/auth.py": "1043ec73da8e69d6bbf205ea8b0eebd90f5ef607dcec04cf50e92369340a1c8f",
+    "src/pmt/host/control_state.py": "19413d6b0f7ad3f09b8155325c1c8994b1e19849e8941cd41a938f009705df54",
+    "src/pmt/host/data.py": "16a84835029c8c46f5f7a81d8b647bf634ac7a7321679c4f8d688ba68a906e40",
+    "src/pmt/host/file_effects.py": "b31892fc5881b8bc34bfea06521aeb8cc48bbe2a79362aad623bcf75a808797c",
+    "src/pmt/host/plans.py": "486bbcea736f92fbfafe1ba6e3818a21db2a0753854178eb466a9513fdb72778",
+    "src/pmt/host/resources.py": "2e95e868ef46f28767c7d027dc0994d75a0c0f7498f2a2babc8d19c05ef0149c",
+    "src/pmt/host/server.py": "39e14afa5b5930c2ee39d9dded3bc917fb45f4c2598749e50cfa1d6efc780c9f",
+    "src/pmt/host/transfer.py": "d3c47aa4a8865d072009cd91834c682b408c0c06bccb8edfb9238e77acd7a501",
+    "src/pmt/hosted_files.py": "afdae0754b556125cb467f3bd7528954f92d94b9aad26a8c9be889f03df9521a",
+    "src/pmt/hosted_runtime.py": "ac69ba70a85f4d98b4b5db5de0c34bbbfb9ee724ea44c7607f72f9bf8c5af46e",
+    "src/pmt/http_store.py": "f7ce488ad28fc035e3b5924b74d9f2a4d0d2f1b8909b76fed0448b632df92bf6",
+    "src/pmt/migration.py": "f3955bc9b21829eda0d23ad3ff98615663244d6472365c0b14ea8af2248b817c",
+    "src/pmt/pending.py": "8095dc4ab2490dcf907f3d1799221b9b89702eb3c3465a82261126036d89f08b",
+    "src/pmt/phase2.py": "17e0c1b8cb853d94cd853e4616721e232be3f094601b5f4bf9ce6fa0cf73c3e5",
+    "src/pmt/phase2_common.py": "14205b2e0ced07b8add2c6a7d90191d070e39bd14e302fd194265eebf71cad7c",
+    "src/pmt/phase2_schema.py": "dc77dba458a9b358809909799edfa21b9d22eb24e65509e17310c0d247dfc8dc",
+    "src/pmt/phase3_schema.py": "e004753db42ec6f443ffa0908b9394a400dcff601c6f5eea97700f1b86397738",
+    "src/pmt/routing/client_config.py": "311f0297a835dc021af07f2dd50be8820515a0d696a4c5c044e396cfed74529c",
+    "src/pmt/runners/service.py": "89cd326f40f9abbe9fabcb1203e464ca43158a3b16f372d720831c8d950a3a76",
+    "src/pmt/runners/supervisor.py": "41cccaac12454e9b772d2f97e3ecbb4900c397d03c8eeb9ae2894ddf3e6c29c1",
+    "src/pmt/service.py": "eb6426e5ffb3ba5b8e995351c8e206c56cbf9dc59288ea688bb857514565167e",
+    "src/pmt/storage_config.py": "d74e3d6a34c88389717590c88a28ba0902b19d0d4b19458283dbfe51efe67c96",
+    "src/pmt/store.py": "5674b84f30422bb0764599679baa14554753ac19cee14f26128b4d0c367df903",
+    "tests/test_phase3_acceptance.py": "c1dec83b3cafbe816208d05c048f72503e1a210912aa5aca441488f6a393f418",
+    "tests/test_phase3_batch.py": "1edb8d7cac1c3bde8eff675d8458b9e59b55ef3ff8ef843b3afc3cf71761b188",
+    "tests/test_phase3_context.py": "4589696a47fac9d7f9a466b6a1879d287af705b0cc9da2bd5d5202136f46ff83",
+    "tests/test_phase3_control.py": "d08e0b654e70a0276f7f44c603370fd3a491035801bce646044629e7c92225bc",
+    "tests/test_phase3_documents.py": "872e51a7b930dd85364769519f0fe2a527305e7342cf633cd026acea8bf20aeb",
+    "tests/test_phase3_graph.py": "c74d812f334258da7e57fd5b0b113e9745b9a6cef85e4a575c8fd297f9a5a9af",
+    "tests/test_phase3_host_application.py": "b5cb61d3562403191383f956b956efa1c02481cab05ea9581d6644dd390cc681",
+    "tests/test_phase3_host_auth.py": "0e63465bbf04a25fa0aed620a617f66f156c3a36994f7ccec0086955330c6162",
+    "tests/test_phase3_host_batch_state.py": "81933f628f22fd93f853088fea46e83e097115d365008a4f133b5b48d3d1a4d8",
+    "tests/test_phase3_host_control_state.py": "d5a29f659e18e58427976beac508d4f0f389c96906296237f6beba05aefa8b60",
+    "tests/test_phase3_host_data.py": "de08331ba788d8c25094d18c22cf821348ef0941253f7533a2776a47ef55db86",
+    "tests/test_phase3_host_network.py": "00846ff59712bb130623b080add2141ac4448d84eb6db2acc7fe77a32416084f",
+    "tests/test_phase3_host_resources.py": "c0dae1122ce952d06cbe2988448a6cd3960f5f4a245716fa4bd770a2a265e7a1",
+    "tests/test_phase3_hosted_cli.py": "c3099853844134511571a72e4fa39e0b2149188520a801eafe472e86a55ed0c1",
+    "tests/test_phase3_hosted_files.py": "2eebd1f0ccae915e0b266c099120ada2651f94e32272c847d3b684e23c644875",
+    "tests/test_phase3_hosted_planning.py": "a05896705a13648c115188d546295c0331b634199cee565519622855605ba2a7",
+    "tests/test_phase3_hosted_runtime.py": "bff1443fe5294abd29b612dd5ab31697c12e0551979f7bbdd1321d876209dd7e",
+    "tests/test_phase3_http_store.py": "7864afe964576f0da9b0f57f8e0dc69728643fdf853c4af0d02d889c2f4615fd",
+    "tests/test_phase3_local_integration.py": "45e1c3bb27ff90ce0cb689c9f52b50cd5da465c374619dfa579587abec39cc2c",
+    "tests/test_phase3_measurement.py": "bffbcacaaa97990938358181410c8e2b74f2bc361a87cc7b1c3c9dd960ab1206",
+    "tests/test_phase3_migration.py": "26dd479b20c412484e4125b39ee8cc901f5007becbc3250cf5435ab5bfb694f3",
+    "tests/test_phase3_pending.py": "5e51d71e0f12a43b18d8d33f31935df5a9d65628f0bdb72ae5ecd3978ae00091",
+    "tests/test_phase3_pending_http.py": "5ab6616b5419cd2b9e4e176e3bfb937b67c1195ce731e6b127d2b04f675a9742",
+    "tests/test_phase3_protocol.py": "7d4be3405b017d4a1a2fc79defead0c6ad323a3fcd686a14bb3a1429fcd49835",
+    "tests/test_phase3_quality_projection.py": "aee6c811255e7b42285533291e45485b6ed09f350afd47ac5d7850b212733aa9",
+    "tests/test_phase3_results.py": "3584fe9df2e4593b396a5f204c054034b283532a06a73560e6ed09934e48bc34",
+    "tests/test_phase3_reuse.py": "5e7757bb114fcc01e880416b385ff297965d801ca9a512340bdc5bf0cd1d594d",
+    "tests/test_phase3_source_metadata.py": "c2a8b2872bc840a2698680f3ecc447092289108954ea48d6ff71d0d632c53e7a",
+    "tests/test_phase3_storage_foundation.py": "e45933aa2813e7d5a8e6d22bbf7456bf2677acaf1bff3436ce12b31525e08066",
+    "tests/test_phase3_transfer.py": "b5316eb30791568bc3441ca4cf53f686e47a95b1c004ee2d90085f25d8a414ed",
+    "tests/test_phase3_transfer_http.py": "45fff8cc3f091686ec2f49efffc7518a90b74226e437356d8925e42e2c253ea2",
+    "tests/test_storage_config.py": "34770f1753d7ac148febbdb09ec6702d168112e80795cd9629353e1a2c60e93d"
+  },
+  "source_stability_confirmation": "confirmed_by_runner_argument",
+  "source_tree": {
+    "dirty": true,
+    "tracked_and_untracked_entry_count": 677
+  },
+  "status": "inconclusive_source_changed_during_run",
+  "test_groups": [
+    {
+      "counts": {
+        "passed": 3
+      },
+      "elapsed_ms": 50071.882,
+      "evidence_tier": "isolated local tests with real in-process/loopback Host behavior",
+      "exit_code": 0,
+      "status": "passed",
+      "test_group": "installed_package_local_and_https",
+      "test_paths": [
+        "tests/test_phase3_acceptance.py"
+      ]
+    },
+    {
+      "counts": {
+        "passed": 1
+      },
+      "elapsed_ms": 8003.669,
+      "evidence_tier": "isolated local tests with real in-process/loopback Host behavior",
+      "exit_code": 0,
+      "status": "passed",
+      "test_group": "https_backup_transfer_and_isolated_restore",
+      "test_paths": [
+        "tests/test_phase3_transfer_http.py::test_loopback_https_import_backup_download_and_isolated_restore"
+      ]
+    },
+    {
+      "counts": {
+        "passed": 9
+      },
+      "elapsed_ms": 45078.191,
+      "evidence_tier": "isolated local tests with real in-process/loopback Host behavior",
+      "exit_code": 0,
+      "status": "passed",
+      "test_group": "hosted_local_file_effects_and_outbox",
+      "test_paths": [
+        "tests\\test_phase3_hosted_files.py"
+      ]
+    },
+    {
+      "counts": {
+        "passed": 3
+      },
+      "elapsed_ms": 23552.303,
+      "evidence_tier": "isolated local tests with real in-process/loopback Host behavior",
+      "exit_code": 0,
+      "status": "passed",
+      "test_group": "installed_hosted_runtime_cli",
+      "test_paths": [
+        "tests\\test_phase3_hosted_cli.py"
+      ]
+    },
+    {
+      "counts": {
+        "passed": 4
+      },
+      "elapsed_ms": 10237.824,
+      "evidence_tier": "isolated local tests with real in-process/loopback Host behavior",
+      "exit_code": 0,
+      "status": "passed",
+      "test_group": "hosted_client_plan_metadata_and_local_routing",
+      "test_paths": [
+        "tests\\test_phase3_hosted_planning.py"
+      ]
+    },
+    {
+      "counts": {
+        "passed": 1
+      },
+      "elapsed_ms": 5462.438,
+      "evidence_tier": "isolated local tests with real in-process/loopback Host behavior",
+      "exit_code": 0,
+      "status": "passed",
+      "test_group": "host_source_metadata_scope_isolation",
+      "test_paths": [
+        "tests\\test_phase3_source_metadata.py"
+      ]
+    }
+  ]
+}

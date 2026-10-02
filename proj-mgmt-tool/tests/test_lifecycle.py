@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from pmt.db import Database
+from pmt.db import Database, SCHEMA_VERSION
 from pmt.errors import PmtError
 from pmt.lifecycle import (claim_task, create_scope, finish_task, record_event, recover_claim,
                            release_claim, save_change, save_decision)
@@ -184,7 +184,7 @@ def test_v1_request_owner_migration_and_diagnostic_warning(tmp_path):
     db = Database(data, config)
     with db.connect() as conn:
         assert {"actor", "session_id"} <= {r[1] for r in conn.execute("PRAGMA table_info(requests)")}
-        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "3"
+        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == str(SCHEMA_VERSION)
     request = req("diagnostic_test")
     db.diagnostics.emit = lambda *_a, **_kw: False
     response, code = db.run_request(request, lambda *_: {"saved": True})

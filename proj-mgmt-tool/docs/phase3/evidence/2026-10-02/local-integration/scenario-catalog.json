@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "phase3-local-scenario-catalog",
+  "created_on": "2026-10-02",
+  "purpose": "Freeze comparable local fixtures and explicitly preserve cases without a valid legacy baseline.",
+  "evidence_tier": "fixture",
+  "common": {
+    "logical_goal": "Preserve the same requirement, acceptance criteria, scope, and resulting project artifacts while observing the cost of the local workflow.",
+    "invariants": [
+      "Keep all required criteria, prohibited scope, and uncertainty visible.",
+      "Use the same canonical source graph and scenario patch before baseline and optimized runs.",
+      "Never treat fixture quality as native-model quality.",
+      "Unknown token usage remains unknown; UTF-8 bytes and elapsed time are separate measurements.",
+      "Count detail reads, context builds, retries, review, and rework in addition to initial calls."
+    ],
+    "source_fixture": {
+      "path": "docs/phase3/evidence/2026-10-02/baseline/canonical-planning-graph.json",
+      "sha256": "978e608dac67e363a3e4fbde696ae6400c81b90c048052859267817330df4ff8",
+      "repository_commit": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+      "graph_schema": 1
+    },
+    "environment_rule": "Record Python, platform, SQLite, actual checkout commit, and legacy source fingerprints. Exact condition mismatch means not_comparable.",
+    "model_role": {"model": "none", "role": "deterministic local fixture; no provider/API calls"},
+    "quality_rule": "Only deterministic source, resource, DB, process, and declared criterion checks can pass here. Native-model semantic quality is not evaluated.",
+    "token_rule": {"status": "unknown", "actual": null, "estimate": null},
+    "measurement_schema": "pmt-efficiency-local-v1"
+  },
+  "cases": [
+    {
+      "id": "new-plan-full-graph-render",
+      "logical_goal": "Validate the complete canonical plan graph and render the same full plan artifacts.",
+      "input": {"fixture_ref": "common.source_fixture", "patch": null},
+      "acceptance": ["legacy validator reports valid and complete", "Markdown and canonical graph JSON hashes match the frozen output"],
+      "baseline_status": "measured_fixture",
+      "baseline_ref": "../baseline/phase2-planning-full-transfer.json",
+      "measurement_case_id": "phase2-canonical-plan-full-graph-render",
+      "baseline_condition_fingerprint": "c6574b6596a04692cc40aeb5250b9903fdc8f7dd9dc5875120c7529b0c6fb752",
+      "baseline_case_fingerprint": "547235650da02b96c45ba16d21b05003c9e5072e7ef2d650f4ca538e2e27f77c",
+      "comparison_rule": "Use the exact F0 case and condition fingerprints. A different source, environment, model/role, policy, acceptance, or semantic output is not comparable.",
+      "legacy_route": "existing phase2 validate_graph + render_docs; frozen F0 measurement is the observed run",
+      "optimized_route": ["F1-F4 typed change and document segments", "F5 bounded current context", "F6 reuse decision", "F7 compact result", "F8 single-step control", "F9 grouped dispatch"]
+    },
+    {
+      "id": "partial-plan-change",
+      "logical_goal": "Change one requirement premise and produce the same complete final graph and plan document while preserving unrelated content.",
+      "input": {"fixture_ref": "common.source_fixture", "patch": {"op": "replace", "node_id": "00000000-0000-4000-8000-000000000002", "field": "premise", "value": "고정 측정 사례에서 한 요구사항의 전제를 변경한다"}},
+      "acceptance": ["changed requirement remains linked to its criteria", "unrelated graph nodes and relations remain identical", "final artifact bytes and hashes are recorded", "baseline route performs the existing full validation and render"],
+      "baseline_status": "capture_legacy_fixture",
+      "baseline_ref": "phase2-partial-change-full-render.json",
+      "measurement_case_id": "phase2-partial-plan-full-render",
+      "legacy_route": "unchanged phase2 validate_graph + render_docs over the frozen patched graph",
+      "optimized_route": ["F3 impact recomputation", "F4 affected segment prepare/publish", "F5 bounded context", "F6 decision", "F7 result", "F8 control", "F9 grouped dispatch"]
+    },
+    {
+      "id": "resume-existing-plan",
+      "logical_goal": "Continue the same accepted plan from its pinned source and last accepted state.",
+      "input": {"fixture_ref": "common.source_fixture", "state": "new-session with current source pin"},
+      "acceptance": ["current source and owner are revalidated", "old summary does not become authority", "only currently valid evidence is reused"],
+      "baseline_status": "not_comparable",
+      "baseline_ref": null,
+      "reason": "No matching preserved Phase2 resume receipt, pinned run, or prior-session cost trace. A synthetic resume would invent historical behavior."
+    },
+    {
+      "id": "parallel-investigation-context",
+      "logical_goal": "Give two independent investigations the same authorized requirements and count their follow-up detail reads.",
+      "input": {"fixture_ref": "common.source_fixture", "logical_workers": 2},
+      "acceptance": ["each worker receives current required scope", "follow-up detail reads and duplicate work are counted", "combined result retains source and evidence refs"],
+      "baseline_status": "not_comparable",
+      "baseline_ref": null,
+      "reason": "No preserved Phase2 investigation-context bundle, worker call receipts, or detail-read trace exists."
+    },
+    {
+      "id": "ambiguous-requirement",
+      "logical_goal": "Keep an unresolved requirement explicit and ask for clarification without guessing.",
+      "input": {"fixture_ref": "common.source_fixture", "ambiguity": {"field": "acceptance", "value": null}},
+      "acceptance": ["missing acceptance remains unknown", "no guessed criterion is introduced", "clarification request and follow-up cost are counted"],
+      "baseline_status": "not_comparable",
+      "baseline_ref": null,
+      "reason": "No matching Phase2 clarification exchange or decision receipt is preserved; validator success alone cannot reproduce clarification semantics."
+    },
+    {
+      "id": "failed-operation-retry-and-rework",
+      "logical_goal": "Observe a failed local operation, its authorized retry, review, and resulting rework as separate costs.",
+      "input": {"fixture_ref": "common.source_fixture", "failure_kind": "stale-source-before-publish", "retry_limit": 1},
+      "acceptance": ["first failure is preserved", "retry is explicitly authorized", "final source and resource hashes are checked", "review and rework are counted separately"],
+      "baseline_status": "not_comparable",
+      "baseline_ref": null,
+      "reason": "No preserved Phase2 retry authorization, review receipt, or rework trace exists. A local synthetic failure would not establish the same legacy behavior."
+    }
+  ]
+}

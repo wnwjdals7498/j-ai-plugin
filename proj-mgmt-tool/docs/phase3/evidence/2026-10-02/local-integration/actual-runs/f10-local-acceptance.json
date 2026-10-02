@@ -1,0 +1,209 @@
+{
+  "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_local_integration.py -q --tb=short --show-capture=no --basetemp=.pmt-test/f10-full-after-f9",
+  "efficiency_conclusion": {
+    "measured_improvement_claimed": false,
+    "reason": "Current actual SourcePin and F1-F9 execution/control route differ from the saved legacy renderer cases.",
+    "status": "not_comparable"
+  },
+  "exit_code": 0,
+  "fixture_errors_ref": "../windows-fixture-errors.json",
+  "frozen_source_fixture_sha256": "978e608dac67e363a3e4fbde696ae6400c81b90c048052859267817330df4ff8",
+  "grouped_execution_observed": {
+    "collection_replay": "same request returned stored collection response",
+    "f8_action_contains_current_two_child_contract": true,
+    "missing_child_outcome": "reconciling",
+    "one_acknowledged_parent_handle": true,
+    "physical_slots": 1,
+    "pre_dispatch_cancel_outcome": "both children canceled; union locks released",
+    "quality": "fixture only; native/model quality not evaluated",
+    "valid_report_outcome": "review_pending (fixture deliberately includes a child failure)"
+  },
+  "host_acceptance": {
+    "details": "F10 command is local-only. Separate isolated loopback TLS tests covered resources, source snapshot/F2/F5, two-client replay/claim race, and scope/device revocation. No deployed Host, reverse proxy or Linux acceptance.",
+    "evidence_ref": "../host-resource-boundary.json",
+    "status": "loopback_https_passed_separately"
+  },
+  "kind": "phase3-local-f10-acceptance",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.13",
+  "recorded_on": "2026-10-02",
+  "repository_head": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+  "scenario_evidence_sha256": {
+    "ambiguous-requirement.json": "481e26b936000bc39e74315710e8b2b5c05c606ba86d086839f99592c1abd5fa",
+    "failed-operation-retry-and-rework.json": "e9bf1d9a18b5d0f19c152eb60f48cd146b1b0e73a44594d53c903143c45454b5",
+    "new-plan-full-graph-render.json": "e2877d2c23aad17acf7f62ad66e3bde031a6361285ed6ae773c406343aadadaa",
+    "parallel-investigation-context-cancel-before-dispatch.json": "bf487404d92d2c74855821741be361877d1d7eb175dc6d57376223ae4cbd94a6",
+    "parallel-investigation-context-missing-child.json": "5cd184a48be0e0d03122a28b6c0ddf1f8aae68f29cfc0f1442035ef5d459bdd0",
+    "parallel-investigation-context.json": "3fa3d06f1fa50d04fc308530d70109abaf22860619719671d4efed49bfcb091e",
+    "partial-plan-change.json": "37db97fc89bbaa76142fefc761455d634d9fa5ffcf41eea823e3fa06b48b143b",
+    "resume-existing-plan.json": "975da4155b72e207ae7ee3f7a984f0eaef29a79b2015f388c98f68ae81b04663"
+  },
+  "scenario_ids": [
+    "new-plan-full-graph-render",
+    "partial-plan-change",
+    "resume-existing-plan",
+    "parallel-investigation-context",
+    "ambiguous-requirement",
+    "failed-operation-retry-and-rework"
+  ],
+  "scenarios": {
+    "ambiguous-requirement": {
+      "baseline_status": "not_comparable",
+      "calls": 22,
+      "comparison": "not_comparable",
+      "context_generations": 2,
+      "detail_queries": 2,
+      "elapsed_ms": 48525.3837,
+      "input_bytes": 31937,
+      "output_bytes": 77258,
+      "quality": {
+        "criteria": [],
+        "model_quality": "not_evaluated",
+        "status": "not_run"
+      },
+      "retries": 0,
+      "reviews": 1,
+      "run_status": "partial_pending_f9",
+      "source_hash": "8565f7125eca064be079fe7877850e2fda36f59d5a8ff4c856975f5781eb9599",
+      "tokens": {
+        "actual": null,
+        "estimate": null,
+        "status": "unknown"
+      }
+    },
+    "failed-operation-retry-and-rework": {
+      "baseline_status": "not_comparable",
+      "calls": 23,
+      "comparison": "not_comparable",
+      "context_generations": 2,
+      "detail_queries": 3,
+      "elapsed_ms": 24590.304799999998,
+      "input_bytes": 19844,
+      "output_bytes": 70453,
+      "quality": {
+        "criteria": [],
+        "model_quality": "not_evaluated",
+        "status": "not_run"
+      },
+      "retries": 1,
+      "reviews": 0,
+      "run_status": "partial_pending_f9",
+      "source_hash": "bf620977d8d255ac7e9ac0c517f41c7bf3ebbeff44fdb5d1d7d97a425c11c945",
+      "tokens": {
+        "actual": null,
+        "estimate": null,
+        "status": "unknown"
+      }
+    },
+    "new-plan-full-graph-render": {
+      "baseline_status": "measured_fixture",
+      "calls": 35,
+      "comparison": "not_comparable",
+      "context_generations": 2,
+      "detail_queries": 6,
+      "elapsed_ms": 31870.492899999997,
+      "input_bytes": 27476,
+      "output_bytes": 111599,
+      "quality": {
+        "criteria": [],
+        "model_quality": "not_evaluated",
+        "status": "not_run"
+      },
+      "retries": 0,
+      "reviews": 1,
+      "run_status": "partial_pending_f9",
+      "source_hash": "6df21366273dc27882cf31a1ff117e65fe61158174fbe14e867c735bc12b16fc",
+      "tokens": {
+        "actual": null,
+        "estimate": null,
+        "status": "unknown"
+      }
+    },
+    "parallel-investigation-context": {
+      "baseline_status": "not_comparable",
+      "calls": 35,
+      "comparison": "not_comparable",
+      "context_generation_count_status": "unknown for cancellation variant; full-group and missing-child variants count returned F9 context refs",
+      "context_generations": null,
+      "detail_queries": 3,
+      "elapsed_ms": 59251.542199999996,
+      "input_bytes": 39084,
+      "output_bytes": 122213,
+      "quality": {
+        "criteria": [],
+        "model_quality": "not_evaluated",
+        "status": "not_run"
+      },
+      "retries": 0,
+      "reviews": 1,
+      "run_status": "partial_pending_f9",
+      "source_hash": "7d4cec2f58903a2cdb2b00abb69807adba2c9ace23d346ea2d694b0d7adbd3ea",
+      "tokens": {
+        "actual": null,
+        "estimate": null,
+        "status": "unknown"
+      }
+    },
+    "partial-plan-change": {
+      "baseline_status": "capture_legacy_fixture",
+      "calls": 40,
+      "comparison": "not_comparable",
+      "context_generations": 2,
+      "detail_queries": 6,
+      "elapsed_ms": 54594.5274,
+      "input_bytes": 42858,
+      "output_bytes": 124960,
+      "quality": {
+        "criteria": [],
+        "model_quality": "not_evaluated",
+        "status": "not_run"
+      },
+      "retries": 0,
+      "reviews": 1,
+      "run_status": "partial_pending_f9",
+      "source_hash": "9d619c24c0ddbfe9e486afa2c3461b4a97921178a0d5bd3798d2dfd74b5e5775",
+      "tokens": {
+        "actual": null,
+        "estimate": null,
+        "status": "unknown"
+      }
+    },
+    "resume-existing-plan": {
+      "baseline_status": "not_comparable",
+      "calls": 43,
+      "comparison": "not_comparable",
+      "context_generations": 3,
+      "detail_queries": 6,
+      "elapsed_ms": 58099.2083,
+      "input_bytes": 45367,
+      "output_bytes": 141236,
+      "quality": {
+        "criteria": [],
+        "model_quality": "not_evaluated",
+        "status": "not_run"
+      },
+      "retries": 0,
+      "reviews": 1,
+      "run_status": "partial_pending_f9",
+      "source_hash": "a47d8c63cf2338ca084abce38ffcd9ef7450c28bf5919144b270bb60faa24a73",
+      "tokens": {
+        "actual": null,
+        "estimate": null,
+        "status": "unknown"
+      }
+    }
+  },
+  "schema_version": 1,
+  "sqlite": "3.50.4",
+  "test_summary": {
+    "duration_seconds": 302.35,
+    "failed": 0,
+    "passed": 21
+  },
+  "tier": "actual isolated LocalStore/SQLite/filesystem/fixture-process calls; no provider API or model call",
+  "tokens": {
+    "actual": null,
+    "estimate": null,
+    "status": "unknown"
+  }
+}

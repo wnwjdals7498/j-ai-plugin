@@ -111,6 +111,32 @@ def _version_manifest(source: dict[str, Any], product: str, version: str, file_h
     }
 
 
+def _static_schema_version(root: Path, db_source: str) -> int:
+    """Read the supported schema literal without importing/executing project code."""
+    direct = re.search(r"^SCHEMA_VERSION\s*=\s*(\d+)\s*$", db_source, re.MULTILINE)
+    if direct:
+        return int(direct.group(1))
+    alias = re.search(r"^SCHEMA_VERSION\s*=\s*([A-Za-z_]\w*)\s*$", db_source, re.MULTILINE)
+    if alias:
+        symbol = alias.group(1)
+        imported = re.search(
+            rf"^from\s+\.([A-Za-z_]\w*)\s+import\s+[^\n]*\bSCHEMA_VERSION\s+as\s+{re.escape(symbol)}\b",
+            db_source, re.MULTILINE,
+        )
+        if imported:
+            schema_source = (root / "src" / "pmt" / f"{imported.group(1)}.py").read_text(encoding="utf-8")
+            literal = re.search(r"^SCHEMA_VERSION\s*=\s*(\d+)\s*$", schema_source, re.MULTILINE)
+            if literal:
+                return int(literal.group(1))
+    # Compatibility with the prior phase2 alias retained by older source trees.
+    if "SCHEMA_VERSION = PHASE2_SCHEMA_VERSION" in db_source:
+        phase2_source = (root / "src" / "pmt" / "phase2_schema.py").read_text(encoding="utf-8")
+        literal = re.search(r"^SCHEMA_VERSION\s*=\s*(\d+)\s*$", phase2_source, re.MULTILINE)
+        if literal:
+            return int(literal.group(1))
+    raise ValueError("Database schema version must resolve to a static integer literal")
+
+
 def _standalone_launcher() -> str:
     return '''"""Portable PMT CLI launcher for an unpacked plugin folder."""\nfrom pathlib import Path\nimport sys\n\nPACKAGE_ROOT = Path(__file__).resolve().parents[1]\nsys.path.insert(0, str(PACKAGE_ROOT / "src"))\nfrom pmt.cli import main\n\nif __name__ == "__main__":\n    raise SystemExit(main())\n'''
 
@@ -256,13 +282,10 @@ def build_plugins(output_dir: str | Path, version: str | None = None,
         from_src = (root / "src" / "pmt" / "__init__.py").read_text(encoding="utf-8")
         core_version_match = re.search(r"__version__\s*=\s*['\"]([^'\"]+)", from_src)
         schema_text = (root / "src" / "pmt" / "db.py").read_text(encoding="utf-8")
-        schema_match = re.search(r"^SCHEMA_VERSION\s*=\s*(\d+)", schema_text, re.MULTILINE)
-        if not schema_match and "SCHEMA_VERSION = PHASE2_SCHEMA_VERSION" in schema_text:
-            schema_text = (root / "src" / "pmt" / "phase2_schema.py").read_text(encoding="utf-8")
-            schema_match = re.search(r"^SCHEMA_VERSION\s*=\s*(\d+)", schema_text, re.MULTILINE)
-        if not core_version_match or not schema_match or core_version_match.group(1) != core_version:
+        schema_version = _static_schema_version(root, schema_text)
+        if not core_version_match or core_version_match.group(1) != core_version:
             raise ValueError
-        source_info = {"core_version": core_version, "schema_version": int(schema_match.group(1))}
+        source_info = {"core_version": core_version, "schema_version": schema_version}
     except (OSError, KeyError, TypeError, ValueError, tomllib.TOMLDecodeError) as exc:
         raise BuildError("Project version or schema metadata is invalid") from exc
     version = version or source_info["core_version"]

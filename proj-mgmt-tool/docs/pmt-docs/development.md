@@ -9,6 +9,9 @@
 - 오류는 입력/충돌/일시장애/내부오류로 구분한다. 실패를 성공값으로 삼키지 않고 재시도 가능 여부를 근거로 지정한다.
 - 새 의존성은 목적·공식 근거·대안·설치/업데이트·호환성·시험 영향을 메인이 확인한다. 코드·설명·시험의 상태를 함께 갱신한다.
 - 본체·DB·리소스·사용자 설정은 배포물과 분리한다. 격리된 시험 root만 사용하고 사용자 환경을 시험 때문에 덮어쓰지 않는다.
+- Host 추가 기능은 명시 allowlist·current auth/scope/source·same-request replay 계약부터 연결한다. 기존 로컬 dispatcher나 client working tree를 서버에 노출하지 않는다. Host 부정 시험은 실제 local HTTPS/SQL/files, client effect 시험은 실제 격리 checkout/spool과 대조한다.
+
+3단계의 시험·계층·관문은 [검증 명세](../phase3/verification.md), 현재 통과/실패/미실행은 [구현 상태](../phase3/implementation-status.md)와 evidence를 따른다. 예정 시험 ID를 함수 개수나 과거 통과 수로 대체하지 않는다. 패키징은 최종 source가 고정된 뒤 격리 wheel/venv에서 설치·업데이트·재설치·새 세션 및 로컬 Host 재시작/복원을 확인한다.
 
 ## Step 인계 계약
 

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "kind": "baseline",
+  "case_id": "phase2-canonical-plan-full-graph-render",
+  "purpose": "Reproducible full graph/document transfer baseline using the existing test graph fixture with stable UUIDs. Quality tier is fixture only.",
+  "condition": {
+    "goal": "Validate and render the complete canonical planning graph as the unoptimized full-transfer reference.",
+    "acceptance": {
+      "definition": "existing phase2 validator complete graph + deterministic markdown and canonical graph JSON",
+      "criterion": "valid complete graph, rendered output hashes and byte lengths recorded"
+    },
+    "source": {
+      "repository_commit": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+      "graph_schema": 1,
+      "fixture_sha256": "978e608dac67e363a3e4fbde696ae6400c81b90c048052859267817330df4ff8",
+      "implementation_file_sha256": {
+        "src/pmt/planning/graph.py": "57401be973c709f99638355b78a51334129bf8e16decaad8848b19a34e1e9a23",
+        "src/pmt/util.py": "5d6bc159920299cbe9e80b32f3431578eac78d32e6a7dcd23e16355e2ed369c7",
+        "tests/test_phase2_planning.py": "40ab55fc5703ab0f8eb75006d9d027dff3edef2b3c71defd8391aa4fe92dda4a"
+      }
+    },
+    "environment": {
+      "python": "3.13.13",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "sqlite": "3.50.4",
+      "execution": "local process; no external model; single-run timing observation"
+    },
+    "model_role": {
+      "model": "none",
+      "role": "existing phase2 graph validator and document renderer"
+    },
+    "policy": {
+      "operation": "validate complete graph then render full plan markdown and full graph JSON",
+      "retry_policy": "no retry"
+    },
+    "definition": {
+      "measurement_schema": "pmt-efficiency-local-v1",
+      "byte_definition": "UTF-8 source graph bytes and UTF-8 rendered Markdown + JSON bytes",
+      "timing_definition": "perf_counter_ns elapsed time per validator call and render_docs call; render_docs itself validates once"
+    }
+  },
+  "condition_fingerprint": "c6574b6596a04692cc40aeb5250b9903fdc8f7dd9dc5875120c7529b0c6fb752",
+  "case_fingerprint": "547235650da02b96c45ba16d21b05003c9e5072e7ef2d650f4ca538e2e27f77c",
+  "semantic_io": {
+    "input_fingerprint": "9dbc7cb813a9a00486b87215cd7016c38de472e0c0cb1c019ae3a507ab65e9ed",
+    "output_fingerprint": "9328b6c65123838a99d044f339904baaaf7a244be53510c70e0f81838499f258"
+  },
+  "observations": [
+    {
+      "input_bytes": 3956,
+      "output_bytes": 4387,
+      "calls": 2,
+      "detail_queries": 0,
+      "context_generations": 0,
+      "retries": 0,
+      "rework": 0,
+      "reviews": 0,
+      "elapsed_ms": 0.4703,
+      "validate_elapsed_ms": 0.2587,
+      "render_elapsed_ms": 0.2116,
+      "tokens": {
+        "status": "unknown",
+        "actual": null,
+        "estimate": null
+      },
+      "evidence_tier": "fixture",
+      "quality": {
+        "status": "pass",
+        "criteria": [
+          "existing phase2 validator accepted complete graph",
+          "existing phase2 renderer produced deterministic UTF-8 Markdown and graph JSON"
+        ],
+        "model_quality": "not_evaluated"
+      }
+    }
+  ],
+  "evidence_refs": [
+    "docs/phase3/evidence/2026-10-02/baseline/canonical-planning-graph.json",
+    "docs/phase3/evidence/2026-10-02/baseline/rendered-plan.md",
+    "docs/phase3/evidence/2026-10-02/baseline/rendered-plan.graph.json",
+    "tests/test_phase2_planning.py",
+    "src/pmt/planning/graph.py"
+  ],
+  "manifest_fingerprint": "20dd8760a186a9f9f45e8fd98afe35b4de3fabad3b59d25d4a90c15327986b8c"
+}

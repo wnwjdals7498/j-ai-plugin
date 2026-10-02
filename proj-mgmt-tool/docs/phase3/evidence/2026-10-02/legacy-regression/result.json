@@ -1,0 +1,1823 @@
+{
+  "schema_version": 1,
+  "evidence_tier": "local_integration",
+  "test_scope": "legacy phase1/phase2 regression only; phase3 parallel implementation/tests excluded",
+  "source_commit": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+  "started_at": "2026-10-02T02:17:04.7921267Z",
+  "ended_at": "2026-10-02T02:18:44.2303723Z",
+  "elapsed_seconds": 99.438,
+  "python": "Python 3.13.13",
+  "pytest_version": "pytest 9.1.1",
+  "command": ".venv/Scripts/python.exe -m pytest -q -ra --tb=short --basetemp .pmt-test/p3-legacy-regression --junitxml docs/phase3/evidence/2026-10-02/legacy-regression/junit.xml tests/test_acceptance_matrix.py tests/test_acceptance.py tests/test_backup.py tests/test_cli_integration.py tests/test_end_to_end.py tests/test_final_guards.py tests/test_fixture_contract.py tests/test_foundation.py tests/test_hook_acceptance.py tests/test_hooks.py tests/test_lifecycle_extensions.py tests/test_lifecycle.py tests/test_packaging.py tests/test_phase2_execution.py tests/test_phase2_operations.py tests/test_phase2_planning.py tests/test_phase2_product_boundaries.py tests/test_phase2_reconciliation.py tests/test_phase2_routing.py tests/test_phase2_runners.py tests/test_phase2_steps.py tests/test_phase2_storage.py tests/test_queries.py tests/test_resources.py tests/test_verification.py",
+  "exit_code": 1,
+  "counts": {
+    "tests": 233,
+    "passed": 215,
+    "failed": 11,
+    "errors": 5,
+    "skipped": 2
+  },
+  "cases": [
+    {
+      "name": "test_done01_unknown_verification_snapshot_cannot_finish",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.319,
+      "reason": null
+    },
+    {
+      "name": "test_data01_cli_setup_is_stable_across_processes_and_record_reads",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 1.312,
+      "reason": null
+    },
+    {
+      "name": "test_data02_migration_failure_rolls_back_schema_and_existing_rows",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.03,
+      "reason": null
+    },
+    {
+      "name": "test_idem01_two_processes_create_one_record_and_replay_original",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.576,
+      "reason": null
+    },
+    {
+      "name": "test_idem02_semantic_field_changes_conflict_without_mutating_original",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 4.34,
+      "reason": null
+    },
+    {
+      "name": "test_claim02_other_session_and_old_token_cannot_release_or_finish",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.072,
+      "reason": null
+    },
+    {
+      "name": "test_claim03_confirmed_child_process_termination_allows_explicit_recovery",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 1.658,
+      "reason": null
+    },
+    {
+      "name": "test_done01_missing_result_and_failed_verification_never_mark_done",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.137,
+      "reason": null
+    },
+    {
+      "name": "test_done01_corrupt_evidence_and_unfinished_child_prevent_done",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.207,
+      "reason": null
+    },
+    {
+      "name": "test_done02_successful_finish_replay_keeps_one_completion_event",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.186,
+      "reason": null
+    },
+    {
+      "name": "test_decision01_delegate_requires_scope_and_custom_can_be_replaced_by_select",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.079,
+      "reason": null
+    },
+    {
+      "name": "test_log01_json_diagnostic_keeps_required_ids_and_excludes_secrets_paths",
+      "classname": "tests.test_acceptance_matrix",
+      "status": "passed",
+      "seconds": 0.037,
+      "reason": null
+    },
+    {
+      "name": "test_data_02_v1_migrates_and_future_schema_is_read_guarded",
+      "classname": "tests.test_acceptance",
+      "status": "failed",
+      "seconds": 0.106,
+      "reason": "AssertionError: assert '4' == '3'\n  \n  - 3\n  + 4"
+    },
+    {
+      "name": "test_tx_01_event_ledger_failure_rolls_back_record",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.041,
+      "reason": null
+    },
+    {
+      "name": "test_log_02_diagnostic_failure_keeps_committed_response_and_warning",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.034,
+      "reason": null
+    },
+    {
+      "name": "test_log_03_request_ledger_failure_rolls_back_record_and_event",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.044,
+      "reason": null
+    },
+    {
+      "name": "test_claim_03_recovery_replaces_owner_and_rejects_old_token",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.046,
+      "reason": null
+    },
+    {
+      "name": "test_event_02_repeated_prompt_ids_and_reverse_stop_never_finish",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.052,
+      "reason": null
+    },
+    {
+      "name": "test_decision_01_explicit_choice_supersession_and_stale_rejection",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.05,
+      "reason": null
+    },
+    {
+      "name": "test_recover_01_child_exit_boundary_and_request_replay[before_commit-1-Acceptance item]",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.255,
+      "reason": null
+    },
+    {
+      "name": "test_recover_01_child_exit_boundary_and_request_replay[after_commit-2-after child commit]",
+      "classname": "tests.test_acceptance",
+      "status": "passed",
+      "seconds": 0.269,
+      "reason": null
+    },
+    {
+      "name": "test_backup_restore_roundtrip_preserves_database_and_blobs",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 0.259,
+      "reason": null
+    },
+    {
+      "name": "test_restore_rejects_corrupt_manifest_blob_without_publishing",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 0.157,
+      "reason": null
+    },
+    {
+      "name": "test_backup_rejects_active_resource_job_and_nonempty_destination",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 0.133,
+      "reason": null
+    },
+    {
+      "name": "test_backup_same_request_concurrent_and_replay_copies_once",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 0.09,
+      "reason": null
+    },
+    {
+      "name": "test_backup_maintenance_blocks_independent_cli_writer_and_resource_registration",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 1.29,
+      "reason": null
+    },
+    {
+      "name": "test_backup_copy_failure_marks_incomplete_and_releases_maintenance",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 0.117,
+      "reason": null
+    },
+    {
+      "name": "test_restore_bad_schema_and_missing_blob_leave_live_records_unchanged",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 0.211,
+      "reason": null
+    },
+    {
+      "name": "test_restore_same_request_concurrent_publishes_once",
+      "classname": "tests.test_backup",
+      "status": "passed",
+      "seconds": 0.177,
+      "reason": null
+    },
+    {
+      "name": "test_cli_01_utf8_one_line_no_stdout_diagnostics",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.308,
+      "reason": null
+    },
+    {
+      "name": "test_cli_02_parse_errors_are_json_and_exit_two[{]",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.255,
+      "reason": null
+    },
+    {
+      "name": "test_cli_02_parse_errors_are_json_and_exit_two[{\"protocol_version\":1,\"protocol_version\":1}]",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.244,
+      "reason": null
+    },
+    {
+      "name": "test_cli_02_schema_version_and_operation_rejected[invalid_request0]",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.211,
+      "reason": null
+    },
+    {
+      "name": "test_cli_02_schema_version_and_operation_rejected[invalid_request1]",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.21,
+      "reason": null
+    },
+    {
+      "name": "test_cli_02_schema_version_and_operation_rejected[invalid_request2]",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.233,
+      "reason": null
+    },
+    {
+      "name": "test_cli_02_oversized_json_rejected",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.261,
+      "reason": null
+    },
+    {
+      "name": "test_cli_03_cwd_with_spaces_and_korean_uses_configured_data_root",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.83,
+      "reason": null
+    },
+    {
+      "name": "test_idem_01_same_request_key_replays_original_result",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.627,
+      "reason": null
+    },
+    {
+      "name": "test_idem_02_same_request_key_with_different_meaning_conflicts",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.607,
+      "reason": null
+    },
+    {
+      "name": "test_claim_01_two_independent_processes_claim_only_once",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.873,
+      "reason": null
+    },
+    {
+      "name": "test_rev_01_two_processes_with_same_revision_have_one_winner",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.926,
+      "reason": null
+    },
+    {
+      "name": "test_cli_02_invalid_payload_does_not_claim_or_mutate",
+      "classname": "tests.test_cli_integration",
+      "status": "passed",
+      "seconds": 0.731,
+      "reason": null
+    },
+    {
+      "name": "test_done_02_full_workflow_and_new_session_context",
+      "classname": "tests.test_end_to_end",
+      "status": "passed",
+      "seconds": 3.396,
+      "reason": null
+    },
+    {
+      "name": "test_work_child_progress_is_derived_without_automatic_parent_completion",
+      "classname": "tests.test_end_to_end",
+      "status": "passed",
+      "seconds": 1.257,
+      "reason": null
+    },
+    {
+      "name": "test_obsolete_supersedes_cannot_create_multiple_current_decisions",
+      "classname": "tests.test_final_guards",
+      "status": "passed",
+      "seconds": 0.047,
+      "reason": null
+    },
+    {
+      "name": "test_failure_inserted_after_success_invalidates_even_when_clock_does_not_advance[same_timestamp]",
+      "classname": "tests.test_final_guards",
+      "status": "passed",
+      "seconds": 0.225,
+      "reason": null
+    },
+    {
+      "name": "test_failure_inserted_after_success_invalidates_even_when_clock_does_not_advance[clock_back]",
+      "classname": "tests.test_final_guards",
+      "status": "passed",
+      "seconds": 0.301,
+      "reason": null
+    },
+    {
+      "name": "test_explicit_and_configured_roots_do_not_require_path_home[arguments]",
+      "classname": "tests.test_final_guards",
+      "status": "passed",
+      "seconds": 0.038,
+      "reason": null
+    },
+    {
+      "name": "test_explicit_and_configured_roots_do_not_require_path_home[environment]",
+      "classname": "tests.test_final_guards",
+      "status": "passed",
+      "seconds": 0.036,
+      "reason": null
+    },
+    {
+      "name": "test_explicit_and_configured_roots_do_not_require_path_home[platform_defaults]",
+      "classname": "tests.test_final_guards",
+      "status": "passed",
+      "seconds": 0.005,
+      "reason": null
+    },
+    {
+      "name": "test_fixture_request_has_protocol_v1_and_stable_session",
+      "classname": "tests.test_fixture_contract",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_fixture_roots_are_separate_and_user_scoped",
+      "classname": "tests.test_fixture_contract",
+      "status": "passed",
+      "seconds": 0.006,
+      "reason": null
+    },
+    {
+      "name": "test_schema_initializes_and_ids_persist",
+      "classname": "tests.test_foundation",
+      "status": "passed",
+      "seconds": 0.042,
+      "reason": null
+    },
+    {
+      "name": "test_run_request_replay_conflict_and_atomic_error",
+      "classname": "tests.test_foundation",
+      "status": "passed",
+      "seconds": 0.04,
+      "reason": null
+    },
+    {
+      "name": "test_maintenance_foreign_keys_and_strict_json",
+      "classname": "tests.test_foundation",
+      "status": "passed",
+      "seconds": 0.032,
+      "reason": null
+    },
+    {
+      "name": "test_hook_01_all_product_fixtures_use_real_cli_and_keep_only_minimal_event[codex-UserPromptSubmit-codex-user-prompt.json-prompt_submitted]",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.283,
+      "reason": null
+    },
+    {
+      "name": "test_hook_01_all_product_fixtures_use_real_cli_and_keep_only_minimal_event[claude-Stop-claude-stop.json-turn_stopped]",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.267,
+      "reason": null
+    },
+    {
+      "name": "test_hook_01_all_product_fixtures_use_real_cli_and_keep_only_minimal_event[opencode-session.idle-opencode-session-idle.json-session_idle]",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.325,
+      "reason": null
+    },
+    {
+      "name": "test_hook_03_unsupported_native_event_warns_without_storage[codex-AssistantMessage-raw0]",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.288,
+      "reason": null
+    },
+    {
+      "name": "test_hook_03_unsupported_native_event_warns_without_storage[claude-PreToolUse-raw1]",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.214,
+      "reason": null
+    },
+    {
+      "name": "test_hook_03_unsupported_native_event_warns_without_storage[opencode-session.prompt-raw2]",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.34,
+      "reason": null
+    },
+    {
+      "name": "test_hook_03_pending_directory_write_failure_never_calls_core_or_claims_storage",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.293,
+      "reason": null
+    },
+    {
+      "name": "test_hook_01_same_stable_native_occurrence_replays_one_committed_result",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 1.54,
+      "reason": null
+    },
+    {
+      "name": "test_hook_01_open_code_without_occurrence_id_only_deduplicates_pending_replay",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.529,
+      "reason": null
+    },
+    {
+      "name": "test_stop_01_reverse_stop_session_end_and_idle_never_change_item_state",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 1.269,
+      "reason": null
+    },
+    {
+      "name": "test_hook_02_real_database_busy_keeps_pending_and_replay_commits_once",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 1.145,
+      "reason": null
+    },
+    {
+      "name": "test_hook_02_actual_cli_timeout_preserves_original_pending_ids_for_replay",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.553,
+      "reason": null
+    },
+    {
+      "name": "test_hook_02_actual_database_io_failure_keeps_pending_until_repair",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.462,
+      "reason": null
+    },
+    {
+      "name": "test_hook_03_database_and_pending_root_failure_is_visible_without_false_save",
+      "classname": "tests.test_hook_acceptance",
+      "status": "passed",
+      "seconds": 0.421,
+      "reason": null
+    },
+    {
+      "name": "test_codex_stable_occurrence_ids_and_no_prompt_copy",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_native_occurrence_namespace_separates_product_and_session",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_missing_occurrence_gets_new_uuid_with_replay_only_scope",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_opencode_keeps_only_allowlisted_metadata",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.013,
+      "reason": null
+    },
+    {
+      "name": "test_profile_fallback_is_persistent_separate_and_rejects_corruption",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.021,
+      "reason": null
+    },
+    {
+      "name": "test_pending_saved_before_cli_and_removed_only_after_ok",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.019,
+      "reason": null
+    },
+    {
+      "name": "test_pending_retained_on_cli_failure",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.017,
+      "reason": null
+    },
+    {
+      "name": "test_timeout_leaves_same_pending_envelope_for_replay",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.017,
+      "reason": null
+    },
+    {
+      "name": "test_explicit_pending_replay_uses_original_ids",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.017,
+      "reason": null
+    },
+    {
+      "name": "test_unsupported_native_event_rejected",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_sensitive_values_are_excluded_without_banning_prompt_event_type",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_opencode_tool_completion_uses_documented_hook_and_packaged_bridge",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_codex_windows_commands_quote_resolved_plugin_root",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_claude_command_args_use_official_exec_form",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_session_start_injects_saved_context_from_real_isolated_cli",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.591,
+      "reason": null
+    },
+    {
+      "name": "test_session_start_without_explicit_scope_records_event_without_context_query",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.351,
+      "reason": null
+    },
+    {
+      "name": "test_session_start_context_lookup_failure_uses_warning_channel",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.328,
+      "reason": null
+    },
+    {
+      "name": "test_opencode_context_bridge_uses_core_cli_and_reports_configuration_errors",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.672,
+      "reason": null
+    },
+    {
+      "name": "test_invalid_context_ids_are_warnings_and_never_guess_a_scope",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.017,
+      "reason": null
+    },
+    {
+      "name": "test_opencode_plugin_uses_official_system_transform_and_explicit_scope_gate",
+      "classname": "tests.test_hooks",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_blocked_task_can_be_explicitly_unblocked_to_planned",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.05,
+      "reason": null
+    },
+    {
+      "name": "test_only_blocked_tasks_can_transition_to_planned_and_reason_is_required",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.053,
+      "reason": null
+    },
+    {
+      "name": "test_canceled_transition_requires_explicit_stopped_owned_claim",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.058,
+      "reason": null
+    },
+    {
+      "name": "test_unclaimed_planned_task_can_be_canceled_but_other_kinds_cannot",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.057,
+      "reason": null
+    },
+    {
+      "name": "test_terminal_record_edits_are_rejected[Done]",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.052,
+      "reason": null
+    },
+    {
+      "name": "test_terminal_record_edits_are_rejected[Canceled]",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.046,
+      "reason": null
+    },
+    {
+      "name": "test_parent_cannot_be_canceled_while_descendant_is_claimed",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.048,
+      "reason": null
+    },
+    {
+      "name": "test_rich_criteria_are_preserved_and_finish_uses_coverage_union",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.057,
+      "reason": null
+    },
+    {
+      "name": "test_item_without_criteria_cannot_finish",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.13,
+      "reason": null
+    },
+    {
+      "name": "test_record_event_preserves_allowlisted_source_metadata_and_drops_prompt_secrets",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.043,
+      "reason": null
+    },
+    {
+      "name": "test_log02_real_stream_failure_keeps_commit_warns_and_replays",
+      "classname": "tests.test_lifecycle_extensions",
+      "status": "passed",
+      "seconds": 0.048,
+      "reason": null
+    },
+    {
+      "name": "test_scope_record_event_and_idempotent_replay",
+      "classname": "tests.test_lifecycle",
+      "status": "passed",
+      "seconds": 0.055,
+      "reason": null
+    },
+    {
+      "name": "test_scope_relationship_remote_normalization_and_no_merge",
+      "classname": "tests.test_lifecycle",
+      "status": "passed",
+      "seconds": 0.059,
+      "reason": null
+    },
+    {
+      "name": "test_claim_release_recover_and_stale_owner",
+      "classname": "tests.test_lifecycle",
+      "status": "passed",
+      "seconds": 0.088,
+      "reason": null
+    },
+    {
+      "name": "test_competing_claims_commit_once",
+      "classname": "tests.test_lifecycle",
+      "status": "passed",
+      "seconds": 0.062,
+      "reason": null
+    },
+    {
+      "name": "test_change_revision_decision_and_finish_fails_closed",
+      "classname": "tests.test_lifecycle",
+      "status": "passed",
+      "seconds": 0.065,
+      "reason": null
+    },
+    {
+      "name": "test_profile_concurrent_creation_and_corruption_preservation",
+      "classname": "tests.test_lifecycle",
+      "status": "passed",
+      "seconds": 0.209,
+      "reason": null
+    },
+    {
+      "name": "test_v1_request_owner_migration_and_diagnostic_warning",
+      "classname": "tests.test_lifecycle",
+      "status": "failed",
+      "seconds": 0.043,
+      "reason": "AssertionError: assert '4' == '3'\n  \n  - 3\n  + 4"
+    },
+    {
+      "name": "test_alias_conflict_and_unsupported_schema_preservation",
+      "classname": "tests.test_lifecycle",
+      "status": "passed",
+      "seconds": 0.041,
+      "reason": null
+    },
+    {
+      "name": "test_pkg_01_three_separate_bundles_manifest_and_zip_hashes",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.005,
+      "reason": "pmt_build_plugins.BuildError: Project version or schema metadata is invalid"
+    },
+    {
+      "name": "test_pkg_01_standalone_cli_works_from_unrelated_cwd",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.005,
+      "reason": "pmt_build_plugins.BuildError: Project version or schema metadata is invalid"
+    },
+    {
+      "name": "test_pkg_01_second_version_does_not_replace_earlier_bundle",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.005,
+      "reason": "pmt_build_plugins.BuildError: Project version or schema metadata is invalid"
+    },
+    {
+      "name": "test_pkg_01_existing_version_is_preserved_and_refused",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.005,
+      "reason": "pmt_build_plugins.BuildError: Project version or schema metadata is invalid"
+    },
+    {
+      "name": "test_pkg_01_source_mutation_during_copy_aborts_publication",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.387,
+      "reason": "AssertionError: Regex pattern did not match.\n  Expected regex: 'source changed'\n  Actual message: 'Project version or schema metadata is invalid'"
+    },
+    {
+      "name": "test_pkg_01_retries_one_temporary_windows_publish_denial",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.007,
+      "reason": "pmt_build_plugins.BuildError: Project version or schema metadata is invalid"
+    },
+    {
+      "name": "test_pkg_01_persistent_windows_publish_denial_is_bounded_and_structured",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.007,
+      "reason": "KeyError: 'cause_type'"
+    },
+    {
+      "name": "test_pkg_01_source_drift_during_publish_retry_aborts_and_cleans_stage",
+      "classname": "tests.test_packaging",
+      "status": "failed",
+      "seconds": 0.365,
+      "reason": "AssertionError: Regex pattern did not match.\n  Expected regex: 'source changed'\n  Actual message: 'Project version or schema metadata is invalid'"
+    },
+    {
+      "name": "test_overlapping_lock_waits_but_disjoint_paths_can_run",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.103,
+      "reason": null
+    },
+    {
+      "name": "test_multiscope_conflict_never_partially_acquires",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.069,
+      "reason": null
+    },
+    {
+      "name": "test_result_before_observation_is_durable_and_observation_cannot_regress",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.055,
+      "reason": null
+    },
+    {
+      "name": "test_cancel_requires_reconcile_evidence_before_releasing_locks",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.061,
+      "reason": null
+    },
+    {
+      "name": "test_scope_extension_conflict_keeps_original_locks_without_new_subset",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.06,
+      "reason": null
+    },
+    {
+      "name": "test_two_independent_processes_compete_for_overlapping_scopes",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.368,
+      "reason": null
+    },
+    {
+      "name": "test_retry_requires_confirmed_end_and_stops_after_two_retries",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.103,
+      "reason": null
+    },
+    {
+      "name": "test_unknown_or_unsupported_route_blocks_before_scope_acquisition",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.054,
+      "reason": null
+    },
+    {
+      "name": "test_dot_path_covers_entire_workspace_and_route_modes_normalize",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.169,
+      "reason": null
+    },
+    {
+      "name": "test_global_execution_cap_applies_across_different_routes",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.091,
+      "reason": null
+    },
+    {
+      "name": "test_stale_step_result_is_preserved_but_cannot_complete",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.057,
+      "reason": null
+    },
+    {
+      "name": "test_observation_rejects_arbitrary_text_fields",
+      "classname": "tests.test_phase2_execution",
+      "status": "passed",
+      "seconds": 0.058,
+      "reason": null
+    },
+    {
+      "name": "test_progress_heartbeat_changes_seen_but_not_actual_progress",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.101,
+      "reason": null
+    },
+    {
+      "name": "test_referenced_and_newly_referenced_resources_are_not_deleted",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.09,
+      "reason": null
+    },
+    {
+      "name": "test_graph_evidence_reference_is_indexed_for_retention",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.081,
+      "reason": null
+    },
+    {
+      "name": "test_reserved_resource_cannot_receive_new_reference",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.063,
+      "reason": null
+    },
+    {
+      "name": "test_expired_unreferenced_cleanup_is_replayable",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.086,
+      "reason": null
+    },
+    {
+      "name": "test_log_rotation_is_bounded_and_redacts_tokens",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.218,
+      "reason": null
+    },
+    {
+      "name": "test_diagnostic_failure_does_not_repeat_committed_business",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.055,
+      "reason": null
+    },
+    {
+      "name": "test_temp_retention_requires_seven_full_days_by_module_clock",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.078,
+      "reason": null
+    },
+    {
+      "name": "test_three_calendar_month_history_cleanup_keeps_dedup_tombstones",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.091,
+      "reason": null
+    },
+    {
+      "name": "test_failed_file_delete_is_journaled_and_same_request_resumes",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.087,
+      "reason": null
+    },
+    {
+      "name": "test_progress_corruption_is_stale_and_observable",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.075,
+      "reason": null
+    },
+    {
+      "name": "test_progress_references_require_ready_uuid_artifacts",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.072,
+      "reason": null
+    },
+    {
+      "name": "test_new_reference_racing_reserved_delete_is_rejected",
+      "classname": "tests.test_phase2_operations",
+      "status": "passed",
+      "seconds": 0.098,
+      "reason": null
+    },
+    {
+      "name": "test_valid_graph_has_stable_report_and_rendered_json",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_invalid_graph_fields_and_references_are_rejected[<lambda>-plan_graph_duplicate_id]",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_invalid_graph_fields_and_references_are_rejected[<lambda>-plan_graph_invalid_reference]",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_invalid_graph_fields_and_references_are_rejected[<lambda>-plan_graph_termination_missing]",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.003,
+      "reason": null
+    },
+    {
+      "name": "test_invalid_graph_fields_and_references_are_rejected[<lambda>-plan_graph_invalid]",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.058,
+      "reason": null
+    },
+    {
+      "name": "test_parent_cycle_is_rejected",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_decomposition_and_dependency_cycles_are_checked_separately",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_too_few_choices_need_an_explicit_insufficiency_reason",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_graph_rejects_wrong_project_id",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.002,
+      "reason": null
+    },
+    {
+      "name": "test_save_draft_persists_only_resource_reference_and_can_be_read",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 1.154,
+      "reason": null
+    },
+    {
+      "name": "test_publish_writes_docs_only_with_owned_workspace_scope",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.852,
+      "reason": null
+    },
+    {
+      "name": "test_publish_without_owned_paths_leaves_project_docs_untouched",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.862,
+      "reason": null
+    },
+    {
+      "name": "test_unfinished_requirement_only_draft_is_saved_but_not_publishable",
+      "classname": "tests.test_phase2_planning",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_built_package_has_current_core_schema_and_integrity[claude]",
+      "classname": "tests.test_phase2_product_boundaries",
+      "status": "error",
+      "seconds": 0.005,
+      "reason": "failed on setup with \"build_plugins.BuildError: Project version or schema metadata is invalid\""
+    },
+    {
+      "name": "test_built_package_has_current_core_schema_and_integrity[codex]",
+      "classname": "tests.test_phase2_product_boundaries",
+      "status": "error",
+      "seconds": 0.001,
+      "reason": "failed on setup with \"build_plugins.BuildError: Project version or schema metadata is invalid\""
+    },
+    {
+      "name": "test_product_environment_does_not_inherit_credentials_or_proxies",
+      "classname": "tests.test_phase2_product_boundaries",
+      "status": "error",
+      "seconds": 0.001,
+      "reason": "failed on setup with \"build_plugins.BuildError: Project version or schema metadata is invalid\""
+    },
+    {
+      "name": "test_run_root_must_be_fresh_and_inside_native_phase2_area",
+      "classname": "tests.test_phase2_product_boundaries",
+      "status": "error",
+      "seconds": 0.001,
+      "reason": "failed on setup with \"build_plugins.BuildError: Project version or schema metadata is invalid\""
+    },
+    {
+      "name": "test_run_root_refuses_existing_content",
+      "classname": "tests.test_phase2_product_boundaries",
+      "status": "error",
+      "seconds": 0.001,
+      "reason": "failed on setup with \"build_plugins.BuildError: Project version or schema metadata is invalid\""
+    },
+    {
+      "name": "test_actual_project_checkout_resolves_its_parent_repository_anchor",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 0.152,
+      "reason": null
+    },
+    {
+      "name": "test_real_git_baseline_review_dirty_preservation_and_same_commit_skip",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 8.946,
+      "reason": null
+    },
+    {
+      "name": "test_same_owner_dirty_fingerprint_pins_current_execution_basis",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 5.872,
+      "reason": null
+    },
+    {
+      "name": "test_acknowledged_impact_invalidates_plan_and_requests_active_run_cancel",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 5.275,
+      "reason": null
+    },
+    {
+      "name": "test_diverged_branch_requires_reconciliation_and_does_not_advance",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 5.761,
+      "reason": null
+    },
+    {
+      "name": "test_nested_project_uses_verified_nearest_git_root_and_scoped_diffs",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "failed",
+      "seconds": 6.755,
+      "reason": "AssertionError: error: unable to write file .git/objects/f7/19efd430d52bcfc8566a43b2eb655688d38871: Permission denied\n  error: packages/project-a/src/feature.txt: failed to insert into database\n  error: unable to index file 'packages/project-a/src/feature.txt'\n  fatal: updating files failed\n  \nassert 128 == 0\n +  where 128 = CompletedProcess(args=['git', '-C', 'D:\\\\workspace\\\\test-space\\\\github\\\\j-ai-plugin\\\\proj-mgmt-tool\\\\.pmt-test\\\\p3-leg...nsert into database\\nerror: unable to index file 'packages/project-a/src/feature.txt'\\nfatal: updating files failed\\n\").returncode"
+    },
+    {
+      "name": "test_non_git_and_missing_scope_lock_are_reported_without_touching_docs",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 1.023,
+      "reason": null
+    },
+    {
+      "name": "test_incomplete_git_journal_is_resumed_on_retry",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 2.201,
+      "reason": null
+    },
+    {
+      "name": "test_dirty_file_outside_run_scope_is_not_hashed",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 1.913,
+      "reason": null
+    },
+    {
+      "name": "test_independent_worker_scope_does_not_require_repository_wide_exclusive_lock",
+      "classname": "tests.test_phase2_reconciliation",
+      "status": "passed",
+      "seconds": 4.184,
+      "reason": null
+    },
+    {
+      "name": "test_sourced_economy_and_explicit_priority",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_p2_route_01_default_auto_selects_only_verified_candidates",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_p2_route_02_explicit_model_or_path_wins_without_silent_substitution",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_p2_route_03_unknown_price_never_claimed_as_economy_winner",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_p2_route_04_confirmed_native_unsupported_allows_external_fallback_only_in_auto",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_p2_route_05_native_capacity_wait_and_started_unknown_run_never_fallback",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_p2_route_06_policy_cas_snapshot_and_request_replay",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.065,
+      "reason": null
+    },
+    {
+      "name": "test_p2_route_07_native_then_permitted_cli_and_direct_api_excluded",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_capability_registration_preserves_unknown_and_never_invents_evidence",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.094,
+      "reason": null
+    },
+    {
+      "name": "test_selection_operation_returns_settings_and_capability_revisions",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.063,
+      "reason": null
+    },
+    {
+      "name": "test_malformed_input_and_secret_fields_are_rejected",
+      "classname": "tests.test_phase2_routing",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_native_main_action_attach_and_poll_preserve_real_ids",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.177,
+      "reason": null
+    },
+    {
+      "name": "test_local_supervisor_receipt_restart_duplicate_poll_and_cancel_tree",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 1.455,
+      "reason": null
+    },
+    {
+      "name": "test_api_sdk_and_opencode_routes_block_with_not_started_proof[route0]",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.126,
+      "reason": null
+    },
+    {
+      "name": "test_api_sdk_and_opencode_routes_block_with_not_started_proof[route1]",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.113,
+      "reason": null
+    },
+    {
+      "name": "test_api_sdk_and_opencode_routes_block_with_not_started_proof[route2]",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.137,
+      "reason": null
+    },
+    {
+      "name": "test_codex_and_claude_commands_are_fixed_and_no_auth_status_command_exists",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_existing_uncertain_dispatch_is_recovered_before_cli_preflight",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.127,
+      "reason": null
+    },
+    {
+      "name": "test_only_final_agent_message_survives_event_stream",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.001,
+      "reason": null
+    },
+    {
+      "name": "test_concurrent_state_publication_uses_unique_staging_files",
+      "classname": "tests.test_phase2_runners",
+      "status": "passed",
+      "seconds": 0.377,
+      "reason": null
+    },
+    {
+      "name": "test_exploration_bootstrap_private_resource_and_replay",
+      "classname": "tests.test_phase2_steps",
+      "status": "passed",
+      "seconds": 0.108,
+      "reason": null
+    },
+    {
+      "name": "test_implementation_cannot_start_from_unapproved_draft",
+      "classname": "tests.test_phase2_steps",
+      "status": "passed",
+      "seconds": 0.078,
+      "reason": null
+    },
+    {
+      "name": "test_version_cas_and_hierarchy_tags",
+      "classname": "tests.test_phase2_steps",
+      "status": "passed",
+      "seconds": 0.13,
+      "reason": null
+    },
+    {
+      "name": "test_branch_invalidation_preserves_other_steps",
+      "classname": "tests.test_phase2_steps",
+      "status": "passed",
+      "seconds": 0.338,
+      "reason": null
+    },
+    {
+      "name": "test_parent_cannot_cancel_until_child_step_is_explicitly_closed",
+      "classname": "tests.test_phase2_steps",
+      "status": "passed",
+      "seconds": 0.126,
+      "reason": null
+    },
+    {
+      "name": "test_classified_item_uses_project_plan_and_inherits_work_priority",
+      "classname": "tests.test_phase2_steps",
+      "status": "passed",
+      "seconds": 0.17,
+      "reason": null
+    },
+    {
+      "name": "test_schema4_migration_preserves_schema2_and_is_repeatable",
+      "classname": "tests.test_phase2_storage",
+      "status": "passed",
+      "seconds": 0.261,
+      "reason": null
+    },
+    {
+      "name": "test_phase2_relationship_checks_active_uniqueness_and_cas_fields",
+      "classname": "tests.test_phase2_storage",
+      "status": "passed",
+      "seconds": 0.092,
+      "reason": null
+    },
+    {
+      "name": "test_future_schema_rejected_without_mutation",
+      "classname": "tests.test_phase2_storage",
+      "status": "passed",
+      "seconds": 0.066,
+      "reason": null
+    },
+    {
+      "name": "test_schema_migration_failure_rolls_back_and_keeps_backup",
+      "classname": "tests.test_phase2_storage",
+      "status": "passed",
+      "seconds": 0.134,
+      "reason": null
+    },
+    {
+      "name": "test_process_writer_observes_maintenance_gate",
+      "classname": "tests.test_phase2_storage",
+      "status": "passed",
+      "seconds": 0.339,
+      "reason": null
+    },
+    {
+      "name": "test_read_01_scoped_records_decisions_next_watch_and_cursor",
+      "classname": "tests.test_queries",
+      "status": "passed",
+      "seconds": 0.243,
+      "reason": null
+    },
+    {
+      "name": "test_read_01_record_selection_includes_only_same_scope_descendants",
+      "classname": "tests.test_queries",
+      "status": "passed",
+      "seconds": 0.078,
+      "reason": null
+    },
+    {
+      "name": "test_read_01_scope_includes_descendant_projects_but_not_siblings",
+      "classname": "tests.test_queries",
+      "status": "passed",
+      "seconds": 0.066,
+      "reason": null
+    },
+    {
+      "name": "test_read_02_summary_is_bounded_and_keeps_current_warning",
+      "classname": "tests.test_queries",
+      "status": "passed",
+      "seconds": 0.087,
+      "reason": null
+    },
+    {
+      "name": "test_read_invalid_cursor_and_cross_scope_record_rejected",
+      "classname": "tests.test_queries",
+      "status": "passed",
+      "seconds": 0.148,
+      "reason": null
+    },
+    {
+      "name": "test_resource_stages_hashes_and_registers_reference",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.138,
+      "reason": null
+    },
+    {
+      "name": "test_resource_rejects_escape_and_symlink",
+      "classname": "tests.test_resources",
+      "status": "skipped",
+      "seconds": 0.075,
+      "reason": "This Windows account cannot create symlinks"
+    },
+    {
+      "name": "test_diagnose_reports_missing_corrupt_orphan_and_retention_candidate",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.106,
+      "reason": null
+    },
+    {
+      "name": "test_missing_artifact_is_not_valid",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.061,
+      "reason": null
+    },
+    {
+      "name": "test_register_replay_and_concurrent_same_request_publish_once",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.111,
+      "reason": null
+    },
+    {
+      "name": "test_register_same_request_changed_payload_conflicts_before_second_copy",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.327,
+      "reason": null
+    },
+    {
+      "name": "test_register_rejects_foreign_scope_and_owner_before_file_job",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.118,
+      "reason": null
+    },
+    {
+      "name": "test_register_db_failure_leaves_diagnosable_orphan_and_failed_job",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.122,
+      "reason": null
+    },
+    {
+      "name": "test_diagnose_excludes_runtime_data_locations",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.075,
+      "reason": null
+    },
+    {
+      "name": "test_diagnose_reports_resource_links_without_traversing_them",
+      "classname": "tests.test_resources",
+      "status": "skipped",
+      "seconds": 0.069,
+      "reason": "This Windows account cannot create symlinks"
+    },
+    {
+      "name": "test_windows_junctions_are_rejected_without_traversing_target",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 1.513,
+      "reason": null
+    },
+    {
+      "name": "test_active_maintenance_blocks_constructor_side_effects_and_resource_jobs",
+      "classname": "tests.test_resources",
+      "status": "passed",
+      "seconds": 0.114,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_actual_dirty_and_untracked_workspace_changes_cannot_reuse",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.29,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_missing_workspace_makes_pass_impossible",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.209,
+      "reason": null
+    },
+    {
+      "name": "test_verify_01_missing_evidence_never_accepts_pass",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.439,
+      "reason": null
+    },
+    {
+      "name": "test_verify_01_matching_snapshot_and_real_ready_artifact_is_reusable",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.537,
+      "reason": null
+    },
+    {
+      "name": "test_verify_01_reuse_is_limited_by_scope_workspace_criteria_command_and_environment",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.603,
+      "reason": null
+    },
+    {
+      "name": "test_verify_01_subset_passes_union_to_satisfy_all_finish_criteria",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.52,
+      "reason": null
+    },
+    {
+      "name": "test_verify_01_id_only_criterion_object_matches_its_canonical_string_form",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.19,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_content_command_and_criteria_changes_stale_success",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.319,
+      "reason": null
+    },
+    {
+      "name": "test_verify_03_later_failure_or_corrupt_evidence_invalidates_prior_pass",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.356,
+      "reason": null
+    },
+    {
+      "name": "test_verify_03_failure_in_an_independent_scope_does_not_stale_candidate",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.356,
+      "reason": null
+    },
+    {
+      "name": "test_verify_03_evidence_hash_change_invalidates_prior_pass",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.312,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_before_snapshot_is_required_and_execution_change_refuses_pass",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.208,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_configuration_dependency_inputs_runtime_change_invalidates_pass[configuration]",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.2,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_configuration_dependency_inputs_runtime_change_invalidates_pass[dependency]",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.223,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_configuration_dependency_inputs_runtime_change_invalidates_pass[inputs]",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.192,
+      "reason": null
+    },
+    {
+      "name": "test_verify_02_configuration_dependency_inputs_runtime_change_invalidates_pass[runtime]",
+      "classname": "tests.test_verification",
+      "status": "passed",
+      "seconds": 0.188,
+      "reason": null
+    }
+  ],
+  "source_hashes_before": {
+    "src/pmt\\hooks.py": "89ebc9e4356d9b1c4cf5c7b4e6efa246ddf34762a4ad3007a38854c14e68ae2c",
+    "tests/test_lifecycle.py": "df5f3d3c786d49289f200d592050b887ef9ef22dd422abb5ebb412490349ada6",
+    "src/pmt\\planning\\graph.py": "57401be973c709f99638355b78a51334129bf8e16decaad8848b19a34e1e9a23",
+    "tests/test_verification.py": "06135279e792c7937289a1ef77e289ab498c5922191afab91cc6e95ee7d922f4",
+    "tests/test_resources.py": "e53c311660e637b181d253901dfb0a81d35f308861373ea037c5cf13968f02cc",
+    "src/pmt\\phase3.py": "a7159523670328fb05f332b3619bd687bc7b81cc20fe7eff4f14256497d262f1",
+    "src/pmt\\resources.py": "83a9559cfd952bdbdb031c46d00ab58f295a17ae3e86624cf4c130492f60e59f",
+    "src/pmt\\runners\\service.py": "a60e2854de6aaa81eec1d98e7d62c415a672ea00f7957e2e0ad8460e40a29899",
+    "src/pmt\\execution\\__init__.py": "994f183d3de75ffc3d2c186a60229eaa5eda7bd75698928f65ec65358e1cbef6",
+    "src/pmt\\steps.py": "981ad00bfe9c625490db33e08f51cb90c9d81906533a0711f6f33f4e9f23a7b3",
+    "tests/test_phase2_storage.py": "422efba21776e2a50bb773ff6f596b3bf4e2facbc7affff95ac813ab10f1e498",
+    "src/pmt\\reconciliation\\__init__.py": "90fdcdd91fe90a69dd7e3f2ff530564d5947981f11bd609d541bee0af31ccfd5",
+    "tests/test_hooks.py": "189b18e032cfaf424d1497682e3bd001fdf0752342cf1bf810c57dddb9e12f03",
+    "tests/test_phase2_steps.py": "d9ba5820924db5ae099417592087573cb5f86730f11c8dd473860b6e5f0f2baf",
+    "src/pmt\\phase2_schema.py": "dc77dba458a9b358809909799edfa21b9d22eb24e65509e17310c0d247dfc8dc",
+    "tests/test_fixture_contract.py": "1b1caaf77edfacafefa0000926d4f62e0c069ec07defb0c168788ae359c90c3c",
+    "tests/test_phase2_execution.py": "7ff83412e32a9b19b23ec62d37c3ec3e534cb4abd39fbbdcd32495eab222d833",
+    "src/pmt\\cli.py": "8e1cf54f59337766e9ff8572bd51333203e0a4e05f4eb8a65226ad3be5e0073c",
+    "src/pmt\\routing\\service.py": "719df5d7de2c8646a70e275fc52e24e01c1dca7dfad93a03c87dae05471bd185",
+    "src/pmt\\db.py": "68c628ea143a2bb9a0271d53c88fdf9b648e0c4ac9e4e9a635b5a5afcaf15cc7",
+    "src/pmt\\efficiency\\source.py": "a02a5abc63fbf84dcae1a27a98c3f34499f1712f78a752743475c0a82f4593e7",
+    "tests/test_phase2_routing.py": "ba5d50b2c2313283c0156080a25aa88efe6e2cd4bba38231f6a366671a2b0314",
+    "src/pmt\\operations.py": "444f6178115359986057c9f0d1eb507bc8a0f210103e0e73afa83d4280ff94d5",
+    "src/pmt\\phase2.py": "d7e7244b182ca1335876032e12cbc1b0a0ae2f36675db07d0ea091f2d38ba3ff",
+    "src/pmt\\efficiency\\storage.py": "6aa3b22052897dd1bfe7de6c974cf91fb3d2566e9240dfbd23a6b5b28c18bc2a",
+    "src/pmt\\__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "src/pmt\\store.py": "387eeeb9f01ec24617ea3bc63a139e74afb88a1ec46ee614aa5a1a412e8dc322",
+    "src/pmt\\runners\\__init__.py": "e256e8b2cc23ed0667104f978b14932be0e55791048d77ebdf52fd216028902e",
+    "tests/test_acceptance_matrix.py": "37850a53b6ba4a75cb16d3cc829dbd362ad44d8aeac35c277997c1fd6bae2716",
+    "src/pmt\\queries.py": "175c271811d9bc2e359cf72651b2bf032d405aa5a81822b0f2d0ebeb368241fb",
+    "src/pmt\\errors.py": "f46a6e206f4be659cd7b1dfbf010bf68749379c2fce31188fa32f7eaf9370081",
+    "src/pmt\\lifecycle.py": "6ef41076ce3a08abfb7f67b193c3253e6e45bb55069f837cee291c4ce6f41351",
+    "tests/test_foundation.py": "643613124dd87a8ab197b5bd0d4d6d1be078def5b65b057c8cb19055ebe14a3d",
+    "src/pmt\\planning\\service.py": "f2d918e3409a33ad033b85e07b8f9a7b2b65c531e58fe64e3feaecfc91eafd2b",
+    "tests/test_cli_integration.py": "912bdc8898f73f4c40ad8dd71de4ba92b9d4839d101dcf6af639893a75230682",
+    "tests/test_queries.py": "1b7d0164bdba5142e7e2c76b868861c3a5755fe5adc889a4bde98f382f476a05",
+    "tests/test_final_guards.py": "936d588867ac516fe2150293ee2ed0a91b7fedc0cadff46f1536567d33b3ea03",
+    "src/pmt\\paths.py": "57d0dfe98a64ca0cc5a370158f832b3a9abec79e2c91df72a2dbd7f3d3c396e2",
+    "tests/test_phase2_operations.py": "064bbcef3eb15c77760ef91361edfb5672d517abab7e5ce3b0f08e7499b09f37",
+    "src/pmt\\verification.py": "3625578e8147a0f0d4d44889e7055897d1fb8f42a9946d928b7a1de013b0f2df",
+    "tests/test_acceptance.py": "a89e1be40a50d8438464170cd9fe1b85bdca1d236763f838a682552deb2affd5",
+    "src/pmt\\routing\\__init__.py": "4569fc56d2fa096a04bf238b5d07fcaa98ab58ed267fabbd08d9ba8b80558b84",
+    "tests/test_phase2_runners.py": "865cfd761e90d032e9711bf63f3c95d3dbe0d169a8045fe91e8e0611e21b8a65",
+    "tests/test_backup.py": "417ca1b4c1399fcad294c520d7a17d0abbde0fad2da4eb8ae40a15e4c202f4f9",
+    "src/pmt\\util.py": "5d6bc159920299cbe9e80b32f3431578eac78d32e6a7dcd23e16355e2ed369c7",
+    "src/pmt\\runners\\supervisor.py": "e6574b1b94f147d89c80412479d44b481cd3a423bae6ee5b21f2c4b2119bbaa1",
+    "src/pmt\\__init__.py": "25a0a5423427aea8ab326caac23d99ca189b5362898d3777507c12ffc5ee6eb0",
+    "src/pmt\\planning\\__init__.py": "2e9e4ce944e3eed6b3cba8329497aa8bb3d5cf2ce6fef908a738aa8803e7efaf",
+    "src/pmt\\phase3_schema.py": "e004753db42ec6f443ffa0908b9394a400dcff601c6f5eea97700f1b86397738",
+    "tests/test_end_to_end.py": "beecd875350f58255d1e6b6af9245933f5667f4aedfe406f6738066217d7d61e",
+    "tests/test_hook_acceptance.py": "aaf98482c50d3c8c798aa382fb8e0c4a55fb081d588366e55fe9f306d016896b",
+    "tests/test_phase2_planning.py": "40ab55fc5703ab0f8eb75006d9d027dff3edef2b3c71defd8391aa4fe92dda4a",
+    "src/pmt\\reconciliation\\service.py": "66450ac8ccaa6b81977b671675e689ddc0ebb56e38579495d79f23b00ea76236",
+    "src/pmt\\phase2_common.py": "78bb7bca39f5673407d0adadce5b470d650ef17579e3601c09615d1800fbe2ef",
+    "tests/test_lifecycle_extensions.py": "73f2b2e3b6bf164b09a78139e260696d5b4229ef9a74db4c02c5635f1f4fa825",
+    "src/pmt\\efficiency\\__init__.py": "7dcee94edcab7e43cae802001b0356c89ff8889eef49ce33cde21b6ec9c636c8",
+    "tests/test_phase2_reconciliation.py": "f7ef93b4e846bfce41155609fbf5378deebe2b1196326fc7ab4de81bd3bf52ee",
+    "src/pmt\\execution\\service.py": "ca4aae32e77c76e536010f145527f4f08e612b5a98e7c365479df15d7bcc8419",
+    "src/pmt\\diagnostics.py": "a350fc152f3cc8a49b83e07e4496b89a949ad6ed9169713e89eb4d9adf903171",
+    "tests/test_phase2_product_boundaries.py": "029732798330527a94ff9b01dc8a89a4affa6b2207c05d7795db0c22b2fb626e",
+    "src/pmt\\efficiency\\measurement.py": "7da46cfbd4e99cbcb6bc5655f99cc9896a3e832491235ee8c218ed0a281e376d",
+    "tests/test_packaging.py": "ff9a47535c062188fda6716bb27c8331317d6e17a330a9cacccc4133132735a1",
+    "src/pmt\\service.py": "1a33919488c687238decec30ea78bf0bb6410eba1dc25904d27e9f7a8c7989e9",
+    "src/pmt\\efficiency\\measurement_ops.py": "8c17d920cae4a5bb7bcff4e7a11f6bc2c935da3651c41cafc6c111ba21766d2a"
+  },
+  "source_hashes_after": {
+    "src/pmt\\hooks.py": "89ebc9e4356d9b1c4cf5c7b4e6efa246ddf34762a4ad3007a38854c14e68ae2c",
+    "tests/test_lifecycle.py": "df5f3d3c786d49289f200d592050b887ef9ef22dd422abb5ebb412490349ada6",
+    "src/pmt\\planning\\graph.py": "57401be973c709f99638355b78a51334129bf8e16decaad8848b19a34e1e9a23",
+    "tests/test_verification.py": "06135279e792c7937289a1ef77e289ab498c5922191afab91cc6e95ee7d922f4",
+    "tests/test_resources.py": "e53c311660e637b181d253901dfb0a81d35f308861373ea037c5cf13968f02cc",
+    "src/pmt\\phase3.py": "a7159523670328fb05f332b3619bd687bc7b81cc20fe7eff4f14256497d262f1",
+    "src/pmt\\resources.py": "83a9559cfd952bdbdb031c46d00ab58f295a17ae3e86624cf4c130492f60e59f",
+    "src/pmt\\runners\\service.py": "a60e2854de6aaa81eec1d98e7d62c415a672ea00f7957e2e0ad8460e40a29899",
+    "src/pmt\\execution\\__init__.py": "994f183d3de75ffc3d2c186a60229eaa5eda7bd75698928f65ec65358e1cbef6",
+    "src/pmt\\steps.py": "981ad00bfe9c625490db33e08f51cb90c9d81906533a0711f6f33f4e9f23a7b3",
+    "tests/test_phase2_storage.py": "422efba21776e2a50bb773ff6f596b3bf4e2facbc7affff95ac813ab10f1e498",
+    "src/pmt\\reconciliation\\__init__.py": "90fdcdd91fe90a69dd7e3f2ff530564d5947981f11bd609d541bee0af31ccfd5",
+    "tests/test_hooks.py": "189b18e032cfaf424d1497682e3bd001fdf0752342cf1bf810c57dddb9e12f03",
+    "tests/test_phase2_steps.py": "d9ba5820924db5ae099417592087573cb5f86730f11c8dd473860b6e5f0f2baf",
+    "src/pmt\\phase2_schema.py": "dc77dba458a9b358809909799edfa21b9d22eb24e65509e17310c0d247dfc8dc",
+    "tests/test_fixture_contract.py": "1b1caaf77edfacafefa0000926d4f62e0c069ec07defb0c168788ae359c90c3c",
+    "tests/test_phase2_execution.py": "7ff83412e32a9b19b23ec62d37c3ec3e534cb4abd39fbbdcd32495eab222d833",
+    "src/pmt\\cli.py": "8e1cf54f59337766e9ff8572bd51333203e0a4e05f4eb8a65226ad3be5e0073c",
+    "src/pmt\\routing\\service.py": "719df5d7de2c8646a70e275fc52e24e01c1dca7dfad93a03c87dae05471bd185",
+    "src/pmt\\db.py": "68c628ea143a2bb9a0271d53c88fdf9b648e0c4ac9e4e9a635b5a5afcaf15cc7",
+    "src/pmt\\efficiency\\source.py": "a02a5abc63fbf84dcae1a27a98c3f34499f1712f78a752743475c0a82f4593e7",
+    "tests/test_phase2_routing.py": "ba5d50b2c2313283c0156080a25aa88efe6e2cd4bba38231f6a366671a2b0314",
+    "src/pmt\\operations.py": "444f6178115359986057c9f0d1eb507bc8a0f210103e0e73afa83d4280ff94d5",
+    "src/pmt\\phase2.py": "d7e7244b182ca1335876032e12cbc1b0a0ae2f36675db07d0ea091f2d38ba3ff",
+    "src/pmt\\efficiency\\storage.py": "6aa3b22052897dd1bfe7de6c974cf91fb3d2566e9240dfbd23a6b5b28c18bc2a",
+    "src/pmt\\__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "src/pmt\\store.py": "387eeeb9f01ec24617ea3bc63a139e74afb88a1ec46ee614aa5a1a412e8dc322",
+    "src/pmt\\runners\\__init__.py": "e256e8b2cc23ed0667104f978b14932be0e55791048d77ebdf52fd216028902e",
+    "tests/test_acceptance_matrix.py": "37850a53b6ba4a75cb16d3cc829dbd362ad44d8aeac35c277997c1fd6bae2716",
+    "src/pmt\\queries.py": "175c271811d9bc2e359cf72651b2bf032d405aa5a81822b0f2d0ebeb368241fb",
+    "src/pmt\\errors.py": "f46a6e206f4be659cd7b1dfbf010bf68749379c2fce31188fa32f7eaf9370081",
+    "src/pmt\\lifecycle.py": "6ef41076ce3a08abfb7f67b193c3253e6e45bb55069f837cee291c4ce6f41351",
+    "tests/test_foundation.py": "643613124dd87a8ab197b5bd0d4d6d1be078def5b65b057c8cb19055ebe14a3d",
+    "src/pmt\\planning\\service.py": "f2d918e3409a33ad033b85e07b8f9a7b2b65c531e58fe64e3feaecfc91eafd2b",
+    "tests/test_cli_integration.py": "912bdc8898f73f4c40ad8dd71de4ba92b9d4839d101dcf6af639893a75230682",
+    "tests/test_queries.py": "1b7d0164bdba5142e7e2c76b868861c3a5755fe5adc889a4bde98f382f476a05",
+    "tests/test_final_guards.py": "936d588867ac516fe2150293ee2ed0a91b7fedc0cadff46f1536567d33b3ea03",
+    "src/pmt\\paths.py": "57d0dfe98a64ca0cc5a370158f832b3a9abec79e2c91df72a2dbd7f3d3c396e2",
+    "tests/test_phase2_operations.py": "064bbcef3eb15c77760ef91361edfb5672d517abab7e5ce3b0f08e7499b09f37",
+    "src/pmt\\verification.py": "3625578e8147a0f0d4d44889e7055897d1fb8f42a9946d928b7a1de013b0f2df",
+    "tests/test_acceptance.py": "a89e1be40a50d8438464170cd9fe1b85bdca1d236763f838a682552deb2affd5",
+    "src/pmt\\routing\\__init__.py": "4569fc56d2fa096a04bf238b5d07fcaa98ab58ed267fabbd08d9ba8b80558b84",
+    "tests/test_phase2_runners.py": "865cfd761e90d032e9711bf63f3c95d3dbe0d169a8045fe91e8e0611e21b8a65",
+    "tests/test_backup.py": "417ca1b4c1399fcad294c520d7a17d0abbde0fad2da4eb8ae40a15e4c202f4f9",
+    "src/pmt\\util.py": "5d6bc159920299cbe9e80b32f3431578eac78d32e6a7dcd23e16355e2ed369c7",
+    "src/pmt\\runners\\supervisor.py": "e6574b1b94f147d89c80412479d44b481cd3a423bae6ee5b21f2c4b2119bbaa1",
+    "src/pmt\\__init__.py": "25a0a5423427aea8ab326caac23d99ca189b5362898d3777507c12ffc5ee6eb0",
+    "src/pmt\\planning\\__init__.py": "2e9e4ce944e3eed6b3cba8329497aa8bb3d5cf2ce6fef908a738aa8803e7efaf",
+    "src/pmt\\phase3_schema.py": "e004753db42ec6f443ffa0908b9394a400dcff601c6f5eea97700f1b86397738",
+    "tests/test_end_to_end.py": "beecd875350f58255d1e6b6af9245933f5667f4aedfe406f6738066217d7d61e",
+    "tests/test_hook_acceptance.py": "aaf98482c50d3c8c798aa382fb8e0c4a55fb081d588366e55fe9f306d016896b",
+    "tests/test_phase2_planning.py": "40ab55fc5703ab0f8eb75006d9d027dff3edef2b3c71defd8391aa4fe92dda4a",
+    "src/pmt\\reconciliation\\service.py": "66450ac8ccaa6b81977b671675e689ddc0ebb56e38579495d79f23b00ea76236",
+    "src/pmt\\phase2_common.py": "78bb7bca39f5673407d0adadce5b470d650ef17579e3601c09615d1800fbe2ef",
+    "tests/test_lifecycle_extensions.py": "73f2b2e3b6bf164b09a78139e260696d5b4229ef9a74db4c02c5635f1f4fa825",
+    "src/pmt\\efficiency\\__init__.py": "7dcee94edcab7e43cae802001b0356c89ff8889eef49ce33cde21b6ec9c636c8",
+    "tests/test_phase2_reconciliation.py": "f7ef93b4e846bfce41155609fbf5378deebe2b1196326fc7ab4de81bd3bf52ee",
+    "src/pmt\\execution\\service.py": "ca4aae32e77c76e536010f145527f4f08e612b5a98e7c365479df15d7bcc8419",
+    "src/pmt\\diagnostics.py": "a350fc152f3cc8a49b83e07e4496b89a949ad6ed9169713e89eb4d9adf903171",
+    "tests/test_phase2_product_boundaries.py": "029732798330527a94ff9b01dc8a89a4affa6b2207c05d7795db0c22b2fb626e",
+    "src/pmt\\efficiency\\measurement.py": "7da46cfbd4e99cbcb6bc5655f99cc9896a3e832491235ee8c218ed0a281e376d",
+    "tests/test_packaging.py": "ff9a47535c062188fda6716bb27c8331317d6e17a330a9cacccc4133132735a1",
+    "src/pmt\\service.py": "1a33919488c687238decec30ea78bf0bb6410eba1dc25904d27e9f7a8c7989e9",
+    "src/pmt\\efficiency\\measurement_ops.py": "8c17d920cae4a5bb7bcff4e7a11f6bc2c935da3651c41cafc6c111ba21766d2a"
+  },
+  "source_files_changed_during_run": [],
+  "dirty_before": [
+    " M pyproject.toml",
+    " M src/pmt/db.py",
+    " M src/pmt/diagnostics.py",
+    " M src/pmt/service.py",
+    " M tests/test_backup.py",
+    " M tests/test_phase2_storage.py",
+    "?? docs/phase3/evidence/",
+    "?? src/pmt/efficiency/",
+    "?? src/pmt/phase3.py",
+    "?? src/pmt/phase3_schema.py",
+    "?? src/pmt/store.py",
+    "?? tests/test_phase3_measurement.py",
+    "?? tests/test_phase3_protocol.py",
+    "?? tests/test_phase3_storage_foundation.py"
+  ],
+  "dirty_after": [
+    " M pyproject.toml",
+    " M src/pmt/db.py",
+    " M src/pmt/diagnostics.py",
+    " M src/pmt/service.py",
+    " M tests/test_backup.py",
+    " M tests/test_phase2_storage.py",
+    "?? docs/phase3/evidence/",
+    "?? src/pmt/efficiency/",
+    "?? src/pmt/phase3.py",
+    "?? src/pmt/phase3_schema.py",
+    "?? src/pmt/store.py",
+    "?? tests/test_phase3_measurement.py",
+    "?? tests/test_phase3_protocol.py",
+    "?? tests/test_phase3_storage_foundation.py"
+  ],
+  "external_model_calls": "none initiated by this pytest command",
+  "evidence_files": [
+    "junit.xml",
+    "pytest-output.txt"
+  ]
+}

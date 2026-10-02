@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "baseline",
+  "case_id": "phase2-native-plan-generation-2026-10-01",
+  "purpose": "Record the last real native-model planning result as the pre-optimization reference; original prompt/context and rendered output bytes were not retained.",
+  "condition": {
+    "goal": "phase2 planning request preserved; detailed original text not retained",
+    "acceptance": {
+      "criterion": "linked-plan",
+      "recorded_validation": "valid complete graph",
+      "definition": "historical phase2 criterion only"
+    },
+    "source": {
+      "repo_commit": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+      "graph_sha256": "4c80668c596c035afe04dc2b9f5765fc9d19d0a4b4143dedf8997ec6eedd912f",
+      "graph_version": 1
+    },
+    "environment": {
+      "runtime": {
+        "python": "3.13.13",
+        "sqlite": "3.50.4"
+      },
+      "capture_environment": "historical execution metadata only"
+    },
+    "model_role": {
+      "model": "gpt-6-luna",
+      "agent": "codex",
+      "role": "native planning subagent"
+    },
+    "policy": {
+      "source": "phase2 documented native subagent execution; full policy settings not retained"
+    },
+    "definition": {
+      "measurement": "pmt-efficiency-local-v1",
+      "token_rule": "unknown unless provider usage is explicitly recorded",
+      "cost_rule": "include retries, detail queries, context generation, rework, reviews"
+    }
+  },
+  "condition_fingerprint": "68c7aa5475e8d2381fc45a5067e092698568502e4bba9a4127dc4a8531083fa2",
+  "case_fingerprint": "d33dc2beb7217d2a2c3a38f4637495a0a3905f161350c2094d060211f09d2533",
+  "semantic_io": {
+    "input_fingerprint": "e3d0fe29d49660ac295ca117f6541866df3948d6a1a7a8179c892c2b00277531",
+    "output_fingerprint": "c3570ad6525da4c103a96d6db5ed5b376fad232cf757dd893cbca6a45c77229b"
+  },
+  "observations": [
+    {
+      "calls": 1,
+      "input_bytes": null,
+      "output_bytes": null,
+      "detail_queries": null,
+      "context_generations": null,
+      "retries": null,
+      "rework": null,
+      "reviews": null,
+      "elapsed_ms": null,
+      "tokens": {
+        "status": "unknown",
+        "actual": null,
+        "estimate": null
+      },
+      "evidence_tier": "model_actual",
+      "quality": {
+        "status": "pass",
+        "criteria": [
+          "linked-plan"
+        ],
+        "basis": "recorded graph validation and Step/Item/Work states in cited phase2 evidence"
+      }
+    }
+  ],
+  "evidence_refs": [
+    "docs/phase2/evidence/2026-10-01/phase2-status.json",
+    "docs/phase2/implementation-status.md"
+  ],
+  "manifest_fingerprint": "aa4c779a45bfda686c8ad77495d05c441d32d993653892324ad570e4a728e440"
+}

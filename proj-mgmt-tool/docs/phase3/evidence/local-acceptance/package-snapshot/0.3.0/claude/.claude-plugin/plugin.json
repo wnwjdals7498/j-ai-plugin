@@ -1,0 +1,8 @@
+{
+  "name": "pmt-lifecycle",
+  "version": "0.3.0",
+  "description": "Record minimal Claude Code lifecycle events in PMT.",
+  "author": {
+    "name": "PMT"
+  }
+}

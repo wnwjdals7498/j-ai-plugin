@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "phase3-local-fixture-error-record",
+  "recorded_on": "2026-10-02",
+  "test": "test_f10_actual_public_two_child_batch_report_collect_and_replay",
+  "tier": "isolated local pytest fixture",
+  "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_local_integration.py::test_f10_actual_public_two_child_batch_report_collect_and_replay -q --tb=short --show-capture=no --basetemp=.pmt-test/f10-f9-pending-v2",
+  "exit_code": 1,
+  "failure": {
+    "stage": "second child Step directive fixture resource publication",
+    "function": "pmt.phase2_common.persist_json_resource",
+    "operation": "os.replace(temp_file, content_addressed_object)",
+    "platform_error": "Windows WinError 32: file is in use by another process",
+    "cleanup_error": "temporary file unlink also returned WinError 32",
+    "database_state": "F1-F6 completed; F9 group prepare had not started",
+    "sensitive_values_recorded": false
+  },
+  "connection_lifecycle_review": {
+    "database_write": "Database.write closes its connection in a finally block",
+    "fixture_queries": "The F9 helper uses closing(db.connect()) for read connections",
+    "failure_location": "File replacement occurs before the resource metadata write transaction; no open SQLite connection was identified in the calling path",
+    "assessment": "External Windows file lock is plausible but the locking process is unconfirmed; do not classify as a product pass or automatically retry"
+  },
+  "additional_observation": {
+    "test": "test_f10_actual_public_group_cancel_before_dispatch_cancels_children",
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_local_integration.py::test_f10_actual_public_group_cancel_before_dispatch_cancels_children -q --tb=short --show-capture=no --basetemp=.pmt-test/f10-cancel-measurement",
+    "exit_code": 1,
+    "stage": "actual_context_env fixture evidence-resource artifact metadata insert",
+    "platform_error": "SQLite OperationalError: attempt to write a readonly database",
+    "connection_lifecycle_review": "Database.write closes its connection in finally; failure occurred during fixture setup while persisting a JSON resource, before the scenario body or LocalStore group cancellation operation began",
+    "sensitive_values_recorded": false,
+    "handling": "Recorded without retry or gate relaxation"
+  },
+  "host_resource_auth_observation": {
+    "test": "test_private_f9_child_directive_requires_explicit_active_batch_scope_binding",
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_host_resources.py tests/test_phase3_host_application.py tests/test_phase3_host_auth.py -q --tb=short --show-capture=no --basetemp=.pmt-test/f11-private-final",
+    "exit_code": 1,
+    "stage": "actual_context_env fixture Step directive artifact metadata insert",
+    "platform_error": "SQLite OperationalError: attempt to write a readonly database",
+    "connection_lifecycle_review": "Database.write closes its connection in finally; failure happened in fixture setup before the HostResource assertion. The same child-scope test passed in a prior isolated run (1 passed, 10.17s).",
+    "handling": "Preserved as an intermittent fixture/environment error; no automatic retry"
+  },
+  "post_fix_validation": {
+    "host_resource_local_suite": {"exit_code": 0, "passed": 16, "duration_seconds": 22.36,
+      "basetemp": ".pmt-test/f11-content-address-final"},
+    "real_https_resource_test": {"exit_code": 0, "passed": 1, "duration_seconds": 3.0},
+    "real_https_source_f2_test": {"exit_code": 0, "passed": 1, "duration_seconds": 2.58},
+    "two_client_scope_replay_tests": {"exit_code": 0, "passed": 2, "duration_seconds": 3.91},
+    "note": "Earlier fixture errors are retained; later targeted validation passed after the bounded publication and source response fixes."
+  },
+  "acceptance": "The F10 full test file passed earlier with exit 0 and 21 passed. Separate fixture setup errors are preserved above; the later exact HTTPS resource, source/F2, and two-client tests passed after their respective fixes."
+}

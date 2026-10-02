@@ -1,0 +1,97 @@
+........................................................................ [ 13%]
+........................................................................ [ 26%]
+......................................................................FF [ 39%]
+........................................................................ [ 52%]
+........................................................................ [ 65%]
+................E...............F....................................... [ 78%]
+.........s.............................................................. [ 91%]
+..s.......s.......s............................                          [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_f10_actual_missing_acceptance_stays_unknown_and_blocks_f8 _
+src\pmt\db.py:320: in write
+    yield conn
+src\pmt\phase2_common.py:71: in persist_json_resource
+    conn.execute("INSERT OR IGNORE INTO operation_journal(id,kind,state,body_json,created_at,updated_at) "
+E   sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+tests\test_phase3_context.py:100: in actual_context_env
+    directive_resource = persist_json_resource(db, directive_req, directive, project_id,
+src\pmt\phase2_common.py:69: in persist_json_resource
+    with db.write() as conn:
+         ^^^^^^^^^^
+D:\Application\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+src\pmt\db.py:325: in write
+    raise self._sqlite_error(exc) from exc
+E   pmt.errors.PmtError: Database operation failed
+================================== FAILURES ===================================
+_ test_actual_native_group_handle_and_structured_report_collect_per_child[1] __
+src\pmt\phase2_common.py:90: in persist_json_resource
+    os.replace(tmp, target)
+E   PermissionError: [WinError 32] 다른 프로세스가 파일을 사용 중이기 때문에 프로세스가 액세스 할 수 없습니다: 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p5c-xz7xq211\\data\\resources\\objects\\81\\pmt-isprrdf2' -> 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p5c-xz7xq211\\data\\resources\\objects\\81\\8133ed2ca5a5cd7293c44e3667c6b6451e1d1bf88dace923a36785ecf4414760.json'
+
+The above exception was the direct cause of the following exception:
+src\pmt\phase2_common.py:119: in persist_json_resource
+    raise PmtError("resource_io_error", "Structured resource publication failed", 4, True) from exc
+E   pmt.errors.PmtError: Structured resource publication failed
+
+During handling of the above exception, another exception occurred:
+tests\test_phase3_batch.py:636: in test_actual_native_group_handle_and_structured_report_collect_per_child
+    stop_evidence = persist_json_resource(env["db"], {**dispatch, "request_id": _id(), "payload": {}},
+src\pmt\phase2_common.py:122: in persist_json_resource
+    tmp.unlink(missing_ok=True)
+D:\Application\Python313\Lib\pathlib\_local.py:746: in unlink
+    os.unlink(self)
+E   PermissionError: [WinError 32] 다른 프로세스가 파일을 사용 중이기 때문에 프로세스가 액세스 할 수 없습니다: 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p5c-xz7xq211\\data\\resources\\objects\\81\\pmt-isprrdf2'
+____ test_actual_cli_group_runs_one_supervisor_and_collects_child_mapping _____
+src\pmt\phase2_common.py:90: in persist_json_resource
+    os.replace(tmp, target)
+E   PermissionError: [WinError 32] 다른 프로세스가 파일을 사용 중이기 때문에 프로세스가 액세스 할 수 없습니다: 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p5c-g9f0xe5z\\data\\resources\\objects\\d2\\pmt-fad6g7i3' -> 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p5c-g9f0xe5z\\data\\resources\\objects\\d2\\d2f7740c7c48721c3ff770138b3dd5ed6d5df7ba3fb7a99f116cfd5664f14128.json'
+
+The above exception was the direct cause of the following exception:
+src\pmt\phase2_common.py:119: in persist_json_resource
+    raise PmtError("resource_io_error", "Structured resource publication failed", 4, True) from exc
+E   pmt.errors.PmtError: Structured resource publication failed
+
+During handling of the above exception, another exception occurred:
+tests\test_phase3_batch.py:786: in test_actual_cli_group_runs_one_supervisor_and_collects_child_mapping
+    evidence = persist_json_resource(env["db"], {**prepare, "request_id": _id(), "payload": {}},
+src\pmt\phase2_common.py:122: in persist_json_resource
+    tmp.unlink(missing_ok=True)
+D:\Application\Python313\Lib\pathlib\_local.py:746: in unlink
+    os.unlink(self)
+E   PermissionError: [WinError 32] 다른 프로세스가 파일을 사용 중이기 때문에 프로세스가 액세스 할 수 없습니다: 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p5c-g9f0xe5z\\data\\resources\\objects\\d2\\pmt-fad6g7i3'
+______ test_active_target_claim_blocks_import_without_overwriting_target ______
+tests\test_phase3_migration.py:60: in _source_case
+    conn.execute("INSERT INTO scopes(id,kind,slug,body_json,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+E   sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+tests\test_phase3_migration.py:298: in test_active_target_claim_blocks_import_without_overwriting_target
+    source = _source_case(tmp_path)
+             ^^^^^^^^^^^^^^^^^^^^^^
+tests\test_phase3_migration.py:59: in _source_case
+    with db.write() as conn:
+         ^^^^^^^^^^
+D:\Application\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+src\pmt\db.py:325: in write
+    raise self._sqlite_error(exc) from exc
+E   pmt.errors.PmtError: Database operation failed
+============================== warnings summary ===============================
+tests/test_phase3_transfer.py::test_archive_rejects_slip_duplicate_reparse_and_size_excess
+  D:\Application\Python313\Lib\zipfile\__init__.py:1655: UserWarning: Duplicate name: 'manifest.json'
+    return self._open_to_write(zinfo, force_zip64=force_zip64)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_phase3_publication.py:212: This Windows account cannot create symlinks
+SKIPPED [1] tests\test_phase3_workspace.py:275: symlink creation is unavailable in this test environment
+SKIPPED [1] tests\test_resources.py:61: This Windows account cannot create symlinks
+SKIPPED [1] tests\test_resources.py:237: This Windows account cannot create symlinks
+ERROR tests/test_phase3_local_integration.py::test_f10_actual_missing_acceptance_stays_unknown_and_blocks_f8
+FAILED tests/test_phase3_batch.py::test_actual_native_group_handle_and_structured_report_collect_per_child[1]
+FAILED tests/test_phase3_batch.py::test_actual_cli_group_runs_one_supervisor_and_collects_child_mapping
+FAILED tests/test_phase3_migration.py::test_active_target_claim_blocks_import_without_overwriting_target
+3 failed, 543 passed, 4 skipped, 1 warning, 1 error in 1339.61s (0:22:19)

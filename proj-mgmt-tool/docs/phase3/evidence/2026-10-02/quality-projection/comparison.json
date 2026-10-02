@@ -1,0 +1,138 @@
+{
+  "bounded_build_elapsed_ms": 1901.5834,
+  "bounded_incomplete": false,
+  "bounded_payload_bytes": 7760,
+  "condition_sha256": "cbae6d5d2deffffc6061fce916ee405a8dbdafe8be2a1279b7083258fe8bc6e7",
+  "criteria_preservation": "pass",
+  "full_payload_bytes": 124900,
+  "model_quality": {
+    "status": "pass",
+    "case_count": 1,
+    "scope": "Independent handoff meaning extraction on a synthetic fixed-source task; no implementation-quality generalization",
+    "required_fields": [
+      "goal",
+      "non_goals",
+      "forbidden_change_scope",
+      "method_steps",
+      "input_meanings",
+      "output_meanings",
+      "test_meanings",
+      "logging_meanings",
+      "criterion_ids"
+    ],
+    "provider_tokens": null,
+    "runtime_ms": null,
+    "dispatches": [
+      "/root/p3_quality_full",
+      "/root/p3_quality_bounded"
+    ]
+  },
+  "provider_tokens": null,
+  "scope": "payload comparison only; setup/index/detail/retry/model costs excluded",
+  "target_source_hash": "2412b2528a45c6650a19f2f6f886e4f0e1a77f8d791abde350c6414ee0f5247c",
+  "tier": "local_integration",
+  "total_cost_comparison": "not_run",
+  "recorded_at": "2026-10-02T12:28:16.885383+00:00",
+  "model": "gpt-6-luna",
+  "payload_reduction_percent": 93.79,
+  "payload_sha256": {
+    "full": "7b5ba2b980649aa2064146d6361a206189d26459934fd20dd66d73146e492fc4",
+    "bounded": "c62721574dab9763a2982b3fb6cc50cc8ae571b85cdb207e174a3637290039db"
+  },
+  "model_answers": {
+    "full": {
+      "goal": "Preserve source and criteria to build a verified context.",
+      "non_goals": [
+        "Do not broaden access."
+      ],
+      "forbidden_change_scope": [
+        "claims and authentication"
+      ],
+      "method_steps": [
+        "read",
+        "project"
+      ],
+      "input_meanings": [
+        {
+          "name": "graph",
+          "meaning": "source-pinned graph"
+        }
+      ],
+      "output_meanings": [
+        {
+          "name": "context",
+          "meaning": "bounded projection"
+        }
+      ],
+      "test_meanings": [
+        {
+          "name": "source test",
+          "meaning": "actual hash comparison"
+        },
+        {
+          "name": "current source check",
+          "meaning": "check that SourcePin matches current source"
+        }
+      ],
+      "logging_meanings": [
+        {
+          "name": "trace",
+          "meaning": "safe IDs only"
+        },
+        {
+          "name": "implementation logging",
+          "meaning": "IDs and hashes only"
+        }
+      ],
+      "criterion_ids": [
+        "source-current",
+        "bounded-context"
+      ],
+      "test_execution_result": {
+        "value": null,
+        "reason": "The fixture specifies what the test means but provides no execution result."
+      }
+    },
+    "bounded": {
+      "goal": "Preserve source and criteria by building verified task context.",
+      "non_goals": [
+        "Do not broaden access."
+      ],
+      "forbidden_change_scope": [
+        "claims and authentication"
+      ],
+      "method_steps": [
+        "read",
+        "project"
+      ],
+      "input_meanings": [
+        {
+          "name": "graph",
+          "meaning": "source-pinned graph"
+        }
+      ],
+      "output_meanings": [
+        {
+          "name": "context",
+          "meaning": "bounded projection"
+        }
+      ],
+      "test_meanings": [
+        {
+          "name": "source test",
+          "meaning": "actual hash"
+        }
+      ],
+      "logging_meanings": [
+        {
+          "name": "trace",
+          "meaning": "safe IDs only"
+        }
+      ],
+      "criterion_ids": [
+        "source-current",
+        "bounded-context"
+      ]
+    }
+  }
+}

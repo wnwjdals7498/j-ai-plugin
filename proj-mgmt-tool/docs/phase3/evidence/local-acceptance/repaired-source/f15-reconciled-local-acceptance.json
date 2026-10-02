@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "kind": "phase3-f15-reconciled-local-acceptance",
+  "recorded_on": "2026-10-02T15:12:29.4707706Z",
+  "status": "passed_local_tier_reconciled",
+  "exit_code": 0,
+  "source_commit": "4f632da7065bd025d1b5053ef8d43cfe9774709f",
+  "core_version": "0.3.0",
+  "db_schema": 4,
+  "aggregate_manifest": "f15-local-acceptance.json",
+  "aggregate_manifest_sha256": "05dfbf700da323cf0fe19c823f524a76e46cc15bf23b25a943141435400f96e7",
+  "aggregate_status": "inconclusive_source_changed_during_run",
+  "aggregate_exit_code": 1,
+  "all_six_aggregate_groups_passed": true,
+  "aggregate_detected_source_changes": [
+    "tests/test_phase3_batch.py",
+    "tests/test_phase3_host_network.py"
+  ],
+  "change_classification": "Root-confirmed trailing whitespace only; ASTs equal; no production source changed",
+  "source_whitespace_proof": "test-whitespace-proof.json",
+  "source_whitespace_proof_sha256": "3af985007eaab86d5708cdaa8bea024b95e2c6af87cba49bfc696e75a022246c",
+  "targeted_recheck": {
+    "command": ".venv/Scripts/python.exe -m pytest tests/test_phase3_batch.py tests/test_phase3_host_batch_state.py tests/test_phase3_host_network.py -q --tb=short --show-capture=no --basetemp=.pmt-test/f15-reconcile-f9-network",
+    "exit_code": 0,
+    "passed": 21,
+    "failed": 0,
+    "elapsed_seconds": 111.89,
+    "evidence_tier": "current source targeted F9 + Host batch/network tests, including loopback HTTPS",
+    "source_hashes_at_recheck": {
+      "src/pmt/resources.py": "ff4f595724ba2058c8416824af8b19395243d1bb7af17fc98686c51053b58ce4",
+      "tests/test_phase3_host_batch_state.py": "81933f628f22fd93f853088fea46e83e097115d365008a4f133b5b48d3d1a4d8",
+      "tests/test_phase3_batch.py": "9afa84549e240cac45f1e671c388121ee2043b214d332d8bf1684492ac73255d",
+      "scripts/verify_phase3_local.py": "c2b14ef6ceb30e5cd42f932b48dce75ab9b191e4656c9fff6b15b20e82396133",
+      "src/pmt/phase2_common.py": "14205b2e0ced07b8add2c6a7d90191d070e39bd14e302fd194265eebf71cad7c",
+      "tests/test_phase3_host_network.py": "762d41afd8721a7e83810f4569bd9f76adbb1c7dec6a9440c3e17524299bf417",
+      "docs/phase3/traceability.md": "0514870c9d6cdfef0a4e57eb9ed34c4f2cd31142e552a3318062d99d1c7f7a1a"
+    },
+    "source_stable_during_recheck": true
+  },
+  "package_snapshot": {
+    "manifest": "f15-package-snapshot.json",
+    "manifest_sha256": "83b2502b68b3c8a64cd032b677811e6db12bf6acfa85d38608960d3c3ec35aac",
+    "folder": "docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0",
+    "core_version": "0.3.0",
+    "db_schema": 4,
+    "portable_cli_smokes": 3
+  },
+  "overall_acceptance": "partial_pending_native_product_remote_linux_and_full_model_measurement",
+  "external_model_calls": "not_run",
+  "native_product_installation": "not_run",
+  "remote_host": "not_run",
+  "linux_public_deployment": "not_run",
+  "model_quality": "not_assessed_except_separate_synthetic_context_projection",
+  "tokens": "unknown",
+  "cost": "unknown",
+  "source_sha256": {
+    "src/pmt/resources.py": "ff4f595724ba2058c8416824af8b19395243d1bb7af17fc98686c51053b58ce4",
+    "tests/test_phase3_host_batch_state.py": "81933f628f22fd93f853088fea46e83e097115d365008a4f133b5b48d3d1a4d8",
+    "tests/test_phase3_batch.py": "9afa84549e240cac45f1e671c388121ee2043b214d332d8bf1684492ac73255d",
+    "scripts/verify_phase3_local.py": "c2b14ef6ceb30e5cd42f932b48dce75ab9b191e4656c9fff6b15b20e82396133",
+    "src/pmt/phase2_common.py": "14205b2e0ced07b8add2c6a7d90191d070e39bd14e302fd194265eebf71cad7c",
+    "tests/test_phase3_host_network.py": "762d41afd8721a7e83810f4569bd9f76adbb1c7dec6a9440c3e17524299bf417",
+    "docs/phase3/traceability.md": "ede348ae29f2387d2e9f53db7603f3020c596bb4bc14f313b96b9c0107ee8a93",
+    "docs/phase3/evidence/local-acceptance/README.md": "ada9cdd5200d6b0b3ba01712d14054c752d4a8e6e1c29584eabf6ce67a759124"
+  },
+  "traceability_source_hash_manifest": "traceability-source-hashes.json",
+  "traceability_source_hash_manifest_sha256": "ec950d773178d929c58f606a863c629a9d7146a6aca9576c9688d3bb0d69d886",
+  "traceability_source_count": 87
+}

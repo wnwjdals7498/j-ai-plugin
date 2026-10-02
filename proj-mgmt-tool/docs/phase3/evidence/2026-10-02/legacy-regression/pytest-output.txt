@@ -1,0 +1,209 @@
+............F........................................................... [ 30%]
+..................................F.FFFFFFFF............................ [ 61%]
+..........EEEEE.....F.........................................s.......s. [ 92%]
+.................                                                        [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_built_package_has_current_core_schema_and_integrity[claude] _
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_phase2_product_boundaries.py:20: in package_distribution
+    build_plugins(root / "distribution", verifier.EXPECTED_CORE, ROOT)
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   build_plugins.BuildError: Project version or schema metadata is invalid
+_ ERROR at setup of test_built_package_has_current_core_schema_and_integrity[codex] _
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_phase2_product_boundaries.py:20: in package_distribution
+    build_plugins(root / "distribution", verifier.EXPECTED_CORE, ROOT)
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   build_plugins.BuildError: Project version or schema metadata is invalid
+_ ERROR at setup of test_product_environment_does_not_inherit_credentials_or_proxies _
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_phase2_product_boundaries.py:20: in package_distribution
+    build_plugins(root / "distribution", verifier.EXPECTED_CORE, ROOT)
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   build_plugins.BuildError: Project version or schema metadata is invalid
+_ ERROR at setup of test_run_root_must_be_fresh_and_inside_native_phase2_area _
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_phase2_product_boundaries.py:20: in package_distribution
+    build_plugins(root / "distribution", verifier.EXPECTED_CORE, ROOT)
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   build_plugins.BuildError: Project version or schema metadata is invalid
+__________ ERROR at setup of test_run_root_refuses_existing_content ___________
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_phase2_product_boundaries.py:20: in package_distribution
+    build_plugins(root / "distribution", verifier.EXPECTED_CORE, ROOT)
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   build_plugins.BuildError: Project version or schema metadata is invalid
+================================== FAILURES ===================================
+_________ test_data_02_v1_migrates_and_future_schema_is_read_guarded __________
+tests\test_acceptance.py:64: in test_data_02_v1_migrates_and_future_schema_is_read_guarded
+    assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "3"
+E   AssertionError: assert '4' == '3'
+E     
+E     - 3
+E     + 4
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:17:15.337546Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":21,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:17:15.359238Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+{"request_id":"a805fa7f-7340-45e9-8ab5-4bf04696bf63","operation":"archive-proof","session_id":"test-main","source":{"product":"test"},"scope_id":null,"record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":3,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:17:15.365260Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:17:15.378006Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":49,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:17:15.427519Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+___________ test_v1_request_owner_migration_and_diagnostic_warning ____________
+tests\test_lifecycle.py:187: in test_v1_request_owner_migration_and_diagnostic_warning
+    assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "3"
+E   AssertionError: assert '4' == '3'
+E     
+E     - 3
+E     + 4
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:17:41.796203Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":17,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:17:41.813922Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+_________ test_pkg_01_three_separate_bundles_manifest_and_zip_hashes __________
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_packaging.py:41: in test_pkg_01_three_separate_bundles_manifest_and_zip_hashes
+    built = build(tmp_path, "0.1.1")
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_packaging.py:37: in build
+    return BUILDER.build_plugins(tmp_path / "distribution", version, ROOT)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   pmt_build_plugins.BuildError: Project version or schema metadata is invalid
+_____________ test_pkg_01_standalone_cli_works_from_unrelated_cwd _____________
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_packaging.py:100: in test_pkg_01_standalone_cli_works_from_unrelated_cwd
+    built = build(tmp_path, "0.1.1")
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_packaging.py:37: in build
+    return BUILDER.build_plugins(tmp_path / "distribution", version, ROOT)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   pmt_build_plugins.BuildError: Project version or schema metadata is invalid
+_________ test_pkg_01_second_version_does_not_replace_earlier_bundle __________
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_packaging.py:131: in test_pkg_01_second_version_does_not_replace_earlier_bundle
+    first = build(tmp_path, "0.1.0")
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_packaging.py:37: in build
+    return BUILDER.build_plugins(tmp_path / "distribution", version, ROOT)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   pmt_build_plugins.BuildError: Project version or schema metadata is invalid
+____________ test_pkg_01_existing_version_is_preserved_and_refused ____________
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_packaging.py:142: in test_pkg_01_existing_version_is_preserved_and_refused
+    first = build(tmp_path, "0.1.0")
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_packaging.py:37: in build
+    return BUILDER.build_plugins(tmp_path / "distribution", version, ROOT)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   pmt_build_plugins.BuildError: Project version or schema metadata is invalid
+_________ test_pkg_01_source_mutation_during_copy_aborts_publication __________
+tests\test_packaging.py:167: in test_pkg_01_source_mutation_during_copy_aborts_publication
+    with pytest.raises(BUILDER.BuildError, match="source changed"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'source changed'
+E     Actual message: 'Project version or schema metadata is invalid'
+__________ test_pkg_01_retries_one_temporary_windows_publish_denial ___________
+scripts\build_plugins.py:264: in build_plugins
+    raise ValueError
+E   ValueError
+
+The above exception was the direct cause of the following exception:
+tests\test_packaging.py:188: in test_pkg_01_retries_one_temporary_windows_publish_denial
+    result = BUILDER.build_plugins(output, "0.1.1", ROOT)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\build_plugins.py:267: in build_plugins
+    raise BuildError("Project version or schema metadata is invalid") from exc
+E   pmt_build_plugins.BuildError: Project version or schema metadata is invalid
+___ test_pkg_01_persistent_windows_publish_denial_is_bounded_and_structured ___
+tests\test_packaging.py:217: in test_pkg_01_persistent_windows_publish_denial_is_bounded_and_structured
+    assert report["error"]["cause_type"] == "PermissionError"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'cause_type'
+____ test_pkg_01_source_drift_during_publish_retry_aborts_and_cleans_stage ____
+tests\test_packaging.py:247: in test_pkg_01_source_drift_during_publish_retry_aborts_and_cleans_stage
+    with pytest.raises(BUILDER.BuildError, match="source changed"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'source changed'
+E     Actual message: 'Project version or schema metadata is invalid'
+_____ test_nested_project_uses_verified_nearest_git_root_and_scoped_diffs _____
+tests\test_phase2_reconciliation.py:429: in test_nested_project_uses_verified_nearest_git_root_and_scoped_diffs
+    _git(repo_root, "add", "packages/project-a/src/feature.txt")
+tests\test_phase2_reconciliation.py:19: in _git
+    assert result.returncode == 0, result.stderr
+E   AssertionError: error: unable to write file .git/objects/f7/19efd430d52bcfc8566a43b2eb655688d38871: Permission denied
+E     error: packages/project-a/src/feature.txt: failed to insert into database
+E     error: unable to index file 'packages/project-a/src/feature.txt'
+E     fatal: updating files failed
+E     
+E   assert 128 == 0
+E    +  where 128 = CompletedProcess(args=['git', '-C', 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p3-leg...nsert into database\nerror: unable to index file 'packages/project-a/src/feature.txt'\nfatal: updating files failed\n").returncode
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"at_utc":"2026-10-02T02:18:16.385969Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_resources.py:61: This Windows account cannot create symlinks
+SKIPPED [1] tests\test_resources.py:237: This Windows account cannot create symlinks
+ERROR tests/test_phase2_product_boundaries.py::test_built_package_has_current_core_schema_and_integrity[claude]
+ERROR tests/test_phase2_product_boundaries.py::test_built_package_has_current_core_schema_and_integrity[codex]
+ERROR tests/test_phase2_product_boundaries.py::test_product_environment_does_not_inherit_credentials_or_proxies
+ERROR tests/test_phase2_product_boundaries.py::test_run_root_must_be_fresh_and_inside_native_phase2_area
+ERROR tests/test_phase2_product_boundaries.py::test_run_root_refuses_existing_content
+FAILED tests/test_acceptance.py::test_data_02_v1_migrates_and_future_schema_is_read_guarded
+FAILED tests/test_lifecycle.py::test_v1_request_owner_migration_and_diagnostic_warning
+FAILED tests/test_packaging.py::test_pkg_01_three_separate_bundles_manifest_and_zip_hashes
+FAILED tests/test_packaging.py::test_pkg_01_standalone_cli_works_from_unrelated_cwd
+FAILED tests/test_packaging.py::test_pkg_01_second_version_does_not_replace_earlier_bundle
+FAILED tests/test_packaging.py::test_pkg_01_existing_version_is_preserved_and_refused
+FAILED tests/test_packaging.py::test_pkg_01_source_mutation_during_copy_aborts_publication
+FAILED tests/test_packaging.py::test_pkg_01_retries_one_temporary_windows_publish_denial
+FAILED tests/test_packaging.py::test_pkg_01_persistent_windows_publish_denial_is_bounded_and_structured
+FAILED tests/test_packaging.py::test_pkg_01_source_drift_during_publish_retry_aborts_and_cleans_stage
+FAILED tests/test_phase2_reconciliation.py::test_nested_project_uses_verified_nearest_git_root_and_scoped_diffs
+11 failed, 215 passed, 2 skipped, 5 errors in 97.99s (0:01:37)

@@ -1,6 +1,6 @@
 # 모델·실행·통신 계약
 
-이 문서의 Queue·runner·Step·범위 lock은 2단계 구현 대상이다. 현재 CLI·claim의 실제 계약은 [1단계 계약](../phase1/contracts.md)을 따른다.
+Queue·runner·Step·범위 lock의 실제 상태는 [2단계 기록](../phase2/implementation-status.md), Host·제어·묶음의 실제 상태는 [3단계 기록](../phase3/implementation-status.md)을 따른다. 기본 CLI·claim의 의미는 [1단계 계약](../phase1/contracts.md)을 유지한다.
 
 ## 모델과 실행 경로
 
@@ -58,3 +58,17 @@ queued → starting → running → review_pending → succeeded
 | 테스트 실패 | 실측 결과 → 상위가 원인/변경 범위 판단 → 필요시 BUG/TEST 기록 → 수정 Step | 사용자 대전제 변경은 사용자, 구조 변경은 최상위 검토 |
 
 Step 성공은 실행 기준 충족, Item 완료는 요구 충족, Work 완료는 통합 목표 충족이다. 하위 모델 성공 응답·프로세스 종료·prototype 완료를 전체 완료로 바꾸지 않는다.
+
+## 현재 3단계 실행 경계
+
+`LocalStore`/`HttpStore`는 operation 결과·소유자 제한 조회·호환 포트를 제공한다. Phase 3 operation registry는 Host API allowlist가 아니다. 저장 mode는 단일 profile로 선택하고 hosted 실패는 로컬 업무 DB로 전환하지 않는다. 모델·CLI·native·working tree는 클라이언트에서 동작한다. [Host 계약](../phase3/host-api-contract.md)의 현재 인증·source·run/lock 확인을 거쳐 로컬 mapping을 해석한다.
+
+F8은 단일 run 또는 F9 parent를 제어한다. Phase 2 Queue·run revision·scope lock이 권위 원본이며 제어기는 현재 run·F5 문맥·F6 근거를 다시 검증한다. native 실행은 안정적인 nonce와 기대 revision을 가진 main-native-call action으로 요청한다. 실제 main 측 handle ACK 전에는 실행 중이라고 기록하지 않는다. 동일 nonce·동일 handle 재전송은 복구 가능하지만 다른 handle은 거부한다. 결과는 저장된 뒤 `review_pending`에서 검토한다. private native action 원문은 해당 원 요청의 응답 cache 하나에 보관하고 공유 control metadata에는 hash/ref/stub만 둔다.
+
+로컬 CLI 경로는 기존 runners 경계와 실제 CLI handle을 사용한다. prompt에는 검증된 F5 bounded projection만 반영하며 hash를 기록한다. 호스트 경로·PID·spool을 원격 저장 계약으로 노출하지 않는다. 관찰은 같은 상태에서 업무 이력을 쌓지 않는 조회이며 다음 poll은 15–60초 범위다. 의미 있는 변경·오류·메인 조치 필요·완료에 한해 통지하고, 표시 UI를 쓸 수 없으면 조회 결과를 명시한다. 앱이 닫힌 상태에서도 깨어난다는 보장은 없다.
+
+취소 요청이나 ACK는 실제 정지 확인이 아니다. 결과·정지 여부가 불명확하면 lock을 유지하고 기존 handle을 reconcile한다. 재시도는 허용된 일시 오류와 미시작/종료 확인을 모두 만족할 때 최대 두 번이며, 새 run은 현재 context/source/reuse 참조를 다시 받는다. 현재 CLI 결과에는 일시 오류 분류가 항상 포함되지 않으므로 그 경우 자동 재시도하지 않는다. 손실된 receipt나 모델의 성공 문구만으로 성공·완료를 기록하지 않는다.
+
+F9는 queued Step별 고정 지시·context·criteria와 parent scope union을 검증하고 물리 실행 한 개를 child별 logical run에 명시적으로 연결한다. 누락 결과는 미확인으로 남기며 다른 child의 검토 전 parent union을 해제하지 않는다. batch 자체를 모든 Step 성공으로 판정하지 않는다.
+
+F7 결과 receipt는 실제 리소스 hash·run·기준 참조에 묶인다. 기준별 pass에는 명시적 증거가 필요하다. Host 중단 중 이미 시작한 로컬 프로세스의 실제 종료 receipt는 기존 own spool에서만 수집할 수 있다. 신규 파일 접근·dispatch·claim을 허용하지 않는다. 이미 생성된 결과는 pending에 보관하고 재연결 시 같은 원 요청으로 조회·조정한다. 모델 token 사용량·비용·실제 모델 품질 효과와 fixture 실행 품질은 구분한다.

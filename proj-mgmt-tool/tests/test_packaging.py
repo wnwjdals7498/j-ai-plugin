@@ -37,6 +37,20 @@ def build(tmp_path: Path, version=None):
     return BUILDER.build_plugins(tmp_path / "distribution", version, ROOT)
 
 
+def test_schema_version_metadata_resolves_static_phase3_alias_without_executing_source(tmp_path):
+    root = tmp_path / "fixture"
+    package_dir = root / "src" / "pmt"
+    package_dir.mkdir(parents=True)
+    marker = tmp_path / "source-was-executed"
+    (package_dir / "phase3_schema.py").write_text(
+        f"SCHEMA_VERSION = 4\nfrom pathlib import Path\nPath({str(marker)!r}).touch()\n", encoding="utf-8")
+    db_source = ("from .phase3_schema import SCHEMA as PHASE3_SCHEMA, "
+                 "SCHEMA_VERSION as PHASE3_SCHEMA_VERSION\n"
+                 "SCHEMA_VERSION = PHASE3_SCHEMA_VERSION\n")
+    assert BUILDER._static_schema_version(root, db_source) == 4
+    assert not marker.exists()
+
+
 def test_pkg_01_three_separate_bundles_manifest_and_zip_hashes(tmp_path):
     built = build(tmp_path, "0.1.1")
     assert built["version"] == "0.1.1"
