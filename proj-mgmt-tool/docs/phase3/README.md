@@ -4,6 +4,8 @@
 
 범위는 [3단계 전체 계획](../03-hosted-storage.md)과 [문서·문맥 효율화 방향](01-document-context-efficiency.md)을 따른다. 직접 모델 API는 제외하며, 네이티브 서브에이전트·Claude/Codex CLI 실행은 로컬에 둔다. Host는 PMT 저장·공유 기능을 담당한다.
 
+기능별 실제 구현 배정은 [상세 구현 계획](implementation-plan.md)과 [구현 연결 규격](implementation-interfaces.md)을 기준으로 한다. `gpt-6-luna` 3개가 영역별 계획을 병렬 작성했고, 기능 명세의 48개 예정 시험과 단계별 처리·오류/복구·인계·통합 관문을 연결했다. 계획의 논리 Step ID는 실제 PMT UUID와 구별한다.
+
 ## 기능 명세 안내
 
 | 기능 | 문서 |

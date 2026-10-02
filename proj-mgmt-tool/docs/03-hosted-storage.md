@@ -8,6 +8,8 @@ Python 기반 정형 입력·트리/연관 graph·부분 문서 생성으로 문
 
 [기능 목록·의존성·구현 순서와 기능 명세](phase3/README.md)를 작업 분해의 기준으로 삼는다. [공통 계약](phase3/contracts.md)과 [시험·인계 명세](phase3/verification.md)에 기능별 입출력·시험·로그·완료 기준을 연결했다.
 
+착수 단계·소유/병렬 배정·실제 연결/복구·관문은 [상세 구현 계획](phase3/implementation-plan.md)을 따르고, 소비자별 인터페이스는 [구현 연결 규격](phase3/implementation-interfaces.md)을 참조한다. 현재 문서 작성 결과이며 코드 구현이나 시험 통과가 아니다.
+
 ## 처리 흐름
 
 ```mermaid
