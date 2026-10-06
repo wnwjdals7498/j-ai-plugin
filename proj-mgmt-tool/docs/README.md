@@ -2,6 +2,8 @@
 
 전체 구조·기술·모듈·통신·개발·운영 기준은 [공통 참조문서](pmt-docs/README.md), 에이전트 진입점은 [AGENTS.md](../AGENTS.md)다.
 
+Windows 저장 서버와 개발 서버의 실제 사용 준비는 [배포 순서·인계](handoff/deployment-order.md)를 따른다. 각각 복사해서 실행할 [Windows Host 프롬프트](handoff/windows-host.md), [개발 서버 프롬프트](handoff/development-plugin.md)를 제공한다.
+
 2단계 병렬 배정과 기능별 상세 인계는 [상세 구현 계획](phase2/README.md)에 정리했다.
 
 3단계 F0~F15의 목적·범위·입출력·구현/기술·시험/로그·완료·인계는 [기능 명세](phase3/README.md)를 따른다.
