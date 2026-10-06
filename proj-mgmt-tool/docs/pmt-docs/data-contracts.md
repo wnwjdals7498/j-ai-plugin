@@ -57,7 +57,7 @@ AI가 데이터셋의 세부 표현을 선택하되 다음 의미를 보존한�
 
 ## 현재 3단계 데이터 계약
 
-현재 코드는 package `0.3.0`, SQLite schema 4를 사용한다. schema 0–3과 기존 2단계 의미를 보존하며 schema 3에서 4로 이관할 때 백업·자료 보존을 검증한다. `LocalStore`/`HttpStore.execute(request)`는 `(envelope, exit_code)`를 반환한다. 결과 조회는 actor/session·현재 권한과 선택적 기대 요청 지문을 확인하며 미존재는 `None`이다. `check_compatibility()`는 core·DB·graph·protocol을 대조한다. Host auth schema와 HTTP API version은 별개다.
+현재 코드는 package `0.4.0`, SQLite schema 5를 사용한다. schema 0–4와 기존 2·3단계 의미를 보존하며 schema 3→4, 4→5 이관 때 백업·자료 보존을 검증한다. `LocalStore`/`HttpStore.execute(request)`는 `(envelope, exit_code)`를 반환한다. 결과 조회는 actor/session·현재 권한과 선택적 기대 요청 지문을 확인하며 미존재는 `None`이다. `check_compatibility()`는 core·DB·graph·protocol을 대조한다. Host auth schema와 HTTP API version은 별개다.
 
 Phase 3 SQLite에는 graph/document 원문 복제본 대신 stable ID, SourcePin, revision, hash, 상태, manifest·이력·intent·outbox 같은 파생 메타데이터와 실행 상태를 둔다. Git 문서와 graph가 업무 원본이다. `request_id` 재전송은 같은 논리 요청만 재생하고, 새 행동은 새 요청·이벤트 식별자를 사용한다. 변경은 기대 revision/source hash에 대한 CAS로 적용하며, 불일치는 성공처럼 합치지 않고 conflict로 돌려준다.
 
@@ -72,3 +72,11 @@ F5 문맥은 권한과 현재 run/source를 재검증한 bounded projection 참�
 Host의 graph/검증 snapshot은 인증된 클라이언트가 제출한 immutable hash 리소스와 현재 pointer다. Git 원본의 독립 수정본이 아니며 `provenance=client_snapshot`, `host_git_verified=false`를 구별한다. 실제 checkout은 클라이언트에서 검사한다. private Step/context는 현재 run·지시 버전·source·scope·기기/세션 소유권으로 제한한다.
 
 Host 논리 workspace는 repository UUID와 branch key SHA-256으로 만든다. 클라이언트 절대 경로는 profile에만 보관한다. backup은 업무 ID·관계·증거를 보존하고 기기 인증·모델 설정·claim/handle·live replay·derived context/cache를 제외한다. 새 target은 별도 인증/namespace를 유지하고 이관된 검증은 current pass로 재사용하지 않는다. pending은 실제 생성된 종료 결과만 원 request/body/source/owner와 함께 보관하며 동일 요청 조회·현재 기준 확인 후 재조정한다.
+
+## 4단계 세션 연속성 데이터
+
+`continuity_objects`는 짧은 사실·basis·checkpoint·변경·정렬·재개 참조를 immutable JSON/hash로 저장한다. `continuity_pointers`는 선택한 project/repository/branch/workspace/task/environment의 확정 객체를 CAS로 가리킨다. `continuity_events`는 실제 사건과 객체를 연결하고 `continuity_journal`은 아직 확정되지 않은 효과를 보존한다. shared는 안전한 요약·ref/hash, private bundle/detail은 현재 actor/session의 점유·기준 검증을 거친 조회다.
+
+basis는 실제 DB revision과 source·계약·조건·수집 범위를 함께 기록한다. graph SourcePin만으로 전체 코드가 확인됐다고 보지 않는다. 파일 inventory/diff 상세는 client-local private 자료이며 공유하는 값은 opaque ref·hash·개수·coverage다. 변경의 `before_basis_ref`는 출발점, `after_basis_ref/hash`는 현재 관찰 기준이다. mapping·assessment는 after 기준과 일치해야 한다.
+
+계획 단계의 checkpoint는 실행 없이 만들 수 있다. source/환경을 확인하지 않았다면 incomplete/unknown을 유지한다. session link·checkpoint·summary는 점유 이전이나 실행 완료를 만들지 않는다. 현재 사실·변경/정렬·적용성·F5 상세를 연결해 다음 조회/검토를 제안하며, 오래된 ref를 새 실행 권한으로 사용하지 않는다. 실제 operation과 Host 경계는 [연결 계약](../phase4/runtime-contract.md), 확인 수준은 [4단계 상태](../phase4/implementation-status.md)를 따른다.

@@ -167,6 +167,14 @@ def test_hosted_selector_routes_allowlist_and_blocks_local_database_fallback(tmp
     assert code == 2 and unavailable["error"]["code"] == "runtime_input_invalid"
     assert not called_local
 
+    change_request = dict(request, operation="collect_changes", payload=dict(request["payload"],
+        run_id="00000000-0000-4000-8000-000000000205", before_basis_ref="basis-before",
+        after_basis_ref="basis-after"))
+    client_changes = select_store(data, config, change_request, http_store_factory=http_factory,
+        local_store_factory=lambda *_: called_local.append(True))
+    assert type(client_changes).__name__ == "HostedChangesClient"
+    assert not called_local and not (data / "pmt.sqlite3").exists()
+
     wrong_actor = dict(request, actor="hook")
     with pytest.raises(PmtError) as denied:
         select_store(data, config, wrong_actor, http_store_factory=http_factory,
@@ -219,6 +227,28 @@ def test_only_normalized_native_hook_event_is_bound_to_host_actor(tmp_path):
     assert adapted["request_id"] == native["request_id"]
     assert adapted["normalized_event"] == native["normalized_event"]
     assert "sensitive prompt" not in canonical_json(adapted)
+
+    session_start = normalize_event("codex", "SessionStart", {
+        "hook_event_name": "SessionStart", "session_id": "native-session",
+        "source": "startup"}, environ={"PMT_INSTALLATION_ID": profile["environment_id"]})
+    overview = {"protocol_version": 1, "request_id": str(uuid.uuid4()),
+        "operation": "compose_resume_overview", "actor": "hook", "session_id": "native-session",
+        "scope_id": PROJECT, "source": {key: session_start["source"][key]
+            for key in ("product", "adapter_version", "installation_id", "native_event", "native_session_id")},
+        "payload": {"role": "main", "budget": {"max_bytes": 4096, "max_lines": 48}}}
+    adapted_overview = adapt_host_actor(profile, overview)
+    assert adapted_overview["actor"] == profile["actor"]
+    assert adapted_overview["source"]["original_actor"] == "hook"
+    from pmt.storage_config import _prepare_host_identity
+    prepared = _prepare_host_identity(profile, overview, {"PMT_SCOPE_ID": PROJECT})
+    assert prepared["scope_id"] == PROJECT
+    with pytest.raises(PmtError) as no_scope:
+        _prepare_host_identity(profile, overview, {})
+    assert no_scope.value.code == "hook_scope_required"
+    forged_metadata_write = {**overview, "operation": "create_checkpoint"}
+    with pytest.raises(PmtError) as denied_metadata_write:
+        adapt_host_actor(profile, forged_metadata_write)
+    assert denied_metadata_write.value.code == "host_actor_mismatch"
 
     forged_business = {**native, "operation": "save_change"}
     with pytest.raises(PmtError) as denied:

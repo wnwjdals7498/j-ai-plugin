@@ -1,0 +1,47 @@
+{
+  "core_version": "0.4.0",
+  "db_schema": 5,
+  "graph_schema": 1,
+  "protocol": 1,
+  "kind": "phase4-package-actual",
+  "created_at": "2026-10-06T05:09:17.815752+00:00",
+  "user_profile_install": "not_run",
+  "products": {
+    "codex": {
+      "package": "dist/0.4.0/codex",
+      "zip_sha256": "8b575363ab98dd984902d2641709665e95fcaf1a5b43ecd3bed343d7a832cd7d",
+      "manifest_sha256": "8da1532fbe3d3af5c05e4321c3312cf5b7212f010fcb696b2387fd3189ddfffc",
+      "file_count": 98,
+      "files_verified": true,
+      "zip_matches_folder": true,
+      "standalone_cli_exit": 0,
+      "core_version": "0.4.0",
+      "schema_version": 5,
+      "continuity_reference_packaged": true
+    },
+    "claude": {
+      "package": "dist/0.4.0/claude",
+      "zip_sha256": "4aa3107050fe1bfdfcc670f08b9ed4147faaf084ca9d10ef02613afcc15c68b9",
+      "manifest_sha256": "a2e7e00566789679221699299ca8abe40666fb38dd4e20dcaaf4c389b5276f13",
+      "file_count": 97,
+      "files_verified": true,
+      "zip_matches_folder": true,
+      "standalone_cli_exit": 0,
+      "core_version": "0.4.0",
+      "schema_version": 5,
+      "continuity_reference_packaged": true
+    },
+    "opencode": {
+      "package": "dist/0.4.0/opencode",
+      "zip_sha256": "cdb8921694c54819a9c5c761b3955304c2980a534dd25d2629c0b21f490b86fd",
+      "manifest_sha256": "090b92d8e010daba825e204ed94feb4331613bf49e7bbd3921dcd6dfe6fdb28c",
+      "file_count": 97,
+      "files_verified": true,
+      "zip_matches_folder": true,
+      "standalone_cli_exit": 0,
+      "core_version": "0.4.0",
+      "schema_version": 5,
+      "continuity_reference_packaged": true
+    }
+  }
+}

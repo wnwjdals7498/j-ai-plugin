@@ -2,7 +2,9 @@
 
 이 폴더는 여러 환경·AI 세션의 작업·결정·근거를 공유하는 PMT다. 로컬 저장·훅·플러그인 검증이 1단계, 두 요구사항 트리·모델 분배가 2단계, Python 문서·문맥 효율화와 Host 저장 연결이 3단계다. 2단계는 [사용자 범위 결정](docs/phase2/scope-decisions.md)을 적용해 구현했다. 실제 확인 범위는 [구현 상태](docs/phase2/implementation-status.md)를 따른다. 문서의 계획·예정 시험을 구현 완료·실측 성공으로 표현하지 않는다.
 
-현재 코드 버전은 0.3.0, SQLite schema는 4다. 로컬 graph·문서·문맥·재사용·실행 제어·묶음과 Host 저장·HTTP·설정·이관·pending을 구현했다. 실제 연결·설치 완료 여부는 [3단계 구현 상태](docs/phase3/implementation-status.md)를 따른다. Phase 3 CLI registry는 Host API allowlist가 아니다. Host 시험은 사용자 결정에 따라 격리된 로컬 환경으로 한정한다.
+4단계 [AI 세션 연속성·변경 기반 재개](docs/04-session-continuity.md)의 코드를 구현하고 로컬 기능을 검증했다. [작업 안내](docs/phase4/README.md), [실제 연결 계약](docs/phase4/runtime-contract.md), [구현 상태·미수용](docs/phase4/implementation-status.md)를 선택해 읽는다. 간헐적 파일 접근 실패의 원인과 실제 제품/모델/외부 운영은 미확정이다. 계획의 논리 이름과 실제 operation을 구별하고, 시험되지 않은 경로를 완료로 표현하지 않는다.
+
+현재 코드 버전은 0.4.0, SQLite schema는 5, graph schema는 1이다. 4단계에서 현재 사실·체크포인트·변경·재개 문맥을 연결하며 schema4 원본은 backup 후 additive migration한다. 기존 기능의 확인 범위는 [3단계 구현 상태](docs/phase3/implementation-status.md), 현재 기능은 [4단계 상태](docs/phase4/implementation-status.md)를 따른다. 로컬 CLI registry는 Host API allowlist가 아니다. Host 시험은 사용자 결정에 따라 격리된 로컬 환경으로 한정한다.
 
 ## 착수 전에 읽을 것
 
@@ -12,6 +14,7 @@
 4. [개발·검증](docs/pmt-docs/development.md)과 [운영·로그](docs/pmt-docs/operations.md): 배정·입출력·시험·증거·보존.
 5. 해당 단계의 상세계획: [1단계](docs/phase1/README.md), [2단계 상세 배정](docs/phase2/README.md)과 [요구 기준](docs/02-model-routing.md), [3단계 기능 명세](docs/phase3/README.md)와 [전체 범위](docs/03-hosted-storage.md). 기존 API 변경이면 [1단계 계약](docs/phase1/contracts.md), 설치 변경이면 [제품·패키징 규약](docs/phase1/adapters-packaging.md)도 확인한다.
 6. 3단계 구현 착수 시 [상세 배정·관문](docs/phase3/implementation-plan.md), [연결 규격](docs/phase3/implementation-interfaces.md)과 담당 영역 계획을 확인한다. 공유 schema·포트·registry는 메인이 조정한다.
+7. 4단계 착수 시 [공통 계약](docs/phase4/contracts.md), [상세계획·구현 순서](docs/phase4/implementation-plan.md), [공유 연결 규격](docs/phase4/implementation-interfaces.md), [예정 시험·로그](docs/phase4/verification.md)와 배정된 A/B/C 상세계획을 확인한다. 재개 개요는 실행 권한이 아니며 현재 점유/source·기존 실행을 다시 확인한다. 공유 계약의 실제 인계를 받은 뒤 의존 작업을 시작한다.
 
 전체 자료를 반복 통독하지 않고 배정 범위·의존 계약·관련 근거를 읽는다. 서로 다른 규약을 발견하면 상세 공통 계약을 기준으로 차이를 메인에게 보고한다. 사용자 지시가 문서보다 우선한다.
 

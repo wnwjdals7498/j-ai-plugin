@@ -505,6 +505,24 @@ def adapt_host_request(profile, request):
         payload["branch_key"] = branch_key
     payload.pop("local_root", None)
     payload.pop("local_workspace", None)
+    continuity_storage_operations = {
+        "get_continuity_object", "list_continuity_objects", "read_continuity_pointer",
+        "get_continuity_effect", "put_continuity_object", "advance_continuity_pointer",
+        "begin_continuity_effect", "update_continuity_effect",
+        "read_current_facts", "read_checkpoint", "compose_resume_overview",
+        "create_checkpoint", "link_session",
+    }
+    if value.get("operation") in continuity_storage_operations:
+        # These are metadata storage ports. The selector mapping is consumed by
+        # the client adapter and must not leak into their strict business DTO.
+        for key in ("project_id", "repository_id", "branch", "workspace", "canonical_workspace",
+                    "relative_graph_path", "branch_key"):
+            payload.pop(key, None)
+    if value.get("operation") == "publish_work_basis":
+        # The Host needs only its canonical workspace and the selected graph
+        # locator. Physical checkout paths stay in this client adapter.
+        payload.pop("workspace", None)
+        payload.pop("branch", None)
     if value.get("operation") in {"publish_source_snapshot", "publish_verification_snapshot", "read_source_metadata",
                                   "publish_client_plan"}:
         payload.pop("workspace", None)
@@ -520,23 +538,40 @@ def adapt_host_actor(profile, request):
         raise PmtError("host_input_invalid", "Request must be an object", 2)
     value = json.loads(canonical_json(request))
     actor = value.get("actor")
+    from .hooks import ADAPTER_VERSION, EVENTS
+    hook_metadata_reads = {"compose_resume_overview"}
+
+    def native_session_source(source):
+        product = source.get("product") if isinstance(source, dict) else None
+        event = source.get("native_event") if isinstance(source, dict) else None
+        allowed_event = {"codex": "SessionStart", "claude": "SessionStart",
+                         "opencode": "session.created"}.get(product)
+        return (product in EVENTS and event == allowed_event
+                and source.get("adapter_version") == ADAPTER_VERSION
+                and source.get("installation_id") == profile["environment_id"]
+                and source.get("native_session_id") == value.get("session_id"))
+
     if actor == profile["actor"]:
         source = value.get("source")
         if isinstance(source, dict) and "original_actor" in source:
-            from .hooks import ADAPTER_VERSION, EVENTS
-            if (value.get("operation") != "record_event" or source.get("product") not in EVENTS
-                    or source.get("adapter_version") != ADAPTER_VERSION
-                    or source.get("installation_id") != profile["environment_id"]
-                    or source.get("original_actor") != "hook"):
+            if (source.get("original_actor") != "hook"
+                    or (value.get("operation") == "record_event" and not native_session_source(source)
+                        and not (source.get("product") in EVENTS
+                                 and source.get("adapter_version") == ADAPTER_VERSION
+                                 and source.get("installation_id") == profile["environment_id"]))
+                    or (value.get("operation") in hook_metadata_reads and not native_session_source(source))
+                    or value.get("operation") not in ({"record_event"} | hook_metadata_reads)):
                 raise PmtError("host_actor_mismatch", "Hook actor provenance is invalid", 3)
         return value
     source = value.get("source")
-    from .hooks import ADAPTER_VERSION, EVENTS
-    if (actor != "hook" or value.get("operation") != "record_event"
-            or not isinstance(source, dict) or source.get("product") not in EVENTS
-            or source.get("adapter_version") != ADAPTER_VERSION
-            or source.get("installation_id") != profile["environment_id"]
-            or not isinstance(value.get("normalized_event"), dict)):
+    normalized_event = (value.get("operation") == "record_event"
+                        and isinstance(value.get("normalized_event"), dict)
+                        and isinstance(source, dict) and source.get("product") in EVENTS
+                        and source.get("adapter_version") == ADAPTER_VERSION
+                        and source.get("installation_id") == profile["environment_id"])
+    metadata_read = value.get("operation") in hook_metadata_reads and isinstance(source, dict) \
+        and native_session_source(source)
+    if actor != "hook" or (not normalized_event and not metadata_read):
         raise PmtError("host_actor_mismatch", "Request actor does not match the authenticated Host principal", 3)
     if "original_actor" in source:
         raise PmtError("host_actor_mismatch", "Native hook input cannot supply original_actor", 3)
@@ -547,14 +582,16 @@ def adapt_host_actor(profile, request):
 
 def _prepare_host_identity(profile, request, environ):
     value = adapt_host_actor(profile, request)
-    if (value.get("operation") == "record_event"
+    if ((value.get("operation") == "record_event"
+            or value.get("operation") == "compose_resume_overview")
             and (value.get("source") or {}).get("original_actor") == "hook"):
         selected_scope = environ.get("PMT_SCOPE_ID")
         try:
             selected_scope = _uuid(selected_scope, "PMT_SCOPE_ID")
         except PmtError as exc:
             raise PmtError("hook_scope_required", "Hosted native hook events require an explicit PMT_SCOPE_ID", 3) from exc
-        if selected_scope not in {item["project_id"] for item in profile["workspace_mappings"]}:
+        if (value.get("operation") == "record_event"
+                and selected_scope not in {item["project_id"] for item in profile["workspace_mappings"]}):
             raise PmtError("hook_scope_forbidden", "PMT_SCOPE_ID must name a configured project mapping", 3)
         if value.get("scope_id") not in (None, selected_scope):
             raise PmtError("hook_scope_forbidden", "Hook request scope conflicts with the configured project", 3)
@@ -590,13 +627,23 @@ def select_store(data_root, config_root, request, *, environ=None, local_store_f
     from .host.control_state import OPERATIONS as CONTROL_OPERATIONS
     from .host.host_contract import HOST_DATA_OPERATIONS, LOCAL_ONLY_OPERATIONS
     host_operations = ALLOWLIST | HOST_DATA_OPERATIONS | CONTROL_OPERATIONS | {"get_request_result"}
+    client_continuity_operations = {"capture_work_basis", "validate_basis",
+                                   "compose_task_resume", "read_resume_detail"}
+    client_change_operations = {
+        "collect_changes", "build_implementation_links", "read_change_slice",
+        "register_observed_change", "assess_alignment", "propose_semantic_resolution",
+        "apply_alignment", "read_applicability",
+    }
     runtime_operations = {"advance_execution_control", "acknowledge_execution_action",
                           "dispatch_execution", "poll_execution", "cancel_runner"}
     file_operations = {"preview_graph_change", "apply_graph_change", "recover_graph_change",
         "prepare_document_segments", "publish_document_segments", "recover_document_segments"}
-    if operation not in host_operations and operation not in LOCAL_ONLY_OPERATIONS:
+    if (operation not in host_operations and operation not in LOCAL_ONLY_OPERATIONS
+            and operation not in client_continuity_operations
+            and operation not in client_change_operations):
         raise PmtError("host_operation_forbidden", "Operation is not available in hosted storage mode", 3)
-    if operation in LOCAL_ONLY_OPERATIONS and operation not in runtime_operations | file_operations:
+    if (operation in LOCAL_ONLY_OPERATIONS and operation not in runtime_operations | file_operations
+            and operation not in client_continuity_operations | client_change_operations):
         raise PmtError("hosted_local_runtime_unavailable",
             "This local filesystem operation has no hosted client adapter; local database fallback is disabled", 3)
     if http_store_factory is None:
@@ -619,6 +666,15 @@ def select_store(data_root, config_root, request, *, environ=None, local_store_f
     if not isinstance(session_id, str) or not session_id:
         raise PmtError("host_session_required", "A native caller session ID is required for hosted storage", 3)
     http.register_session(session_id)
+    if operation in client_continuity_operations:
+        if operation == "capture_work_basis":
+            from .hosted_continuity import HostedContinuityClient
+            return HostedContinuityClient(profile, http, data_root, runtime_env)
+        from .hosted_context import HostedContextClient
+        return HostedContextClient(profile, http, data_root, runtime_env)
+    if operation in client_change_operations:
+        from .hosted_changes import HostedChangesClient
+        return HostedChangesClient(profile, http, data_root, runtime_env)
     if operation in host_operations or operation == "get_request_result":
         return _HostedOperationFacade(profile, http, runtime_env)
     if operation in file_operations:

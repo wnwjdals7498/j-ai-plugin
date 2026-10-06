@@ -28,11 +28,28 @@ BATCH_OPERATIONS = frozenset({"prepare_step_batch", "bind_step_batch", "collect_
 LOCAL_FILE_EFFECT_OPERATIONS = frozenset({"begin_local_file_effect", "complete_local_file_effect",
                                          "read_local_file_effect"})
 PLAN_METADATA_OPERATIONS = frozenset({"publish_client_plan", "read_client_plan"})
+CONTINUITY_READ_OPERATIONS = frozenset({
+    "get_continuity_object", "list_continuity_objects", "read_continuity_pointer",
+    "get_continuity_effect",
+})
+CONTINUITY_WRITE_OPERATIONS = frozenset({
+    "put_continuity_object", "advance_continuity_pointer", "begin_continuity_effect",
+    "update_continuity_effect", "publish_work_basis",
+})
+CONTINUITY_SERVICE_READ_OPERATIONS = frozenset({
+    "read_current_facts", "read_checkpoint", "compose_resume_overview", "read_decision_receipt",
+})
+CONTINUITY_SERVICE_WRITE_OPERATIONS = frozenset({"create_checkpoint", "link_session",
+                                                "apply_alignment_receipt"})
+CONTINUITY_SERVICE_OPERATIONS = (CONTINUITY_SERVICE_READ_OPERATIONS |
+                                 CONTINUITY_SERVICE_WRITE_OPERATIONS)
+CONTINUITY_OPERATIONS = (CONTINUITY_READ_OPERATIONS | CONTINUITY_WRITE_OPERATIONS |
+                         CONTINUITY_SERVICE_OPERATIONS)
 
 HOST_DATA_OPERATIONS = (SOURCE_OPERATIONS | VERIFICATION_OPERATIONS | GRAPH_OPERATIONS
                         | CONTEXT_OPERATIONS | REUSE_OPERATIONS | REUSE_FILE_OPERATIONS | RESULT_OPERATIONS
                         | STEP_RESOURCE_OPERATIONS | BATCH_OPERATIONS | LOCAL_FILE_EFFECT_OPERATIONS
-                        | PLAN_METADATA_OPERATIONS)
+                        | PLAN_METADATA_OPERATIONS | CONTINUITY_OPERATIONS)
 
 READ_OPERATIONS = frozenset({
     "authorize_workspace", "read_source_snapshot", "read_source_metadata", "capture_source_pin", "query_graph", "calculate_graph_impact",
@@ -41,7 +58,7 @@ READ_OPERATIONS = frozenset({
     "read_step_batch",
     "read_local_file_effect",
     "read_client_plan",
-})
+}) | CONTINUITY_READ_OPERATIONS | CONTINUITY_SERVICE_READ_OPERATIONS
 FILE_OPERATIONS = frozenset({
     "publish_source_snapshot", "publish_verification_snapshot", "rebuild_graph_index",
     "register_segment_manifest",

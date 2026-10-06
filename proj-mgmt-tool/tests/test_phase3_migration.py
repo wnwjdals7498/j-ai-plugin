@@ -11,11 +11,12 @@ import uuid
 
 import pytest
 
-from pmt.db import Database
+from pmt.db import Database, SCHEMA_VERSION
 from pmt.errors import PmtError
 from pmt.host.application import HostApplication
 from pmt.host.resources import HostResourceStore
 from pmt.migration import MigrationCoordinator
+from pmt.continuity.storage import ContinuityStore
 from pmt.phase2_common import persist_json_resource
 from pmt.util import canonical_json, new_id, utc_now
 from pmt.workspace import canonical_workspace
@@ -176,7 +177,7 @@ def test_sanitized_backup_import_preserves_business_ids_resources_and_target_aut
     receipt = coordinator.create_backup(source["db"], bundle, [source["mapping"]])
     manifest = coordinator.verify_backup(bundle)
     assert manifest["tier"] == "local-fixture-preparation"
-    assert manifest["source_versions"]["db_schema"] == 4
+    assert manifest["source_versions"]["db_schema"] == SCHEMA_VERSION
     assert manifest["portable_workspace_mappings"][0]["canonical_workspace"] == canonical_workspace(
         source["repo_id"], source["branch"])
     assert manifest["baseline_mapping_status"][0]["mapping_status"] == "current_source_match"
@@ -438,3 +439,69 @@ def test_primary_switch_and_schema_mismatch_remain_explicitly_unsupported(tmp_pa
     with pytest.raises(PmtError) as caught:
         coordinator.create_backup(source["db"], tmp_path / "bad-version", [source["mapping"]])
     assert caught.value.code == "migration_schema_unsupported"
+
+
+def test_backup_import_preserves_shared_continuity_refs_and_invalidates_private_projection(tmp_path):
+    source = _source_case(tmp_path)
+    request = {"request_id": new_id(), "operation": "put_continuity_object",
+        "actor": "main", "session_id": "source-session", "scope_id": source["project_id"],
+        "payload": {}}
+    store = ContinuityStore(source["db"])
+    with source["db"].write() as conn:
+        shared = store.put(conn, request, "basis", {"complete": True,
+            "manifest": {"coherence": "coherent"}, "source": {"branch": source["branch"]},
+            "evidence_ref": source["evidence_id"]},
+            event_id=new_id())
+        private = store.put(conn, request, "detail", {"private_summary": "synthetic detail"},
+            visibility="private")
+        selector = {"repository_id": source["repo_id"], "branch": source["branch"],
+            "workspace_ref": canonical_workspace(source["repo_id"], source["branch"]),
+            "task_id": None, "purpose": "basis", "environment_id": source["db"].environment_id}
+        pointer = store.advance_pointer(conn, request, selector, shared["id"], 0)
+
+    bundle = tmp_path / "continuity-bundle"
+    manifest = MigrationCoordinator().create_backup(source["db"], bundle, [source["mapping"]])
+    assert manifest["continuity_private_invalidated"] == {
+        "count": 1, "ids_sha256": hashlib.sha256(canonical_json([private["id"]]).encode()).hexdigest(),
+        "reason": "private_session_projection_requires_recreation_by_current_owner"}
+    assert manifest["tables"]["continuity_objects"]["count"] == 1
+    assert manifest["tables"]["continuity_pointers"]["count"] == 1
+    with closing(sqlite3.connect(bundle / "transfer.sqlite3")) as staged:
+        staged.row_factory = sqlite3.Row
+        migrated_object = staged.execute("SELECT * FROM continuity_objects WHERE id=?", (shared["id"],)).fetchone()
+        migrated_pointer = staged.execute("SELECT object_id,revision FROM continuity_pointers WHERE pointer_key=?",
+                                          (pointer["pointer_key"],)).fetchone()
+        assert migrated_object is not None and migrated_object["body_hash"] == shared["body_hash"]
+        assert migrated_pointer["object_id"] == shared["id"] and migrated_pointer["revision"] == 1
+        assert staged.execute("SELECT 1 FROM continuity_objects WHERE id=?", (private["id"],)).fetchone() is None
+        assert staged.execute("SELECT 1 FROM artifact_refs WHERE owner_type='continuity' AND owner_id=?",
+                              (shared["id"],)).fetchone() is not None
+
+    target_db, target_host, target_headers, _device = _target_host(tmp_path)
+    imported = MigrationCoordinator().restore_backup(target_host, bundle, target_headers)
+    assert imported["state"] == "imported"
+    with closing(target_db.connect()) as conn:
+        row = conn.execute("SELECT body_json,body_hash,owner_actor,owner_session FROM continuity_objects WHERE id=?",
+                           (shared["id"],)).fetchone()
+        assert row is not None and hashlib.sha256(canonical_json(json.loads(row["body_json"])).encode()).hexdigest() == row["body_hash"]
+        assert row["owner_actor"].startswith("migration:") and row["owner_session"].startswith("migration:")
+        assert conn.execute("SELECT COUNT(*) FROM continuity_pointers WHERE object_id=?", (shared["id"],)).fetchone()[0] == 1
+
+
+def test_unresolved_continuity_effect_blocks_backup_and_preserves_journal(tmp_path):
+    source = _source_case(tmp_path)
+    request = {"request_id": new_id(), "operation": "begin_continuity_effect",
+        "actor": "main", "session_id": "source-session", "scope_id": source["project_id"],
+        "payload": {}}
+    with source["db"].write() as conn:
+        effect = ContinuityStore(source["db"]).begin_effect(conn, request,
+            "fixture_publication", {"outcome_ref": "synthetic"})
+    with pytest.raises(PmtError) as caught:
+        MigrationCoordinator().create_backup(source["db"], tmp_path / "blocked-continuity", [source["mapping"]])
+    assert caught.value.code == "migration_source_not_quiescent"
+    assert caught.value.details["counts"]["continuity_journal"] == 1
+    with closing(source["db"].connect()) as conn:
+        journal = conn.execute("SELECT state,body_hash FROM continuity_journal WHERE id=?", (effect["id"],)).fetchone()
+        assert journal["state"] == "prepared" and journal["body_hash"] == effect["body_hash"]
+        assert conn.execute("SELECT value FROM meta WHERE key='maintenance_owner'").fetchone()[0] == ""
+    assert not (tmp_path / "blocked-continuity").exists()

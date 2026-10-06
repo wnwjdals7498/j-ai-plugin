@@ -8,9 +8,11 @@
 
 `gpt-6-luna` 병렬 작업용 착수 단계·연결 규격·범위 소유·복구·통합 관문은 [3단계 상세계획](phase3/implementation-plan.md)에 정리했다.
 
+새 AI 세션의 현재 방향·변경 반영·체크포인트·재개 문맥은 [4단계 작업 문서](04-session-continuity.md)를 따른다. `gpt-6-luna` 병렬 구현용 31개 Step·입출력·의존 순서는 [4단계 상세계획](phase4/implementation-plan.md), 현재 operation은 [연결 계약](phase4/runtime-contract.md), 21개 예정 시험과 실제 사례는 [수용 연결표](phase4/acceptance-map.md)에 정리했다. 실제 확인 범위·미실행은 [4단계 구현 상태](phase4/implementation-status.md)를 확인한다.
+
 - 작성일: 2026-09-30
-- 상세계획 갱신: 2026-10-02
-- 상태: [1단계 구현·검증 완료](phase1/implementation-status.md), [2단계 구현·실측 현황](phase2/implementation-status.md). 직접 모델 API 제외 원칙을 유지한다. 3단계는 Python 문서·문맥 효율화와 Host 연결 계획.
+- 상세계획 갱신: 2026-10-06
+- 상태: [1단계 구현·검증](phase1/implementation-status.md), [2단계 구현·실측](phase2/implementation-status.md), [3단계 로컬 수용·미실행 범위](phase3/implementation-status.md), [4단계 세션 연속성·변경 기반 재개](phase4/implementation-status.md). 직접 모델 API 제외 원칙을 유지한다.
 - 목적: 회사·집·노트북과 여러 AI 세션에서 작업 상태·결정·근거를 공유하고, 중복 작업과 검증을 줄인다.
 
 ## 구현 순서
@@ -20,6 +22,7 @@
 | [1. 로컬 기록](01-local-storage.md) | 구현 → 본체 검증 → 플러그인화 → 설치 검증 | 로컬 SQLite |
 | [2. 모델 분배](02-model-routing.md) | 자연어 요구 트리 → 구현 요구 트리·기능 명세 → Step 지시 → 병렬 실행·제품 단계별 판정 | 1단계 저장소 + 내부 지시 리소스 |
 | [3. 문서·문맥 효율화와 서버 연결](03-hosted-storage.md) | 정형 변경·관계 영향·부분 생성·문맥/재사용/제어 최적화 → 저장 API·환경 간 공유 | Git 원본 + 로컬 또는 Host SQLite |
+| [4. AI 세션 연속성과 변경 기반 재개](04-session-continuity.md) | 현재 사실/checkpoint → 실제 변경·영향/근거·방향 반영 → 제한된 재개 문맥·Hook → 실제 새 세션 검증 | 기존 원본 + 참조형 변경/체크포인트 metadata |
 
 각 단계의 완료 기준을 실제로 확인한 뒤 다음 단계로 진행한다. 2단계까지는 PMT 서버 없이 사용할 수 있어야 한다. 3단계에서도 모델 분배·코드 실행은 각 작업 환경에 유지한다.
 

@@ -1,0 +1,95 @@
+..............F......................................................... [ 10%]
+........................................................................ [ 21%]
+........................................................................ [ 32%]
+.........................E..............E............................... [ 42%]
+........................................................................ [ 53%]
+........................................................................ [ 64%]
+.......................s................................................ [ 75%]
+................s....................................................... [ 85%]
+....F....................................................s.......s...... [ 96%]
+......................                                                   [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_f5_actual_depth_frontier_stays_unknown_but_full_explicit_selection_is_complete _
+src\pmt\db.py:374: in write
+    yield conn
+src\pmt\phase2_common.py:106: in persist_json_resource
+    conn.execute("INSERT INTO artifacts(id,scope_id,sha256,size_bytes,relative_path,state,retention_until,created_at) "
+E   sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+tests\test_phase3_context.py:100: in actual_context_env
+    directive_resource = persist_json_resource(db, directive_req, directive, project_id,
+src\pmt\phase2_common.py:97: in persist_json_resource
+    with db.write() as conn:
+         ^^^^^^^^^^
+D:\Application\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+src\pmt\db.py:379: in write
+    raise self._sqlite_error(exc) from exc
+E   pmt.errors.PmtError: Database operation failed
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T05:02:21.103492Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":28,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T05:02:21.132019Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+_ ERROR at setup of test_f8_retry_requires_transient_stop_and_new_context_source_match _
+src\pmt\db.py:374: in write
+    yield conn
+src\pmt\phase2_common.py:106: in persist_json_resource
+    conn.execute("INSERT INTO artifacts(id,scope_id,sha256,size_bytes,relative_path,state,retention_until,created_at) "
+E   sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+tests\test_phase3_context.py:100: in actual_context_env
+    directive_resource = persist_json_resource(db, directive_req, directive, project_id,
+src\pmt\phase2_common.py:97: in persist_json_resource
+    with db.write() as conn:
+         ^^^^^^^^^^
+D:\Application\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+src\pmt\db.py:379: in write
+    raise self._sqlite_error(exc) from exc
+E   pmt.errors.PmtError: Database operation failed
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T05:04:50.298387Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":32,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T05:04:50.330298Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+================================== FAILURES ===================================
+______ test_claim02_other_session_and_old_token_cannot_release_or_finish ______
+tests\test_acceptance_matrix.py:238: in test_claim02_other_session_and_old_token_cannot_release_or_finish
+    item = _item(db, _scope(db), workspace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_acceptance_matrix.py:51: in _item
+    assert code == 0, response
+E   AssertionError: {'protocol_version': 1, 'request_id': 'deadf090-2884-4e3d-84df-a911bc385ccf', 'ok': False, 'result': None, ...}
+E   assert 4 == 0
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T04:57:09.463968Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":30,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T04:57:09.494802Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+{"request_id":"0f28d688-68a1-4789-b8ec-d09ec07fd1cb","operation":"create_scope","session_id":"acceptance-session","source":{"product":"test"},"scope_id":null,"record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":9,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":"project","object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T04:57:09.508553Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"deadf090-2884-4e3d-84df-a911bc385ccf","operation":"save_change","session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":"error","error_code":"database_error","retryable":true,"duration_ms":null,"exit_code":4,"old_revision":null,"new_revision":null,"transaction_outcome":"rollback","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T04:57:09.512814Z","level":"WARNING","component":"pmt","event_name":"request_failed"}
+_ test_nested_git_workspace_normalizes_change_and_link_paths_to_mapping_root __
+tests\test_phase4_r2_r3_actual.py:386: in test_nested_git_workspace_normalizes_change_and_link_paths_to_mapping_root
+    _git(git_root, "config", "user.name", "PMT nested fixture")
+tests\test_phase4_r2_r3_actual.py:28: in _git
+    assert result.returncode == 0, result.stderr
+E   AssertionError: error: could not write config file .git/config: Permission denied
+E     
+E   assert 4 == 0
+E    +  where 4 = CompletedProcess(args=['git', '-C', 'D:\\workspace\\test-space\\github\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\p4-ful...ested fixture'], returncode=4, stdout='', stderr='error: could not write config file .git/config: Permission denied\n').returncode
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T05:24:16.041835Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":"86d0de5e-421d-4261-8d99-f334a3142909","operation":"save_decision","session_id":"test-main","source":{},"scope_id":"362fffb4-9553-40a6-aa93-0508ee1bcc25","record_id":"4c261540-e667-4edc-8d61-b7af1c363b2e","event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":8,"exit_code":0,"old_revision":1,"new_revision":2,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"at_utc":"2026-10-06T05:24:16.067025Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+============================== warnings summary ===============================
+tests/test_phase3_transfer.py::test_archive_rejects_slip_duplicate_reparse_and_size_excess
+  D:\Application\Python313\Lib\zipfile\__init__.py:1655: UserWarning: Duplicate name: 'manifest.json'
+    return self._open_to_write(zinfo, force_zip64=force_zip64)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_phase3_publication.py:212: This Windows account cannot create symlinks
+SKIPPED [1] tests\test_phase3_workspace.py:275: symlink creation is unavailable in this test environment
+SKIPPED [1] tests\test_resources.py:61: This Windows account cannot create symlinks
+SKIPPED [1] tests\test_resources.py:237: This Windows account cannot create symlinks
+ERROR tests/test_phase3_context.py::test_f5_actual_depth_frontier_stays_unknown_but_full_explicit_selection_is_complete
+ERROR tests/test_phase3_control.py::test_f8_retry_requires_transient_stop_and_new_context_source_match
+FAILED tests/test_acceptance_matrix.py::test_claim02_other_session_and_old_token_cannot_release_or_finish
+FAILED tests/test_phase4_r2_r3_actual.py::test_nested_git_workspace_normalizes_change_and_link_paths_to_mapping_root
+2 failed, 662 passed, 4 skipped, 1 warning, 2 errors in 1720.47s (0:28:40)

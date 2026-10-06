@@ -12,6 +12,7 @@ import re
 import uuid
 from collections.abc import Mapping
 from contextlib import closing, contextmanager
+from importlib import import_module
 from pathlib import PurePosixPath
 
 from ..errors import PmtError
@@ -23,7 +24,9 @@ from ..util import canonical_json, fingerprint, strict_json_loads, utc_now
 from ..workspace import canonical_workspace
 from .host_contract import (FILE_OPERATIONS, HOST_DATA_OPERATIONS, READ_OPERATIONS,
                             WRITE_OPERATIONS)
-from .host_contract import BATCH_OPERATIONS, LOCAL_FILE_EFFECT_OPERATIONS, PLAN_METADATA_OPERATIONS
+from .host_contract import (BATCH_OPERATIONS, CONTINUITY_OPERATIONS, CONTINUITY_READ_OPERATIONS,
+                            CONTINUITY_SERVICE_OPERATIONS, CONTINUITY_SERVICE_READ_OPERATIONS,
+                            LOCAL_FILE_EFFECT_OPERATIONS, PLAN_METADATA_OPERATIONS)
 
 _HOST_ACTOR = "pmt.host.snapshot"
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -311,9 +314,10 @@ class HostDataExtension:
     def reference_scopes(self, conn, req):
         payload = req.get("payload", {})
         scopes = set()
+        selector = payload.get("selector") if isinstance(payload.get("selector"), dict) else {}
         for value, name in ((req.get("scope_id"), "scope_id"),
                             (payload.get("project_id"), "project_id"),
-                            (payload.get("repository_id"), "repository_id"),
+                            (payload.get("repository_id") or selector.get("repository_id"), "repository_id"),
                             (payload.get("target_id"), "target_id"),
                             (payload.get("run_id"), "run_id")):
             if not value:
@@ -387,6 +391,43 @@ class HostDataExtension:
             _fail("host_operation_forbidden", "Host data operation is not allowlisted", 3)
         principal.require("read" if op in READ_OPERATIONS else "write")
         payload = req.get("payload", {})
+        if op in CONTINUITY_OPERATIONS:
+            if op == "apply_alignment_receipt":
+                from .alignment_receipts import authorize as authorize_alignment_receipt
+                return authorize_alignment_receipt(self, conn, req, principal)
+            if op == "read_decision_receipt":
+                from .alignment_receipts import authorize_decision_receipt
+                return authorize_decision_receipt(conn, req, principal)
+            if op in CONTINUITY_SERVICE_OPERATIONS:
+                return
+            if op == "publish_work_basis":
+                required = {"project_id", "repository_id", "canonical_workspace", "relative_graph_path",
+                    "branch_key", "run_id", "expected_run_revision", "expected_source_revision",
+                    "task_id", "source_pin_before", "source_pin_after", "inventory_hash_before",
+                    "inventory_hash_after", "inventory_coverage"}
+                if set(payload) != required or payload.get("project_id") != req.get("scope_id"):
+                    _fail("host_input_invalid", "Hosted work-basis receipt fields are invalid", 2)
+                principal.require("runtime")
+                self._workspace_binding(conn, req, principal, mode="source_capture")
+                return
+            # The common immutable store supports private task bundles locally,
+            # but the generic Host storage port cannot prove WorkAccess. Keep
+            # this endpoint metadata-only until an owner-bound adapter exists.
+            if op in {"get_continuity_object", "put_continuity_object"}:
+                if (payload.get("kind") in {"bundle", "detail"}
+                        or payload.get("visibility") == "private"
+                        or (op == "put_continuity_object" and payload.get("kind") in {"checkpoint", "alignment"})):
+                    _fail("private_metadata_forbidden",
+                          "This Host operation cannot publish private or confirmed continuity state", 3)
+            selector = payload.get("selector")
+            if op == "advance_continuity_pointer" and isinstance(selector, dict) and selector.get("purpose") in {
+                    "checkpoint", "alignment"}:
+                _fail("continuity_boundary_required",
+                      "Checkpoint and alignment pointers require their verified service operation", 3)
+            if op == "update_continuity_effect" and payload.get("state") == "completed":
+                _fail("continuity_boundary_required",
+                      "Effect completion requires an actual service receipt", 3)
+            return
         if op in PLAN_METADATA_OPERATIONS:
             from .plans import authorize as authorize_plan_metadata
             authorize_plan_metadata(self, conn, req, principal)
@@ -455,6 +496,98 @@ class HostDataExtension:
 
     def handle(self, db, conn, req, principal):
         op = req["operation"]
+        if op in CONTINUITY_OPERATIONS:
+            from ..continuity.contracts import PRIVATE_KINDS
+            from ..continuity.storage import ContinuityStore
+
+            payload = req.get("payload", {})
+            store = ContinuityStore(db)
+            if op == "apply_alignment_receipt":
+                from .alignment_receipts import apply as apply_alignment_receipt
+                return apply_alignment_receipt(self, db, conn, req, principal,
+                    getattr(db, "_headers", {}))
+            if op == "read_decision_receipt":
+                from .alignment_receipts import read_decision_receipt
+                return read_decision_receipt(conn, req, principal)
+            if op in CONTINUITY_SERVICE_OPERATIONS:
+                module = (import_module("..continuity.context", package=__package__)
+                          if op == "compose_resume_overview" else
+                          import_module("..continuity.current", package=__package__))
+                return module.handle(db, conn, req)
+            if op == "publish_work_basis":
+                return self._publish_work_basis(conn, req, principal, store)
+            if op == "get_continuity_object":
+                if set(payload) - {"object_id", "kind"} or payload.get("kind") in PRIVATE_KINDS:
+                    _fail("private_metadata_forbidden" if payload.get("kind") in PRIVATE_KINDS else
+                          "host_input_invalid", "Host object read fields are invalid", 3)
+                return store.get(conn, req, payload.get("object_id"), kind=payload.get("kind"))
+            if op == "list_continuity_objects":
+                if set(payload) - {"kind", "limit"} or payload.get("kind") in PRIVATE_KINDS:
+                    _fail("private_metadata_forbidden" if payload.get("kind") in PRIVATE_KINDS else
+                          "host_input_invalid", "Host object list fields are invalid", 3)
+                return store.list(conn, req, payload.get("kind"), limit=payload.get("limit", 100))
+            if op == "read_continuity_pointer":
+                if set(payload) != {"selector"}:
+                    _fail("host_input_invalid", "Host pointer read fields are invalid", 3)
+                return store.read_pointer(conn, req, payload["selector"])
+            if op == "get_continuity_effect":
+                if set(payload) != {"effect_id"}:
+                    _fail("host_input_invalid", "Host effect read fields are invalid", 3)
+                return store.get_effect(conn, req, payload["effect_id"])
+            if op == "put_continuity_object":
+                allowed = {"kind", "body", "object_id", "visibility", "basis_hash", "event_id"}
+                if set(payload) - allowed:
+                    _fail("host_input_invalid", "Host object write fields are invalid", 3)
+                if payload.get("visibility", "shared") != "shared" or payload.get("kind") in PRIVATE_KINDS:
+                    _fail("private_metadata_forbidden", "Host generic continuity storage accepts shared metadata only", 3)
+                return store.put(conn, req, payload.get("kind"), payload.get("body"),
+                    object_id=payload.get("object_id"), visibility="shared",
+                    basis_hash=payload.get("basis_hash"), event_id=payload.get("event_id"))
+            if op == "advance_continuity_pointer":
+                if set(payload) != {"selector", "object_id", "expected_pointer_revision"}:
+                    _fail("host_input_invalid", "Host pointer write fields are invalid", 3)
+                selector = payload["selector"]
+                purpose_kind = {"basis": "basis", "change": "change",
+                    "link_index": "link_index", "applicability": "applicability"}
+                purpose = selector.get("purpose") if isinstance(selector, dict) else None
+                if purpose not in purpose_kind:
+                    _fail("continuity_boundary_required",
+                          "This pointer purpose is owned by a verified Phase 4 service", 3)
+                value = store.get(conn, req, payload["object_id"])
+                if value["visibility"] != "shared" or value["kind"] != purpose_kind[purpose]:
+                    _fail("continuity_boundary_required",
+                          "Generic pointers may reference only shared objects of the same metadata kind", 3)
+                body = value["body"]
+                source = body.get("source") if isinstance(body.get("source"), dict) else {}
+                scope = body.get("scope") if isinstance(body.get("scope"), dict) else {}
+                work = body.get("work") if isinstance(body.get("work"), dict) else {}
+                conditions = body.get("conditions") if isinstance(body.get("conditions"), dict) else {}
+                dimensions = {
+                    "repository_id": source.get("repository_id") or scope.get("repository_id") or
+                                     body.get("repository_id"),
+                    "branch": source.get("branch") or body.get("branch"),
+                    "workspace_ref": source.get("workspace_ref") or body.get("workspace_ref"),
+                    "task_id": work.get("task_id") or body.get("task_id"),
+                    "environment_id": conditions.get("environment_id") or body.get("environment_id"),
+                }
+                if any(wanted is not None and dimensions.get(key) != wanted
+                       for key, wanted in selector.items() if key != "purpose"):
+                    _fail("continuity_pointer_mismatch",
+                          "Selected pointer dimensions do not match the immutable object metadata", 3)
+                return store.advance_pointer(conn, req, selector, payload["object_id"],
+                                             payload["expected_pointer_revision"])
+            if op == "begin_continuity_effect":
+                allowed = {"kind", "body", "basis_hash"}
+                if set(payload) - allowed or not {"kind", "body"} <= set(payload):
+                    _fail("host_input_invalid", "Host effect begin fields are invalid", 3)
+                return store.begin_effect(conn, req, payload["kind"], payload["body"],
+                                          basis_hash=payload.get("basis_hash"))
+            if op == "update_continuity_effect":
+                allowed = {"effect_id", "state", "outcome"}
+                if set(payload) - allowed or not {"effect_id", "state"} <= set(payload):
+                    _fail("host_input_invalid", "Host effect update fields are invalid", 3)
+                return store.update_effect(conn, req, payload["effect_id"], payload["state"],
+                                           payload.get("outcome"))
         if op == "read_client_plan":
             from .plans import handle as handle_plan_metadata
             return handle_plan_metadata(self, db, conn, req, principal)
@@ -488,13 +621,123 @@ class HostDataExtension:
                 reuse_req["payload"] = {key: reuse_payload[key] for key in
                     ("body_ref", "run_id", "workspace", "paths") if key in reuse_payload}
                 req = reuse_req
-            elif op == "read_task_context":
+            elif op in {"read_task_context", "read_context_detail"}:
                 context_req = dict(req)
                 context_payload = req.get("payload", {})
-                context_req["payload"] = {"context_ref": context_payload.get("context_ref")}
+                allowed = ({"context_ref"} if op == "read_task_context" else
+                           {"context_id", "cursor", "max_bytes", "max_lines"})
+                context_req["payload"] = {key: context_payload[key] for key in allowed if key in context_payload}
                 req = context_req
             return module.handle(db, conn, req)
         _fail("host_operation_unavailable", "Host operation is not a state-only read/write", 3)
+
+    def _publish_work_basis(self, conn, req, principal, store):
+        """Bind a client-attested source inventory to the current Host SQL snapshot."""
+        from ..continuity.current import _snapshot, basis_body
+        from ..continuity.contracts import digest as continuity_digest
+
+        payload = req["payload"]
+        binding = self._workspace_binding(conn, req, principal, mode="source_capture")
+        pointer = binding.get("source_pointer")
+        if not pointer:
+            _fail("source_snapshot_required", "A current client-published source snapshot is required", 3)
+        expected_source_revision = payload["expected_source_revision"]
+        if (type(expected_source_revision) is not int or expected_source_revision != pointer["revision"]):
+            _fail("source_snapshot_stale", "Current Host source snapshot revision changed", 3)
+        before_pin = pin_source(payload["source_pin_before"])
+        after_pin = pin_source(payload["source_pin_after"])
+        current_pin = pin_source(pointer["body"].get("source_pin"))
+        if before_pin.source_hash != after_pin.source_hash:
+            _fail("basis_source_changed", "Client source changed during work-basis capture", 3)
+        verify_source_pin(before_pin, current_pin)
+        if before_pin.repository_id != binding["repository_id"] or before_pin.project_id != binding["project_id"]:
+            _fail("source_conflict", "Client SourcePin differs from the authorized Host workspace", 3)
+
+        run = binding["run"]
+        if (type(payload["expected_run_revision"]) is not int
+                or payload["expected_run_revision"] != run["revision"]):
+            _fail("execution_revision_conflict", "Current Host run revision changed", 3)
+        selected_task = payload.get("task_id")
+        if selected_task is not None:
+            _uuid(selected_task, "task_id")
+            row = conn.execute("SELECT scope_id FROM records WHERE id=?", (selected_task,)).fetchone()
+            related = conn.execute("WITH RECURSIVE ancestry(id,parent_id) AS ("
+                "SELECT id,parent_id FROM records WHERE id=? UNION ALL "
+                "SELECT r.id,r.parent_id FROM records r JOIN ancestry a ON r.id=a.parent_id) "
+                "SELECT 1 FROM ancestry WHERE id=? LIMIT 1",
+                (binding["step"]["id"], selected_task)).fetchone()
+            if (not row or project_scope_id(conn, row["scope_id"]) != binding["project_id"] or not related):
+                _fail("scope_mismatch", "Selected task is not an ancestor of the authorized Host run", 3)
+
+        coverage = payload["inventory_coverage"]
+        fields = {"selected_count", "verified_count", "unknown_count", "reason_codes"}
+        if (not isinstance(coverage, dict) or set(coverage) != fields
+                or any(type(coverage.get(name)) is not int or coverage[name] < 0
+                       for name in ("selected_count", "verified_count", "unknown_count"))
+                or coverage["selected_count"] != coverage["verified_count"] + coverage["unknown_count"]
+                or not isinstance(coverage["reason_codes"], list)
+                or len(coverage["reason_codes"]) > 64
+                or any(not isinstance(code, str) or not 1 <= len(code) <= 100
+                       for code in coverage["reason_codes"])):
+            _fail("basis_inventory_invalid", "Client inventory summary is invalid", 2)
+        for name in ("inventory_hash_before", "inventory_hash_after"):
+            if not isinstance(payload[name], str) or not _HEX64.fullmatch(payload[name]):
+                _fail("basis_inventory_invalid", "Client inventory hash is invalid", 2)
+        if payload["inventory_hash_before"] != payload["inventory_hash_after"]:
+            _fail("basis_source_changed", "Client inventory changed during work-basis capture", 3)
+
+        snapshot_before = _snapshot(conn, binding["project_id"])
+        snapshot_after = _snapshot(conn, binding["project_id"])
+        work_stable = snapshot_before["snapshot_hash"] == snapshot_after["snapshot_hash"]
+        inventory_complete = (coverage["selected_count"] > 0 and coverage["unknown_count"] == 0)
+        complete_source = work_stable and inventory_complete
+        baseline = conn.execute("SELECT reviewed_commit FROM project_baselines WHERE scope_id=?",
+                                (binding["project_id"],)).fetchone()
+        work_revisions = [{"id": key, "revision": value}
+                          for key, value in snapshot_before["revision_set"].items()
+                          if not key.startswith(("run:", "pending:", "step_spec:"))]
+        basis = basis_body(
+            scope={"project_id": binding["project_id"], "repository_id": binding["repository_id"]},
+            source={"repository_id": binding["repository_id"], "branch": before_pin.selected_ref,
+                "workspace_ref": binding["canonical_workspace"], "observed_head": before_pin.reviewed_commit,
+                "analyzed_ref": baseline["reviewed_commit"] if baseline else None, "applied_ref": None,
+                "dirty_state": before_pin.dirty_state, "dirty_fingerprint": before_pin.dirty_fingerprint,
+                "inventory_ref": "client-inventory:sha256:" + payload["inventory_hash_before"],
+                "inventory_hash": payload["inventory_hash_before"],
+                "inventory_coverage": {**coverage, "reason_codes": sorted(set(coverage["reason_codes"])),
+                    "complete": inventory_complete}},
+            contract={"graph_schema": before_pin.graph_schema, "graph_revision": before_pin.graph_revision,
+                "graph_hash": before_pin.graph_hash, "requirement_refs": [],
+                "decision_refs": snapshot_before["decisions"]},
+            work={"capture_ref": snapshot_before["snapshot_hash"], "task_id": selected_task,
+                "records": work_revisions, "run_refs": snapshot_before["active_execution"],
+                "claim_refs": snapshot_before["claim_refs"], "pending_refs": snapshot_before["pending_refs"]},
+            conditions={"environment_id": principal.environment_id,
+                "selected": snapshot_before["verification_refs"],
+                "unknown": ["client_source_is_attested_not_host_git_verified"]},
+            manifest={"components": [
+                    {"name": "source", "captured_at": utc_now(), "authority": "client_attested",
+                     "version": before_pin.source_hash, "complete": complete_source},
+                    {"name": "work", "captured_at": utc_now(), "authority": "host_sql_snapshot",
+                     "version": snapshot_before["snapshot_hash"], "complete": work_stable}],
+                "coherence": "coherent" if complete_source else "incomplete",
+                "reasons": [] if complete_source else (coverage["reason_codes"] or ["client_inventory_incomplete"]),
+                "captured_at": utc_now(),
+                "coherence_checks": {"host_source_pin_matches": True, "run_revision_current": True,
+                    "work_snapshot_stable": work_stable, "client_inventory_stable": True,
+                    "source_provenance": "client_attested"}})
+        basis["source"]["source_provenance"] = "client_attested"
+        basis["source"]["host_git_verified"] = False
+        if payload.get("expected_run_revision") != run["revision"]:
+            _fail("execution_revision_conflict", "Current Host run revision changed", 3)
+        result = store.put(conn, req, "basis", basis,
+            basis_hash=continuity_digest({"source_pin": before_pin.to_dict(),
+                                          "work_snapshot": snapshot_before["snapshot_hash"]}),
+            event_id=str(uuid.uuid5(uuid.UUID(req["request_id"]), "host-client-attested-basis")))
+        return {"basis_ref": result["id"], "basis_hash": result["body_hash"],
+            "basis": result["body"], "complete": result["body"]["complete"],
+            "source_provenance": "client_attested", "host_git_verified": False,
+            "run_revision": run["revision"], "source_snapshot_revision": pointer["revision"]}
 
     def execute_file(self, db, req, principal, headers):
         from ..service import response
@@ -612,7 +855,7 @@ class HostDataExtension:
         expected_revision = payload.get("expected_run_revision")
         if (req.get("operation") in {"authorize_workspace", "publish_source_snapshot",
                                       "publish_verification_snapshot", "build_task_context",
-                                      "resume_task_context", "read_task_context"}
+                                      "resume_task_context", "read_task_context", "publish_work_basis"}
                 and expected_revision is None):
             _fail("execution_revision_conflict", "Current run revision is required for Host source access", 3)
         if expected_revision is not None and (type(expected_revision) is not int or expected_revision != run["revision"]):

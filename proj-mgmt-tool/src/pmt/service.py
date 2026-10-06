@@ -13,6 +13,7 @@ from .errors import PmtError
 from .util import canonical_json
 from .phase2 import OPERATIONS as PHASE2_OPERATIONS
 from .phase3 import OPERATIONS as PHASE3_OPERATIONS
+from .phase4 import OPERATIONS as PHASE4_OPERATIONS
 from .host.host_contract import HOST_DATA_OPERATIONS
 
 ALLOWED = {"protocol_version", "operation", "request_id", "actor", "session_id",
@@ -27,6 +28,7 @@ LIFECYCLE = {"create_scope", "save_change", "save_decision", "record_event", "cl
 READ = {"read_context", "lookup_verification", "get_request_result", "diagnose"}
 OPERATIONS |= PHASE2_OPERATIONS
 OPERATIONS |= PHASE3_OPERATIONS
+OPERATIONS |= PHASE4_OPERATIONS
 OPERATIONS |= HOST_DATA_OPERATIONS
 OPERATIONS.add("write_execution_control")
 OPERATIONS.add("read_step_batch")
@@ -129,6 +131,8 @@ def execute(db: Database, value):
             return import_module("pmt.phase2").execute(db, req)
         if op in PHASE3_OPERATIONS:
             return import_module("pmt.phase3").execute(db, req)
+        if op in PHASE4_OPERATIONS:
+            return import_module("pmt.phase4").execute(db, req)
         if op in HOST_DATA_OPERATIONS - PHASE2_OPERATIONS - PHASE3_OPERATIONS - {"record_verification", "lookup_verification"}:
             raise PmtError("host_connection_required", "This storage transfer operation requires a configured Host", 3)
         if op in {"write_execution_control", "read_step_batch"}:

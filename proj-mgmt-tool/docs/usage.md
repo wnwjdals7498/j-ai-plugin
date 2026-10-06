@@ -135,3 +135,16 @@ $request | py -3.13 .\scripts\pmt.py --data-root $env:PMT_DATA_ROOT --config-roo
 - [OpenCode stable plugin 문서](https://opencode.ai/docs/plugins/): local JavaScript plugin과 `package.json`의 의존성 설치 동작을 확인합니다.
 
 marketplace 등록·설치·신뢰 설정은 제품의 공식 명령을 따릅니다. 설치 시험은 본체·hook fixture 시험과 구별하며, 모델 응답 fixture를 사용한 시험을 실제 LLM의 성능이나 모델 분배 검증으로 표현하지 않습니다.
+
+## 4단계 새 세션에서 이어가기
+
+먼저 `compose_resume_overview`에 명시 project `scope_id`, 현재 `actor/session_id`, 새 `request_id`를 전달합니다. 기본 예산은 UTF-8 16KiB/160줄이며 `payload.budget`으로 제한합니다. 이 조회는 현재 방향·결정 참조·기존 실행·unknown을 전달하고 점유나 실행을 만들지 않습니다. 제품 SessionStart에서 자동 조회하려면 기존 data/config 설정과 `PMT_SCOPE_ID`를 지정합니다.
+
+1. 개요에 기존 run/pending이 있으면 실제 상태·원 요청 결과부터 조회합니다. 같은 작업을 새로 실행하거나 idle만으로 잠금을 해제하지 않습니다.
+2. 작업을 선택하고 현재 run/범위 claim을 확인한 뒤 `capture_work_basis`로 실제 source와 업무 기준을 수집합니다. Hosted는 설정된 클라이언트 checkout을 읽고 Host에 ref/hash/coverage만 저장합니다.
+3. 이전 확정 basis와 차이가 있으면 `collect_changes` → `build_implementation_links` → `assess_alignment`로 영향과 미확인을 확인합니다. `read_applicability`는 기존 근거의 현재 적용 가능성을 별도 기록합니다.
+4. 기준 변경은 `propose_semantic_resolution`으로 위임·사용자 검토 경계를 확인합니다. 실제 F1 graph/F3 문서 반영과 readback 뒤 `apply_alignment` 영수증을 확정합니다. caller의 승인 주장만으로 반영하지 않습니다.
+5. 현재 기준으로 `compose_task_resume`를 만들고 필요한 상세만 `read_resume_detail`로 읽습니다. stale source·권한·불완전한 변경 근거는 추가 조회/검토 대상이며 실행 준비 완료가 아닙니다.
+6. 실제 결정·검토·게시 등 확정 사건을 참조해 `create_checkpoint`를 호출합니다. `link_session`은 참조 연결이며 owner 이전이나 Done 처리가 아닙니다.
+
+실제 입력 계약은 [4단계 runtime contract](phase4/runtime-contract.md), 실행된 범위와 제한은 [4단계 구현 상태](phase4/implementation-status.md)를 따릅니다. `prune_continuity`는 기본 dry-run입니다. 명시 apply로 90일이 지난 미참조 metadata를 정리하되 현재 근거·미해결 효과·실행 소유권은 보존합니다.

@@ -6,6 +6,8 @@ import uuid
 
 import pytest
 
+from pmt import __version__
+from pmt.db import SCHEMA_VERSION
 from pmt.errors import PmtError
 from pmt.http_store import HttpStore
 
@@ -53,7 +55,7 @@ class Fixture:
                 fixture.requests.append((self.command, self.path, dict(self.headers), b""))
                 payload = fixture.body
                 if payload is None and self.path == "/api/v1/compatibility":
-                    payload = {"api_version": 1, "core_version": "0.3.0", "db_schema": 4,
+                    payload = {"api_version": 1, "core_version": __version__, "db_schema": SCHEMA_VERSION,
                                "graph_schema": 1, "protocol_versions": [1], "namespace_id": NAMESPACE,
                                "device_id": DEVICE, "actor": "fixture-user", "scopes": [], "permissions": []}
                 elif payload is None:
@@ -232,7 +234,7 @@ def test_compatibility_register_session_and_http_status_errors(monkeypatch):
 def test_compatibility_rejects_identity_mismatch(monkeypatch):
     monkeypatch.setenv("PMT_FIXTURE_TOKEN", "test-only")
     with Fixture() as fixture:
-        fixture.body = {"api_version": 1, "core_version": "0.3.0", "db_schema": 4,
+        fixture.body = {"api_version": 1, "core_version": __version__, "db_schema": SCHEMA_VERSION,
                         "graph_schema": 1, "protocol_versions": [1], "namespace_id": NAMESPACE,
                         "device_id": str(uuid.uuid4()), "actor": "fixture-user", "scopes": [],
                         "permissions": []}
@@ -242,11 +244,11 @@ def test_compatibility_rejects_identity_mismatch(monkeypatch):
 
 
 @pytest.mark.parametrize("field,value", [
-    ("core_version", "0.4.0"), ("db_schema", 3), ("graph_schema", 2), ("protocol_versions", [2]),
+    ("core_version", "99.0.0"), ("db_schema", 3), ("graph_schema", 2), ("protocol_versions", [2]),
 ])
 def test_compatibility_reports_version_mismatch_without_transport_error(monkeypatch, field, value):
     monkeypatch.setenv("PMT_FIXTURE_TOKEN", "test-only")
-    body = {"api_version": 1, "core_version": "0.3.0", "db_schema": 4,
+    body = {"api_version": 1, "core_version": __version__, "db_schema": SCHEMA_VERSION,
             "graph_schema": 1, "protocol_versions": [1], "namespace_id": NAMESPACE,
             "device_id": DEVICE, "actor": "fixture-user", "scopes": [], "permissions": []}
     body[field] = value

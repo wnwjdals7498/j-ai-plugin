@@ -159,6 +159,8 @@ def normalize_event(product, event, raw, *, environ=None):
         "version": _string(env.get("PMT_PRODUCT_VERSION")) or "unknown",
         "adapter_version": ADAPTER_VERSION,
         "installation_id": instance_id,
+        "native_event": event,
+        "native_session_id": session_id,
     }
     normalized = {
         "event_id": event_id,
@@ -289,8 +291,39 @@ def replay_pending(*, environ=None, timeout=1.5, run=subprocess.run):
     return replayed
 
 
-def lookup_context(session_id, *, product, environ=None, timeout=1.5, run=subprocess.run):
-    """Read saved scope context through the public PMT CLI only."""
+def _overview_selector(config_root, scope_id, record_id):
+    """Resolve only a unique configured mapping for the user's explicit scope."""
+    try:
+        from .storage_config import _read_profile
+        from .workspace import canonical_workspace
+        profile, _digest = _read_profile(config_root)
+    except Exception:
+        return None
+    if not isinstance(profile, dict):
+        return None
+    matches = [item for item in profile.get("workspace_mappings", [])
+               if item.get("project_id") == scope_id]
+    if len(matches) != 1:
+        return None
+    mapping = matches[0]
+    branch = mapping.get("branch")
+    if not isinstance(branch, str) or not branch:
+        return None
+    try:
+        workspace_ref = canonical_workspace(mapping["repository_id"], branch)
+    except Exception:
+        return None
+    return {"repository_id": mapping["repository_id"], "branch": branch,
+            "workspace_ref": workspace_ref, "task_id": record_id,
+            # Current checkpoints intentionally use a shared environment=None
+            # selector; Host authentication still binds the registered caller's
+            # actual environment in the request headers.
+            "purpose": "current", "environment_id": None}
+
+
+def lookup_context(session_id, *, product, environ=None, timeout=1.5, run=subprocess.run,
+                   native_event=None):
+    """Read a bounded metadata-only resume overview through the public PMT CLI."""
     env = os.environ if environ is None else environ
     scope_id = env.get("PMT_SCOPE_ID")
     if scope_id is None or not scope_id.strip():
@@ -314,18 +347,33 @@ def lookup_context(session_id, *, product, environ=None, timeout=1.5, run=subpro
     data_root, config_root = env.get("PMT_DATA_ROOT"), env.get("PMT_CONFIG_ROOT")
     if not data_root or not config_root:
         return {"status": "unavailable", "context_markdown": None, "error_code": "pmt_roots_unconfigured"}
+    installation_id = _string(env.get("PMT_INSTALLATION_ID"))
+    if installation_id is None:
+        try:
+            installation_id = _profile_instance_id(env)
+        except Exception:
+            return {"status": "unavailable", "context_markdown": None,
+                    "error_code": "profile_config_invalid"}
+    source = {"product": product, "adapter_version": ADAPTER_VERSION,
+        "installation_id": installation_id, "native_event": native_event or
+        ("session.created" if product == "opencode" else "SessionStart"),
+        "native_session_id": session_id}
+    payload = {"role": "main", "budget": {"max_bytes": 8192, "max_lines": 96}}
+    selector = _overview_selector(config_root, scope_id, record_id)
+    if selector is not None:
+        payload["selector"] = selector
+    if record_id:
+        payload["task_id"] = record_id
     request = {
         "protocol_version": PROTOCOL_VERSION,
-        "operation": "read_context",
+        "operation": "compose_resume_overview",
         "request_id": new_id(),
         "actor": "hook",
         "session_id": session_id,
         "scope_id": scope_id,
-        "payload": {"limit": 20, "budget": 1800},
-        "source": {"product": product, "adapter_version": ADAPTER_VERSION},
+        "payload": payload,
+        "source": source,
     }
-    if record_id:
-        request["record_id"] = record_id
     wire = json.dumps(request, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     try:
         completed = run(_cli_argv(data_root, config_root, env), input=wire,
@@ -342,10 +390,22 @@ def lookup_context(session_id, *, product, environ=None, timeout=1.5, run=subpro
         return {"status": "unavailable", "context_markdown": None,
                 "error_code": code if isinstance(code, str) else "context_read_failed"}
     result = response.get("result")
-    context = result.get("context_markdown") if isinstance(result, dict) else None
-    if not isinstance(context, str) or not context.strip():
-        return {"status": "unavailable", "context_markdown": None, "error_code": "empty_context"}
-    return {"status": "ok", "context_markdown": context[:12000], "error_code": None}
+    overview = result.get("overview") if isinstance(result, dict) else None
+    if isinstance(result, dict) and result.get("selection_required") is True:
+        overview = {"scope_id": scope_id, "selection_required": True,
+                    "candidate_work_refs": result.get("candidate_work_refs", []),
+                    "unknown": [result.get("reason", "explicit repository selection is required")],
+                    "complete": False}
+    if not isinstance(overview, dict):
+        return {"status": "unavailable", "context_markdown": None,
+                "error_code": "overview_unavailable"}
+    summary = "PMT metadata overview; reference only. Recheck current authority, source, and work ownership before acting.\n"
+    context = summary + canonical_json(overview)
+    if len(context.encode("utf-8")) > 12 * 1024:
+        return {"status": "unavailable", "context_markdown": None,
+                "error_code": "overview_output_exceeded"}
+    return {"status": "ok", "context_markdown": context, "error_code": None,
+            "overview": overview, "complete": result.get("complete") is True}
 
 
 def _session_context_output(context_result, event_ok):
@@ -378,7 +438,8 @@ def process_session_start(product, raw, *, environ=None, timeout=1.5, run=subpro
         event_future = pool.submit(process_hook, product, "SessionStart", raw,
                                    environ=env, timeout=timeout, run=run)
         context_future = pool.submit(lookup_context, session_id, product=product,
-                                     environ=env, timeout=timeout, run=run)
+                                     environ=env, timeout=timeout, run=run,
+                                     native_event="SessionStart")
         try:
             event_future.result()
             event_ok = True
@@ -419,7 +480,11 @@ def main(argv=None):
                 raise HookInputError("--product is required for context lookup")
             raw = strict_json_loads(sys.stdin.buffer.read(64 * 1024 + 1), max_bytes=64 * 1024)
             session_id = raw.get("session_id") if isinstance(raw, dict) else None
-            result = lookup_context(session_id, product=args.product)
+            native_event = raw.get("native_event") if isinstance(raw, dict) else None
+            expected_event = "session.created" if args.product == "opencode" else "SessionStart"
+            if native_event != expected_event:
+                raise HookInputError("context lookup requires the product's native session-start event")
+            result = lookup_context(session_id, product=args.product, native_event=native_event)
             sys.stdout.write(canonical_json(result) + "\n")
             return 0
         if not args.product or not args.event:

@@ -17,6 +17,14 @@ import verify_phase3_local as f10
 from test_phase3_context import actual_context_env
 from pmt.util import canonical_json
 
+_SCENARIO_EVIDENCE_ROOT = None
+
+
+@pytest.fixture(autouse=True)
+def isolate_scenario_evidence(tmp_path, monkeypatch):
+    # A regression run must never overwrite the historical Phase 3 evidence.
+    monkeypatch.setattr(sys.modules[__name__], "_SCENARIO_EVIDENCE_ROOT", tmp_path / "scenario-evidence")
+
 
 def _write_f10_scenario_evidence(scenario_id, *, result, trace=None, extra=None, variant=None):
     catalog = f10.load_catalog()
@@ -51,7 +59,9 @@ def _write_f10_scenario_evidence(scenario_id, *, result, trace=None, extra=None,
             "reason": (case.get("reason") if case["baseline_status"] == "not_comparable" else
                 "Actual fixture binds a different project SourcePin/runtime route and includes F1-F9/control work; the preserved legacy renderer baseline does not measure that same end-to-end condition. No efficiency improvement is inferred."),
             "tokens": "unknown; UTF-8 bytes are not token counts"}}
-    destination = Path(__file__).resolve().parents[1] / "docs/phase3/evidence/2026-10-02/local-integration/actual-runs"
+    if _SCENARIO_EVIDENCE_ROOT is None:
+        raise RuntimeError("Scenario evidence requires an isolated test output root")
+    destination = _SCENARIO_EVIDENCE_ROOT
     destination.mkdir(parents=True, exist_ok=True)
     filename = scenario_id + (f"-{variant}" if variant else "") + ".json"
     (destination / filename).write_text(canonical_json(record) + "\n", encoding="utf-8")

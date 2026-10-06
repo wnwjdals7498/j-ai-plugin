@@ -51,7 +51,19 @@ def _graph_node(node_id, tree_kind, step_id):
 def actual_context_env(tmp_path, request):
     temporary = tempfile.TemporaryDirectory(prefix="p5c-", dir=tmp_path.parents[1])
     root = Path(temporary.name)
-    request.addfinalizer(temporary.cleanup)
+    failures_before = request.session.testsfailed
+
+    def cleanup_or_preserve_failure():
+        if request.session.testsfailed > failures_before:
+            temporary._finalizer.detach()
+            (tmp_path / "fixture-artifacts.json").write_text(canonical_json({
+                "root": str(root), "test": request.node.nodeid,
+                "reason": "failed fixture retained for DB/Git diagnosis"}) + "\n", encoding="utf-8")
+        else:
+            assert root.resolve().is_relative_to(tmp_path.parents[1].resolve())
+            temporary.cleanup()
+
+    request.addfinalizer(cleanup_or_preserve_failure)
     workspace = root / "repo"
     workspace.mkdir()
     subprocess.run(["git", "init", "-q", str(workspace)], check=True)

@@ -67,7 +67,7 @@ function readContextFromBridge(sessionID, timeoutMs = 1500) {
       if (code !== 0 || stderrBytes) return reject(new Error("context bridge failed"))
       try { resolve(JSON.parse(stdout)) } catch { reject(new Error("context bridge returned invalid JSON")) }
     })
-    child.stdin.end(JSON.stringify({ session_id: sessionID }))
+    child.stdin.end(JSON.stringify({ session_id: sessionID, native_event: "session.created" }))
   })
 }
 

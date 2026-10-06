@@ -1,0 +1,28 @@
+........................................................................ [ 65%]
+.............................E........                                   [100%]
+=================================== ERRORS ====================================
+___________ ERROR at setup of test_f8_retry_count_two_is_a_hard_cap ___________
+src\pmt\db.py:374: in write
+    yield conn
+src\pmt\phase2_common.py:73: in persist_json_resource
+    conn.execute("INSERT OR IGNORE INTO operation_journal(id,kind,state,body_json,created_at,updated_at) "
+E   sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+tests\test_phase3_context.py:115: in actual_context_env
+    evidence_resource = persist_json_resource(db, {**directive_req, "request_id": new_id()},
+src\pmt\phase2_common.py:71: in persist_json_resource
+    with db.write() as conn:
+         ^^^^^^^^^^
+D:\Application\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+src\pmt\db.py:385: in write
+    raise error from exc
+E   pmt.errors.PmtError: Database operation failed
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-06T05:56:26.892903Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":33,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-06T05:56:26.925952Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":"database_error","retryable":true,"duration_ms":null,"exit_code":4,"old_revision":null,"new_revision":null,"transaction_outcome":"rollback","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":8,"sqlite_errorname":"SQLITE_READONLY","at_utc":"2026-10-06T05:56:26.972436Z","level":"ERROR","component":"pmt","event_name":"database_write_failed"}
+=========================== short test summary info ===========================
+ERROR tests/test_phase3_control.py::test_f8_retry_count_two_is_a_hard_cap - p...
+109 passed, 1 error in 218.52s (0:03:38)

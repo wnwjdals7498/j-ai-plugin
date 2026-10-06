@@ -1,0 +1,27 @@
+{
+  "tier": "local_integration",
+  "source": "actual LocalStore operation pipeline",
+  "model_execution": "blocked",
+  "request_ids": [
+    "0de9a68b-21e8-4e88-9b0d-fd0371a15b1c",
+    "90588805-e5f3-4a6b-ab93-82e9db2d38cb"
+  ],
+  "input_sha256": "326a41a5fb1557231ee13587cbba28cef6a4c9ef51dbcdb9070311397ace914c",
+  "input_bytes": 3081,
+  "scope_id": "752e8152-6e0d-45a5-b33a-2be97081651e",
+  "checkpoint_ref": "9d86a7ee-34f4-5c4b-b618-d57a5817118a",
+  "basis_ref": "de5cd7ea-552e-5ed0-b292-a5dc1a5fe7de",
+  "run_id": "b7f8f220-89e2-4365-a97f-1fa552f48aae",
+  "native_reader_has_prior_task_context": false,
+  "model_requested": "gpt-6-luna",
+  "managed_agent_spawn": "agent thread limit reached",
+  "cli_exit_code": 1,
+  "reason_codes": [
+    "socket_permission_denied_10013",
+    "automatic_approval_review_rejected_external_transmission"
+  ],
+  "provider_reply_received": false,
+  "token_usage": "unknown",
+  "quality_score": "not_evaluated",
+  "input_contains_real_repository_source": false
+}

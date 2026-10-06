@@ -2,7 +2,7 @@
 
 ## 폴더 구성
 
-아래는 2단계와 현재 3단계 코드 배치다. 공개 계약과 책임 경계를 유지하며 [2단계 실측 범위](../phase2/implementation-status.md), [3단계 실측 상태](../phase3/implementation-status.md)를 구분해 확인한다.
+아래는 2~4단계 코드 배치다. 공개 계약과 책임 경계를 유지하며 [2단계 실측 범위](../phase2/implementation-status.md), [3단계 실측 상태](../phase3/implementation-status.md), [4단계 실측 상태](../phase4/implementation-status.md)를 구분해 확인한다.
 
 ```text
 proj-mgmt-tool/
@@ -24,6 +24,10 @@ proj-mgmt-tool/
 │  ├─ steps.py / operations.py 지시·검토·운영·보존
 │  ├─ phase2*.py              Phase 2 operation 연결·공통 경계·이관 DDL
 │  ├─ phase3.py / phase3_schema.py Phase 3 로컬 registry·schema 4
+│  ├─ phase4.py / phase4_schema.py Phase 4 로컬 registry·schema 5
+│  ├─ continuity/             현재 사실·basis·checkpoint·변경·정렬·재개·보존
+│  ├─ hosted_continuity.py / hosted_context.py / hosted_changes.py
+│  │                          Host 현재 권한과 클라이언트 관찰 연결
 │  ├─ store.py / http_store.py LocalStore·인증 HTTPS operation port
 │  ├─ storage_config.py       단일 저장소 선택·환경/checkout 매핑
 │  ├─ workspace.py / hosted_runtime.py 현재 Host 권한으로 로컬 파일·실행 접근
@@ -36,8 +40,8 @@ proj-mgmt-tool/
 ├─ scripts/                   패키징·검증 도구
 ├─ tests/                     계약·통합·장애·설치 시험
 └─ docs/
-   ├─ 01~03 단계 문서         요구·범위·완료 조건
-   ├─ phase1/phase2/phase3/   단계별 상세 계약·검증 기록
+   ├─ 01~04 단계 문서         요구·범위·완료 조건
+   ├─ phase1/phase2/phase3/phase4/ 단계별 상세 계약·검증 기록
    └─ pmt-docs/               공통 구조·규칙·프로젝트 graph
 ```
 
@@ -55,7 +59,7 @@ proj-mgmt-tool/
 | pytest / setuptools | 기존 시험·Python 패키징 방식 유지 | 시험 의존성과 운영 의존성 분리 |
 | 선택 설치 FastAPI/Pydantic·Uvicorn | Host 저장 API의 형식 검증·OpenAPI·ASGI 실행 | 클라이언트 기본 의존성이 아님; Git/runner 원격 호출 금지 |
 
-클라이언트 기본 런타임은 Python 표준 라이브러리·SQLite다. Host는 `host` extra로 FastAPI/Pydantic·Uvicorn을 설치한다. Phase 3 schema 4는 기존 schema 3 이관을 포함한다. 로컬 실행은 승인된 native handoff와 확인된 Claude/Codex CLI 경로에 한정한다. SDK·직접 모델 API·원격 runner는 제외한다. [Host 연결 계약](../phase3/host-api-contract.md)은 실제 endpoint와 인증·파일/프로세스 경계를 설명한다. 현재 검증은 Windows 로컬 HTTPS이며 외부/Linux/proxy 수용을 뜻하지 않는다.
+클라이언트 기본 런타임은 Python 표준 라이브러리·SQLite다. Host는 `host` extra로 FastAPI/Pydantic·Uvicorn을 설치한다. 현재 Core는 0.4.0, SQLite는 schema 5이며 schema 4 원본을 백업한 뒤 continuity 테이블을 추가한다. graph schema 1과 protocol 1은 유지한다. 로컬 실행은 승인된 native handoff와 확인된 Claude/Codex CLI 경로에 한정한다. SDK·직접 모델 API·원격 runner는 제외한다. [Host 연결 계약](../phase3/host-api-contract.md)과 [4단계 연결 계약](../phase4/runtime-contract.md)은 실제 endpoint와 인증·파일/프로세스 경계를 설명한다. 현재 검증은 Windows 로컬 HTTPS이며 외부/Linux/proxy 수용을 뜻하지 않는다.
 
 ## 기능별 책임과 입출력
 
@@ -71,6 +75,7 @@ proj-mgmt-tool/
 | reconciliation | 기준 커밋·현재 Git·관련 문서/계획 → 영향·갱신·검토 기준 | 점유 후 실행 직전 최신화; planning/verification에 무효화 범위 전달 |
 | diagnostics | 허용된 관찰 필드 → 구조화 로그·쓰기 실패 신호 | 비밀/본문 제외; 업무 이력과 분리 |
 | Phase 3 efficiency | SourcePin·delta·manifest/ref → 로컬 graph/document/context/reuse/result/control 상태 | `phase3.py`는 별도 로컬 CLI registry이며 Host API allowlist가 아님; SQLite 업무 상태와 Git 원본을 분리 |
+| Phase 4 continuity | 현재 DB·실제 client source·확정 사건·변경/근거 refs → immutable basis/checkpoint·재개/정렬 결과 | 개요는 실행 권한이 아니며 source·private 상세는 현재 run/claim으로 확인; 원본 pass나 작업 완료 상태를 추정해 변경하지 않음 |
 | Host·HttpStore | 인증된 저장 intent·source/resource refs → 현재 권한으로 판정한 envelope/receipt | Host가 공유 Queue·lock·결과·metadata의 권위 원본; 클라이언트 DB fallback 금지 |
 | 연결·로컬 실행 | 기기별 profile/mapping·Host run/context → 로컬 실제 관찰·native 요청·opaque handle | 파일 접근 전 현재 권한/SourcePin 확인; argv/PID/환경변수는 로컬 |
 | client 모델 설정·plan metadata | 로컬 정책/가용 능력·F4 완료 refs → route·current published plan ref | ConfigRoot 전용 모델 설정과 Host review 게시를 분리; 구현 Step은 현재 plan을 요구 |

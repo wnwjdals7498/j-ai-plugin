@@ -66,3 +66,13 @@ Host만 `host` extra를 설치하고 `pmt-host`로 별도 data/config root를 �
 | backup·restore | quiescent 원본→sanitized manifest/SQLite/resources→빈 target import→ID/FK/hash 확인; 원본 삭제·자동 primary 전환 없음 |
 
 진단 필드는 request/run/scope/source/context/batch/hash/count·단계·코드·시각·시간을 사용한다. credential·전체 대화·native prompt·argv/env·PID·로컬 절대경로는 공유 metadata/일반 로그에 기록하지 않는다. 파일 effect와 DB commit의 중단 지점은 journal 및 실제 파일 hash로 판단한다. Windows 공유 잠금은 제한된 재시도 후 unknown으로 유지하며 복구본 삭제·다른 실행 재시작·점유 해제로 처리하지 않는다.
+
+## 4단계 현재 기준·보존·복구
+
+schema 4→5 전환은 원본 SQLite를 백업한 뒤 additive migration하며 실패 시 기존 schema를 보존한다. 미완료 continuity journal이 있으면 백업·이관 확정을 막는다. Host에는 공유 참조를 유지하고 private projection은 제외 이유/개수/hash를 기록한다. 이관으로 실행 소유권을 이전하지 않는다.
+
+`prune_continuity`는 기본 dry-run이며 명시 apply 때 90일이 지난 미참조 metadata만 정리한다. 현재 pointer의 근거·활성 작업/실행·미완료 효과·다른 actor의 private 객체를 보존한다. 손상된 참조/hash는 정리를 중단한다. 이전 checkpoint parent는 선택적 과거 이력이므로 만료 후 unavailable일 수 있다. Git/source 파일·실행 원본을 이 명령으로 삭제하지 않는다.
+
+SessionStart는 명시 scope에서 bounded 재개 개요를 조회한다. Hook 실패/timeout은 안전한 오류·추가 조회를 남기고 Stop/idle를 완료·점유 해제로 바꾸지 않는다. 비용은 전체 request/response bytes·상세/재시도·실측 시간을 함께 기록하며 모델 token usage가 없으면 unknown이다. 실제 수용 범위·차단·미실행은 [4단계 구현 상태](../phase4/implementation-status.md)를 확인한다.
+
+SQLite 실패는 안전한 `sqlite_errorcode/sqlite_errorname`을 기록한다. raw exception·SQL·본문은 기록하지 않는다. 실패한 context 시험은 actual DB/Git 임시 자료를 보존하며 위치는 local test artifact로만 기록한다. 간헐적 파일 접근 실패와 재검증을 단일 성공으로 합치지 않는다.

@@ -1,0 +1,31 @@
+{
+  "fixture_version": "p4-r6-independent-context-1",
+  "scenario_id": "resume_active_run_with_unknown_details",
+  "tier": "model_actual_candidate",
+  "project_scope": {
+    "project_ref": "11111111-1111-4111-8111-111111111111",
+    "repository_ref": "22222222-2222-4222-8222-222222222222",
+    "branch": "resume-fixture",
+    "workspace_ref": "pmt://22222222-2222-4222-8222-222222222222/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "resume_overview": {
+    "direction_refs": ["decision:33333333-3333-4333-8333-333333333333"],
+    "current_status": ["work:InProgress", "step:InProgress"],
+    "active_execution": [
+      {
+        "run_ref": "run:44444444-4444-4444-8444-444444444444",
+        "state": "running",
+        "owner_session_ref": "session-hash:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ],
+    "checkpoint_ref": "checkpoint:55555555-5555-4555-8555-555555555555",
+    "basis_ref": "basis:66666666-6666-4666-8666-666666666666",
+    "basis_state": "coherent_at_capture",
+    "unknowns": ["current_run_state_after_capture", "private_step_detail_not_loaded"],
+    "attention": ["existing_run_requires_authoritative_status_read"],
+    "detail_refs": ["detail:77777777-7777-4777-8777-777777777777"],
+    "complete": true,
+    "token_count": null
+  },
+  "user_request": "이 프로젝트를 이어서 진행하려고 합니다. 지금 확인된 내용, 확인되지 않은 점, 다음에 안전하게 할 일을 알려 주세요."
+}

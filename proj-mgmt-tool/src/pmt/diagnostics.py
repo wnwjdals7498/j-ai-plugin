@@ -13,7 +13,10 @@ FIELDS = ("request_id", "operation", "session_id", "source", "scope_id", "record
           "source_hash", "graph_hash", "graph_revision", "rule_version", "template_version",
           "context_id", "batch_id", "measurement_id", "manifest_hash", "count",
           "input_bytes", "output_bytes", "incomplete", "reason_code",
-          "device_id", "environment_id", "namespace_id", "api_version", "host_schema_version")
+          "device_id", "environment_id", "namespace_id", "api_version", "host_schema_version",
+          "object_kind", "object_id", "checkpoint_id", "basis_hash", "pointer_key", "effect_id",
+          "coverage", "cache_hit", "response_bytes", "response_lines", "completeness",
+          "sqlite_errorcode", "sqlite_errorname")
 SENSITIVE_KEYS = {"token", "claim_token", "authorization", "secret", "transcript", "payload", "body"}
 
 def _safe(value, depth=0):

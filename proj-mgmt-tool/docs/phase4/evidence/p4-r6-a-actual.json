@@ -1,0 +1,2660 @@
+{
+  "boundary_event_id": "0f05aec2-0bc3-43a3-b122-a904dd83e88b",
+  "comparability": {
+    "cost_saving_rate_claimed": false,
+    "no_change_same_goal_acceptance_source_role_environment": true,
+    "pairs_use_exact_database_starting_state": true,
+    "quality_assessment": "deterministic required refs/state only; no model invoked",
+    "related_change_same_final_source_role_environment": true
+  },
+  "conditions": {
+    "continuity_path": "R1 current facts/checkpoint/basis, R2 change/index, R3 assessment/applicability and R4 overview/bundle/detail as applicable",
+    "graph_path": "docs/pmt-docs/plan.graph.json",
+    "initial_basis_ref": "70e17569-ccb7-508e-82ae-4b4a046feb78",
+    "legacy_path": "bounded prior re-entry: context, run, Step and directive queries, selected file hash, SourcePin and existing F5 context/detail",
+    "model": null,
+    "model_usage": "unknown_not_invoked",
+    "remote_host": false,
+    "source": "same isolated real Git checkout held fixed during each paired re-entry",
+    "source_change_cost": "fixture source commit is common setup before the changed-source pair and excluded from re-entry totals",
+    "source_read_instrumentation": "Python Path.read_bytes calls on the selected graph/target paths and Git subprocess calls inside each measured path; Git internal reads and other file APIs are not byte-instrumented",
+    "source_selection": [
+      "docs/pmt-docs/plan.graph.json",
+      "src/target.py"
+    ],
+    "storage": "isolated local SQLite cloned from one exact fixture snapshot",
+    "target_path": "src/target.py",
+    "unmeasured_io": "Git internal I/O, open/read_text or OS-level reads outside Path.read_bytes, CPU/memory, model tokens and quality scores are unknown",
+    "verification_definition_hash": "9712fd3e538f536ef41083e1d3cefda546245c96d0335cc0fadd5d5416f5ca95"
+  },
+  "environment": {
+    "core_version": "0.4.0",
+    "db_schema": 5,
+    "fixture_source_sha256": "62901b80cf25d7b8f8dae1ee20773aa081582a41057d181d8b5f1c832e7f0ac1",
+    "graph_schema": 1,
+    "platform": "win32",
+    "python": "3.13.13",
+    "runtime_source_sha256": {
+      "src/pmt/continuity/context.py": "443048c7e73ed68eced2bff4781d19595c741f6d231cfd56748f645d71db25e2",
+      "src/pmt/continuity/current.py": "f11469bb646b274d3d1756f4785754b2f289a7b1d22d6f949d3145baf946b938",
+      "src/pmt/hosted_context.py": "63e494e894094a2e8f179e7bbed447c1232a279f4533d7cb6f7aaeeeec73c7d5",
+      "tests/test_phase4_current_context.py": "62901b80cf25d7b8f8dae1ee20773aa081582a41057d181d8b5f1c832e7f0ac1",
+      "tests/test_phase4_hosted_alignment_actual.py": "ee3bc0d381ceb32398158febf4a4e957e81e917c3090c74e2c9809259707c713",
+      "tests/test_phase4_hosted_context.py": "3b0668512986f756ba4e093ce5964dd438c23ece6bd65eb9e12ee0a2d88d6c1c"
+    },
+    "script_sha256": "2ebac9608469aedc1e3393d46639650737aee4beb34e0a82169ee2855a658004"
+  },
+  "item_id": "79e87c1d-94e4-4de4-baae-d8503597fc13",
+  "measurement_completed_at": "2026-10-06T05:32:46.351404+00:00",
+  "measurement_script": "p4-r6-a-measure-2",
+  "measurement_started_at": "2026-10-06T05:31:50.598856+00:00",
+  "project_id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+  "repository_id": "a262b78a-503b-4ee5-80b8-7bf1a2a1999f",
+  "run_id": "a395691f-c988-4e79-89b0-549dfed73012",
+  "scenarios": {
+    "no_change": {
+      "comparison_eligible": true,
+      "comparison_ineligible_reason": null,
+      "continuity": {
+        "calls_by_operation": {
+          "compose_resume_overview": {
+            "count": 1,
+            "elapsed_ms": 3.635,
+            "request_bytes": 639,
+            "response_bytes": 3516,
+            "response_lines": 1
+          },
+          "compose_task_resume": {
+            "count": 1,
+            "elapsed_ms": 3572.909,
+            "request_bytes": 1525,
+            "response_bytes": 1807,
+            "response_lines": 1
+          },
+          "read_checkpoint": {
+            "count": 1,
+            "elapsed_ms": 2.572,
+            "request_bytes": 572,
+            "response_bytes": 4084,
+            "response_lines": 1
+          },
+          "read_current_facts": {
+            "count": 1,
+            "elapsed_ms": 4.671,
+            "request_bytes": 273,
+            "response_bytes": 2489,
+            "response_lines": 1
+          },
+          "read_resume_detail": {
+            "count": 2,
+            "elapsed_ms": 5307.93,
+            "request_bytes": 1992,
+            "response_bytes": 9298,
+            "response_lines": 2
+          },
+          "validate_basis": {
+            "count": 1,
+            "elapsed_ms": 2029.906,
+            "request_bytes": 723,
+            "response_bytes": 367,
+            "response_lines": 1
+          }
+        },
+        "git_calls": 80,
+        "git_observations": [
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          }
+        ],
+        "instrumented_path_read_bytes": 15904,
+        "instrumented_path_read_bytes_calls": 28,
+        "operation_calls": 7,
+        "operation_elapsed_ms": 10921.623,
+        "protocol_bytes_total": 27285,
+        "request_bytes": 5724,
+        "response_bytes": 21561,
+        "response_lines": 7,
+        "semantic": {
+          "active_execution": [
+            {
+              "revision": 1,
+              "run_ref": "a395691f-c988-4e79-89b0-549dfed73012",
+              "state": "running",
+              "stop_confirmed": false,
+              "task_ref": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+              "updated_at": "2026-10-06T05:31:50.049443Z"
+            }
+          ],
+          "applicability_ref": null,
+          "applicability_status": null,
+          "assessment_ref": null,
+          "assessment_state": null,
+          "basis_validation": "unchanged",
+          "bundle_complete": false,
+          "change_coverage": null,
+          "change_ref": null,
+          "checkpoint_ref": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+          "detail_pages": 2,
+          "detail_text_sha256": "7be175ba7d54a71bb2619fbe0b6a65c8e58b89dfaab9eb07ac2b103ed0ff0d66",
+          "goal_visible": true,
+          "link_coverage": null,
+          "link_index_ref": null,
+          "next_action": {
+            "action": "continue_from_current_checkpoint",
+            "executable": false,
+            "reason": "no_change_confirmed",
+            "required_conditions": [
+              "revalidate_current_owner_and_source"
+            ],
+            "required_refs": [
+              "762ede73-17e0-5b83-8a90-afd071f8b71b"
+            ],
+            "unknown": []
+          },
+          "overview_complete": false,
+          "resume_change_reason_codes": [],
+          "resume_change_status": "no_change_confirmed",
+          "sections": [
+            {
+              "section_id": null,
+              "value_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+            }
+          ]
+        },
+        "state_after": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "bundle"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 1,
+              "kind": "detail"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            },
+            {
+              "id": "5f3d2bbb-174c-5739-9924-90e44d82e406",
+              "kind": "task_context",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 7,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_before": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 1,
+              "kind": "detail"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 4,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_unchanged": false,
+        "unobserved_file_io_bytes": "unknown",
+        "wall_elapsed_ms": 10922.389
+      },
+      "input_identity": {
+        "branch": "master",
+        "environment_id": "cadd00bb-496c-4620-880d-d4c2d5e00dfd",
+        "f5_budget": {
+          "max_bytes": 600,
+          "max_lines": 50,
+          "unit": "utf8"
+        },
+        "goal_hash": "9712fd3e538f536ef41083e1d3cefda546245c96d0335cc0fadd5d5416f5ca95",
+        "head": "e56e2e308838e64c40fb7fdeabcbb9ef48e006cc",
+        "inventory_hash": "6dac14bc4909dd292115235c3ff9045f1d8113bb832d2530628f34e981381b75",
+        "role": "lower",
+        "run_id": "a395691f-c988-4e79-89b0-549dfed73012",
+        "run_revision": 1,
+        "work_revision": 2
+      },
+      "legacy": {
+        "calls_by_operation": {
+          "build_task_context": {
+            "count": 1,
+            "elapsed_ms": 1914.464,
+            "request_bytes": 1343,
+            "response_bytes": 4946,
+            "response_lines": 1
+          },
+          "capture_source_pin": {
+            "count": 1,
+            "elapsed_ms": 852.372,
+            "request_bytes": 559,
+            "response_bytes": 876,
+            "response_lines": 1
+          },
+          "read_context": {
+            "count": 1,
+            "elapsed_ms": 4.353,
+            "request_bytes": 302,
+            "response_bytes": 3130,
+            "response_lines": 1
+          },
+          "read_context_detail": {
+            "count": 2,
+            "elapsed_ms": 1894.988,
+            "request_bytes": 1616,
+            "response_bytes": 7264,
+            "response_lines": 2
+          },
+          "read_execution": {
+            "count": 1,
+            "elapsed_ms": 4.112,
+            "request_bytes": 316,
+            "response_bytes": 2043,
+            "response_lines": 1
+          },
+          "read_step": {
+            "count": 1,
+            "elapsed_ms": 4.615,
+            "request_bytes": 312,
+            "response_bytes": 405,
+            "response_lines": 1
+          },
+          "read_step_directive": {
+            "count": 1,
+            "elapsed_ms": 10.04,
+            "request_bytes": 370,
+            "response_bytes": 756,
+            "response_lines": 1
+          }
+        },
+        "git_calls": 31,
+        "git_observations": [
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          }
+        ],
+        "instrumented_path_read_bytes": 3923,
+        "instrumented_path_read_bytes_calls": 6,
+        "operation_calls": 8,
+        "operation_elapsed_ms": 4684.944,
+        "protocol_bytes_total": 24238,
+        "request_bytes": 4818,
+        "response_bytes": 19420,
+        "response_lines": 8,
+        "semantic": {
+          "context_incomplete": true,
+          "context_records": 4,
+          "decision_count": 0,
+          "detail_pages": 2,
+          "detail_text_sha256": "7be175ba7d54a71bb2619fbe0b6a65c8e58b89dfaab9eb07ac2b103ed0ff0d66",
+          "directive_goal_sha256": "3a2cc6963947032ef603d9df5dc7072580b7ae510ea766f837bcd0a3b506730b",
+          "missing_required": [
+            {
+              "reason_code": "source_field_missing",
+              "section_id": "method"
+            }
+          ],
+          "omitted_required": [
+            {
+              "available": true,
+              "bytes": 152,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "inputs"
+            },
+            {
+              "available": true,
+              "bytes": 163,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "outputs"
+            },
+            {
+              "available": true,
+              "bytes": 173,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "criteria"
+            },
+            {
+              "available": true,
+              "bytes": 142,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "tests"
+            },
+            {
+              "available": true,
+              "bytes": 147,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "logging"
+            },
+            {
+              "available": true,
+              "bytes": 104,
+              "lines": 0,
+              "reason_code": "budget_exceeded",
+              "section_id": "evidence_refs"
+            },
+            {
+              "available": true,
+              "bytes": 152,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "autonomy"
+            },
+            {
+              "available": true,
+              "bytes": 486,
+              "lines": 9,
+              "reason_code": "budget_exceeded",
+              "section_id": "unresolved"
+            }
+          ],
+          "run_revision": 1,
+          "run_state": "running",
+          "section_ids": [
+            "change_scope",
+            "goal",
+            "non_goal",
+            "purpose"
+          ],
+          "selected_file_bytes": 53,
+          "selected_file_sha256": "70f52b4d643694e04f60fecfaec80622e5309a7f89aa68a5a6c3e199a3741bd6",
+          "step_state": "InProgress"
+        },
+        "state_after": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 1,
+              "kind": "detail"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            },
+            {
+              "id": "f54eb71c-49fc-5ba9-af2b-ed753d6e15e3",
+              "kind": "task_context",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 5,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_before": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 1,
+              "kind": "detail"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 4,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_unchanged": false,
+        "unobserved_file_io_bytes": "unknown",
+        "wall_elapsed_ms": 4878.193
+      }
+    },
+    "related_change": {
+      "comparison_eligible": true,
+      "comparison_ineligible_reason": null,
+      "continuity": {
+        "calls_by_operation": {
+          "assess_alignment": {
+            "count": 1,
+            "elapsed_ms": 714.707,
+            "request_bytes": 737,
+            "response_bytes": 764,
+            "response_lines": 1
+          },
+          "build_implementation_links": {
+            "count": 1,
+            "elapsed_ms": 1077.339,
+            "request_bytes": 484,
+            "response_bytes": 961,
+            "response_lines": 1
+          },
+          "capture_work_basis": {
+            "count": 2,
+            "elapsed_ms": 3760.7870000000003,
+            "request_bytes": 1352,
+            "response_bytes": 7139,
+            "response_lines": 2
+          },
+          "collect_changes": {
+            "count": 1,
+            "elapsed_ms": 6364.002,
+            "request_bytes": 537,
+            "response_bytes": 1181,
+            "response_lines": 1
+          },
+          "compose_resume_overview": {
+            "count": 1,
+            "elapsed_ms": 5.267,
+            "request_bytes": 639,
+            "response_bytes": 3516,
+            "response_lines": 1
+          },
+          "compose_task_resume": {
+            "count": 1,
+            "elapsed_ms": 3859.57,
+            "request_bytes": 1692,
+            "response_bytes": 3026,
+            "response_lines": 1
+          },
+          "read_applicability": {
+            "count": 1,
+            "elapsed_ms": 1578.205,
+            "request_bytes": 1285,
+            "response_bytes": 433,
+            "response_lines": 1
+          },
+          "read_checkpoint": {
+            "count": 1,
+            "elapsed_ms": 3.154,
+            "request_bytes": 572,
+            "response_bytes": 4084,
+            "response_lines": 1
+          },
+          "read_current_facts": {
+            "count": 1,
+            "elapsed_ms": 4.656,
+            "request_bytes": 273,
+            "response_bytes": 2489,
+            "response_lines": 1
+          },
+          "read_resume_detail": {
+            "count": 2,
+            "elapsed_ms": 6495.9130000000005,
+            "request_bytes": 1992,
+            "response_bytes": 11360,
+            "response_lines": 2
+          },
+          "rebuild_graph_index": {
+            "count": 1,
+            "elapsed_ms": 1749.919,
+            "request_bytes": 1036,
+            "response_bytes": 836,
+            "response_lines": 1
+          },
+          "validate_basis": {
+            "count": 1,
+            "elapsed_ms": 2049.339,
+            "request_bytes": 723,
+            "response_bytes": 373,
+            "response_lines": 1
+          }
+        },
+        "git_calls": 186,
+        "git_observations": [
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 17,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 16,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 16,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 16,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 17,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 16,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 16,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 16,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 17,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 16,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 12,
+            "tool": "git"
+          },
+          {
+            "argv_count": 11,
+            "tool": "git"
+          },
+          {
+            "argv_count": 13,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          }
+        ],
+        "instrumented_path_read_bytes": 27938,
+        "instrumented_path_read_bytes_calls": 51,
+        "operation_calls": 14,
+        "operation_elapsed_ms": 27662.858,
+        "protocol_bytes_total": 47484,
+        "request_bytes": 11322,
+        "response_bytes": 36162,
+        "response_lines": 14,
+        "semantic": {
+          "active_execution": [
+            {
+              "revision": 1,
+              "run_ref": "a395691f-c988-4e79-89b0-549dfed73012",
+              "state": "running",
+              "stop_confirmed": false,
+              "task_ref": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+              "updated_at": "2026-10-06T05:31:50.049443Z"
+            }
+          ],
+          "applicability_ref": "8cc5d77a-51ba-5a66-8fcd-4874027cde86",
+          "applicability_status": "unknown",
+          "assessment_ref": "621d0370-dbd1-5aba-8ec7-b5979b926b36",
+          "assessment_state": "incomplete",
+          "basis_validation": "changed",
+          "bundle_complete": false,
+          "change_coverage": "complete",
+          "change_ref": "072aeca0-0de9-56cf-afed-b1fc862d687f",
+          "checkpoint_ref": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+          "detail_pages": 2,
+          "detail_text_sha256": "f10d0bb0196205242320f149fddf0514af3752fcd49533bc6ba78c20c711dc5f",
+          "goal_visible": true,
+          "link_coverage": {
+            "complete": false,
+            "mapped_count": 0,
+            "scope_hash": "8c1eeca7903fb2e645ea3c850bc1e8577f3fd35fe64673ae1d7d7da37f0bca8f",
+            "selected_count": 1,
+            "unknown_count": 0,
+            "unmapped_count": 1
+          },
+          "link_index_ref": "a55f1d3d-e163-586d-9244-dd3af52bbeef",
+          "next_action": {
+            "action": "request_selection",
+            "executable": false,
+            "reason": "related_change_not_proven_currently_applied",
+            "required_conditions": [
+              "revalidate_current_owner_and_source",
+              "review_current_assessment_and_applicability",
+              "verify_applied_alignment_pointer"
+            ],
+            "required_refs": [
+              "072aeca0-0de9-56cf-afed-b1fc862d687f",
+              "621d0370-dbd1-5aba-8ec7-b5979b926b36",
+              "8cc5d77a-51ba-5a66-8fcd-4874027cde86"
+            ],
+            "unknown": [
+              "change_after_basis_semantically_stale",
+              "assessment_incomplete_or_unknown",
+              "applicability_basis_stale",
+              "applicability_graph_stale",
+              "applicability_unknown",
+              "alignment_not_currently_applied"
+            ]
+          },
+          "overview_complete": false,
+          "resume_change_reason_codes": [
+            "change_after_basis_semantically_stale",
+            "assessment_incomplete_or_unknown",
+            "applicability_basis_stale",
+            "applicability_graph_stale",
+            "applicability_unknown",
+            "alignment_not_currently_applied"
+          ],
+          "resume_change_status": "change_requires_review",
+          "sections": [
+            {
+              "section_id": null,
+              "value_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+            }
+          ]
+        },
+        "state_after": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "applicability"
+            },
+            {
+              "count": 1,
+              "kind": "assessment"
+            },
+            {
+              "count": 3,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "bundle"
+            },
+            {
+              "count": 1,
+              "kind": "change"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 3,
+              "kind": "detail"
+            },
+            {
+              "count": 1,
+              "kind": "link_index"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 2,
+              "source_hash": "c4919af98b4a66ad28a26fa37cfea08f4f86d877840f4f934bd2445ef007834b",
+              "state": "ready"
+            },
+            {
+              "id": "04ba7414-f2cb-52df-9879-8a6c94553c5e",
+              "kind": "task_context",
+              "revision": 1,
+              "source_hash": "c4919af98b4a66ad28a26fa37cfea08f4f86d877840f4f934bd2445ef007834b",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "072aeca0-0de9-56cf-afed-b1fc862d687f",
+              "pointer_key": "35579ff39d340d385c045f51854361168d544f00015a9099fcddd5f12755775d",
+              "revision": 1
+            },
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 14,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_before": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 1,
+              "kind": "detail"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 4,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_unchanged": false,
+        "unobserved_file_io_bytes": "unknown",
+        "wall_elapsed_ms": 27664.538
+      },
+      "input_identity": {
+        "branch": "master",
+        "environment_id": "cadd00bb-496c-4620-880d-d4c2d5e00dfd",
+        "f5_budget": {
+          "max_bytes": 600,
+          "max_lines": 50,
+          "unit": "utf8"
+        },
+        "goal_hash": "9712fd3e538f536ef41083e1d3cefda546245c96d0335cc0fadd5d5416f5ca95",
+        "head": "2ccac77b047333340d0fba7d97cc51974970fae3",
+        "inventory_hash": "6dac14bc4909dd292115235c3ff9045f1d8113bb832d2530628f34e981381b75",
+        "role": "lower",
+        "run_id": "a395691f-c988-4e79-89b0-549dfed73012",
+        "run_revision": 1,
+        "scenario": "related selected Python file change",
+        "target_sha256": "0f050373972452617deaa82e686e4b2c01f814e13317928fdbbf4021c9f958bd",
+        "work_revision": 2
+      },
+      "legacy": {
+        "calls_by_operation": {
+          "build_task_context": {
+            "count": 1,
+            "elapsed_ms": 1845.484,
+            "request_bytes": 1343,
+            "response_bytes": 4946,
+            "response_lines": 1
+          },
+          "capture_source_pin": {
+            "count": 1,
+            "elapsed_ms": 820.445,
+            "request_bytes": 559,
+            "response_bytes": 876,
+            "response_lines": 1
+          },
+          "read_context": {
+            "count": 1,
+            "elapsed_ms": 3.357,
+            "request_bytes": 302,
+            "response_bytes": 3130,
+            "response_lines": 1
+          },
+          "read_context_detail": {
+            "count": 2,
+            "elapsed_ms": 2001.397,
+            "request_bytes": 1616,
+            "response_bytes": 7264,
+            "response_lines": 2
+          },
+          "read_execution": {
+            "count": 1,
+            "elapsed_ms": 1.789,
+            "request_bytes": 316,
+            "response_bytes": 2043,
+            "response_lines": 1
+          },
+          "read_step": {
+            "count": 1,
+            "elapsed_ms": 1.82,
+            "request_bytes": 312,
+            "response_bytes": 405,
+            "response_lines": 1
+          },
+          "read_step_directive": {
+            "count": 1,
+            "elapsed_ms": 7.671,
+            "request_bytes": 370,
+            "response_bytes": 756,
+            "response_lines": 1
+          },
+          "rebuild_graph_index": {
+            "count": 1,
+            "elapsed_ms": 1712.746,
+            "request_bytes": 1036,
+            "response_bytes": 836,
+            "response_lines": 1
+          }
+        },
+        "git_calls": 44,
+        "git_observations": [
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "elapsed_ms": 160.796,
+            "exit_code": 0,
+            "purpose": "bounded_name_status_diff",
+            "stdout_bytes": 16,
+            "stdout_sha256": "065445999b9a75d21f5d72667b7c7230a0d7236de69d6a4117208e02090b6d15",
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 6,
+            "tool": "git"
+          },
+          {
+            "argv_count": 7,
+            "tool": "git"
+          },
+          {
+            "argv_count": 5,
+            "tool": "git"
+          },
+          {
+            "argv_count": 8,
+            "tool": "git"
+          }
+        ],
+        "instrumented_path_read_bytes": 5471,
+        "instrumented_path_read_bytes_calls": 8,
+        "operation_calls": 9,
+        "operation_elapsed_ms": 6394.709,
+        "protocol_bytes_total": 26110,
+        "request_bytes": 5854,
+        "response_bytes": 20256,
+        "response_lines": 9,
+        "semantic": {
+          "context_incomplete": true,
+          "context_records": 4,
+          "decision_count": 0,
+          "detail_pages": 2,
+          "detail_text_sha256": "f10d0bb0196205242320f149fddf0514af3752fcd49533bc6ba78c20c711dc5f",
+          "directive_goal_sha256": "3a2cc6963947032ef603d9df5dc7072580b7ae510ea766f837bcd0a3b506730b",
+          "missing_required": [
+            {
+              "reason_code": "source_field_missing",
+              "section_id": "method"
+            }
+          ],
+          "omitted_required": [
+            {
+              "available": true,
+              "bytes": 152,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "inputs"
+            },
+            {
+              "available": true,
+              "bytes": 163,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "outputs"
+            },
+            {
+              "available": true,
+              "bytes": 173,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "criteria"
+            },
+            {
+              "available": true,
+              "bytes": 142,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "tests"
+            },
+            {
+              "available": true,
+              "bytes": 147,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "logging"
+            },
+            {
+              "available": true,
+              "bytes": 104,
+              "lines": 0,
+              "reason_code": "budget_exceeded",
+              "section_id": "evidence_refs"
+            },
+            {
+              "available": true,
+              "bytes": 152,
+              "lines": 2,
+              "reason_code": "budget_exceeded",
+              "section_id": "autonomy"
+            },
+            {
+              "available": true,
+              "bytes": 486,
+              "lines": 9,
+              "reason_code": "budget_exceeded",
+              "section_id": "unresolved"
+            }
+          ],
+          "run_revision": 1,
+          "run_state": "running",
+          "section_ids": [
+            "change_scope",
+            "goal",
+            "non_goal",
+            "purpose"
+          ],
+          "selected_file_bytes": 53,
+          "selected_file_sha256": "0f050373972452617deaa82e686e4b2c01f814e13317928fdbbf4021c9f958bd",
+          "step_state": "InProgress"
+        },
+        "state_after": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 1,
+              "kind": "detail"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 2,
+              "source_hash": "c4919af98b4a66ad28a26fa37cfea08f4f86d877840f4f934bd2445ef007834b",
+              "state": "ready"
+            },
+            {
+              "id": "dacb9b5f-dd76-5bbd-aeb9-eadf4f99c53c",
+              "kind": "task_context",
+              "revision": 1,
+              "source_hash": "c4919af98b4a66ad28a26fa37cfea08f4f86d877840f4f934bd2445ef007834b",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 6,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_before": {
+          "continuity_objects": [
+            {
+              "count": 1,
+              "kind": "basis"
+            },
+            {
+              "count": 1,
+              "kind": "checkpoint"
+            },
+            {
+              "count": 1,
+              "kind": "detail"
+            }
+          ],
+          "phase3_objects": [
+            {
+              "id": "388864b8-2a0f-4a61-8454-e159b1d50787",
+              "kind": "graph_index",
+              "revision": 1,
+              "source_hash": "0902b4e4bae284fad8f6bbb789c19d6b88b6b43b96a7679930d0e183e29517d2",
+              "state": "ready"
+            }
+          ],
+          "pointers": [
+            {
+              "object_id": "762ede73-17e0-5b83-8a90-afd071f8b71b",
+              "pointer_key": "556220b6e64b23edb607082c79636b47f11f01d7c29b1f54411290667f1d6d87",
+              "revision": 1
+            }
+          ],
+          "request_count": 4,
+          "run": {
+            "id": "a395691f-c988-4e79-89b0-549dfed73012",
+            "owner_session": "phase4-session",
+            "revision": 1,
+            "state": "running",
+            "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "stop_confirmed": 0
+          },
+          "scope_locks": [
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "docs/pmt-docs/plan.graph.json"
+            },
+            {
+              "kind": "path",
+              "owner_session": "phase4-session",
+              "resource": "src/target.py"
+            },
+            {
+              "kind": "workspace",
+              "owner_session": "phase4-session",
+              "resource": "."
+            }
+          ],
+          "step": {
+            "id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+            "revision": 1,
+            "state": "InProgress"
+          },
+          "work": {
+            "id": "9a98266c-59ec-4b00-8f79-6798fefd379d",
+            "revision": 2,
+            "state": "InProgress"
+          }
+        },
+        "state_unchanged": false,
+        "unobserved_file_io_bytes": "unknown",
+        "wall_elapsed_ms": 6701.422
+      }
+    }
+  },
+  "schema": "p4-r6-a-measurement-v1",
+  "source_head_after_change": "2ccac77b047333340d0fba7d97cc51974970fae3",
+  "source_head_before_change": "e56e2e308838e64c40fb7fdeabcbb9ef48e006cc",
+  "step_id": "a69ba8e6-2550-41ae-8f95-7519c982b6cb",
+  "work_id": "9a98266c-59ec-4b00-8f79-6798fefd379d"
+}

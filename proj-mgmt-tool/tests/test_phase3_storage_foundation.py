@@ -27,7 +27,7 @@ def test_schema3_migration_has_backup_and_preserves_data(tmp_path):
     old = _schema3(tmp_path)
     db = Database(old.root, old.config_root)
     with db.connect() as conn:
-        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "4"
+        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == str(db_module.SCHEMA_VERSION)
         assert conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='phase3_objects'").fetchone()
         conn.execute("INSERT INTO scopes(id,kind,slug,created_at,updated_at) VALUES('preserved','project','p','t','t')")
     backups = list(db.root.glob("pmt-schema3-*.sqlite3"))
@@ -109,7 +109,7 @@ def test_local_store_port_parity_and_compatibility(tmp_path):
     assert response["ok"] and code == 0
     assert store.get_request_result(request["request_id"], "actor", "session") == (response, code)
     assert store.get_request_result(request["request_id"], "other", "session") is None
-    assert store.check_compatibility()["db_schema"] == 4
+    assert store.check_compatibility()["db_schema"] == db_module.SCHEMA_VERSION
 
 
 def test_journal_stage_cas_and_outbox_owner_controls(tmp_path):

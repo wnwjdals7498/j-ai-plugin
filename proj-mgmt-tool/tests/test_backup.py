@@ -9,6 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from pmt.db import Database, SCHEMA_VERSION
 from pmt.resources import execute
+from pmt.continuity.storage import ContinuityStore
+from pmt.util import new_id
 import pmt.resources as resources
 
 
@@ -48,6 +50,94 @@ def test_backup_restore_roundtrip_preserves_database_and_blobs(tmp_path):
         assert conn.execute("SELECT count(*) FROM artifact_refs WHERE artifact_id=?", (artifact_id,)).fetchone()[0] == 1
     assert (restore_dir / "resources" / "objects" / artifact_id).read_bytes() == b"round trip evidence"
     assert execute(db, restore_request) == (restored, code)
+
+
+def test_backup_blocks_unresolved_continuity_effect_without_changing_source(tmp_path):
+    db = Database(tmp_path / "live-data", tmp_path / "config")
+    scope = str(uuid.uuid4())
+    with db.write() as conn:
+        conn.execute("INSERT INTO scopes(id,kind,slug,created_at,updated_at) VALUES(?,'project','fixture','t','t')",
+                     (scope,))
+    effect_request = {"request_id": new_id(), "operation": "begin_continuity_effect",
+        "actor": "test", "session_id": "backup", "scope_id": scope, "payload": {}}
+    with db.write() as conn:
+        effect = ContinuityStore(db).begin_effect(conn, effect_request,
+            "fixture_publication", {"receipt_ref": "synthetic"})
+    destination = tmp_path / "blocked-backup"
+    blocked, code = execute(db, _request("backup", {"destination_root": str(destination)}))
+    assert code == 3 and blocked["error"]["code"] == "backup_not_quiescent"
+    assert blocked["error"]["details"]["continuity_journal"] == {"prepared": 1}
+    assert not destination.exists()
+    with db.connect() as conn:
+        row = conn.execute("SELECT state,body_hash FROM continuity_journal WHERE id=?", (effect["id"],)).fetchone()
+        assert row["state"] == "prepared" and row["body_hash"] == effect["body_hash"]
+        assert conn.execute("SELECT value FROM meta WHERE key='maintenance_owner'").fetchone()[0] == ""
+
+
+def test_backup_restore_preserves_shared_continuity_objects_and_pointers(tmp_path):
+    db = Database(tmp_path / "live-data", tmp_path / "config")
+    scope = str(uuid.uuid4())
+    with db.write() as conn:
+        conn.execute("INSERT INTO scopes(id,kind,slug,created_at,updated_at) VALUES(?,'project','fixture','t','t')",
+                     (scope,))
+    request = {"request_id": new_id(), "operation": "put_continuity_object",
+        "actor": "test", "session_id": "backup", "scope_id": scope, "payload": {}}
+    with db.write() as conn:
+        store = ContinuityStore(db)
+        basis = store.put(conn, request, "basis", {"source_provenance": "client_attested",
+            "host_git_verified": False, "inventory_ref": "client-inventory:sha256:" + "a" * 64})
+        selector = {"purpose": "basis"}
+        pointer = store.advance_pointer(conn, request, selector, basis["id"], 0)
+    backup_dir = tmp_path / "continuity-backup"
+    saved, code = execute(db, _request("backup", {"destination_root": str(backup_dir)}))
+    assert code == 0 and saved["ok"]
+    restored_dir = tmp_path / "continuity-restored"
+    restored, code = execute(db, _request("restore", {
+        "backup_path": str(backup_dir), "destination_root": str(restored_dir)}))
+    assert code == 0 and restored["result"]["restored"]
+    copy = Database(restored_dir, tmp_path / "restored-config")
+    with copy.connect() as conn:
+        row = conn.execute("SELECT body_hash,body_json FROM continuity_objects WHERE id=?", (basis["id"],)).fetchone()
+        assert row is not None and row["body_hash"] == basis["body_hash"]
+        pointer_row = conn.execute("SELECT object_id,revision FROM continuity_pointers WHERE pointer_key=?",
+                                   (pointer["pointer_key"],)).fetchone()
+        assert tuple(pointer_row) == (basis["id"], 1)
+
+
+def test_restore_schema4_backup_runs_additive_schema5_migration_before_publish(tmp_path):
+    db = Database(tmp_path / "live-data", tmp_path / "config")
+    with db.write() as conn:
+        conn.execute("INSERT INTO scopes(id,kind,slug,created_at,updated_at) VALUES('scope','project','project','t','t')")
+    backup_dir = tmp_path / "backup-v4"
+    backed, code = execute(db, _request("backup", {"destination_root": str(backup_dir)}))
+    assert code == 0 and backed["ok"]
+
+    db_path = backup_dir / "pmt.sqlite3"
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("DROP TABLE continuity_journal")
+        conn.execute("DROP TABLE continuity_events")
+        conn.execute("DROP TABLE continuity_pointers")
+        conn.execute("DROP TABLE continuity_objects")
+        conn.execute("UPDATE meta SET value='4' WHERE key='schema_version'")
+    manifest_path = backup_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    raw = db_path.read_bytes()
+    manifest["schema_version"] = 4
+    manifest["database"]["sha256"] = hashlib.sha256(raw).hexdigest()
+    manifest["database"]["size_bytes"] = len(raw)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    destination = tmp_path / "restored-v5"
+    restored, code = execute(db, _request("restore", {
+        "backup_path": str(backup_dir), "destination_root": str(destination)}))
+    assert code == 0 and restored["ok"]
+    assert restored["result"]["schema_version"] == SCHEMA_VERSION
+    migrated = Database(destination, tmp_path / "restored-config")
+    with migrated.connect() as conn:
+        assert conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == str(SCHEMA_VERSION)
+        assert {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")} >= {
+            "continuity_objects", "continuity_pointers", "continuity_events", "continuity_journal"}
+        assert conn.execute("SELECT slug FROM scopes WHERE id='scope'").fetchone()[0] == "project"
 
 
 def test_restore_rejects_corrupt_manifest_blob_without_publishing(tmp_path):

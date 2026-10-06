@@ -18,6 +18,9 @@ from urllib.request import urlopen
 
 import pytest
 
+from pmt import __version__ as CORE_VERSION
+from pmt.db import SCHEMA_VERSION
+
 pytest_plugins = ["test_phase3_host_network"]
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,9 +40,9 @@ def _copy_python_package(stage: Path, *, distribution_version: str | None = None
     shutil.copytree(ROOT / "src" / "pmt", stage / "src" / "pmt", ignore=ignore)
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     if distribution_version:
-        old = 'version = "0.3.0"'
+        old = f'version = "{CORE_VERSION}"'
         if old not in project:
-            raise AssertionError("the F15 package revision fixture expected source distribution 0.3.0")
+            raise AssertionError("the package revision fixture expected the current source distribution")
         project = project.replace(old, f'version = "{distribution_version}"', 1)
     (stage / "pyproject.toml").write_text(project, encoding="utf-8", newline="\n")
 
@@ -57,7 +60,7 @@ def _build_wheel(stage: Path, wheelhouse: Path):
 
 @pytest.fixture
 def installed_package(tmp_path):
-    stage = tmp_path / "package-source-0.3.0"
+    stage = tmp_path / ("package-source-" + CORE_VERSION)
     wheelhouse = tmp_path / "wheelhouse"
     wheelhouse.mkdir()
     _copy_python_package(stage)
@@ -93,8 +96,8 @@ def _setup(package, data_root, config_root):
         "actor": "main", "session_id": "f15-package-session", "payload": {"product": "cli"}}
     response, code = _run_protocol(package, data_root, config_root, request)
     assert code == 0 and response["ok"], response.get("error")
-    assert response["result"]["core_version"] == "0.3.0"
-    assert response["result"]["schema_version"] == 4
+    assert response["result"]["core_version"] == CORE_VERSION
+    assert response["result"]["schema_version"] == SCHEMA_VERSION
     return response["result"]
 
 
@@ -149,7 +152,7 @@ def test_f15_installed_package_setup_hook_update_and_code_restore(installed_pack
     package = installed_package
     data_root, config_root = tmp_path / "user-data", tmp_path / "user-config"
     initial = _setup(package, data_root, config_root)
-    assert _installed_version(package) == "0.3.0"
+    assert _installed_version(package) == CORE_VERSION
     assert initial["storage_ready"] is True
 
     hook_driver = ("import json,sys; from pmt.hooks import process_hook; "
@@ -173,32 +176,32 @@ def test_f15_installed_package_setup_hook_update_and_code_restore(installed_pack
         schema_before = conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0]
         event_count_before = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         event_payload = conn.execute("SELECT payload_json FROM events WHERE event_type='prompt_submitted'").fetchone()[0]
-    assert event_count_before == 1 and int(schema_before) == 4
+    assert event_count_before == 1 and int(schema_before) == SCHEMA_VERSION
     assert "F15_PRIVATE_PROMPT_SENTINEL_NOT_FOR_STORAGE" not in event_payload
     assert not list((data_root / "hook-pending").glob("*.json"))
 
-    # This is a synthetic distribution-revision update fixture: Core code and
-    # runtime version remain 0.3.0 while the wheel metadata advances by .post1.
-    updated_stage = package["tmp"] / "package-source-0.3.0.post1"
-    _copy_python_package(updated_stage, distribution_version="0.3.0.post1")
+    # Only the isolated wheel metadata advances; runtime code/version stay fixed.
+    updated_version = CORE_VERSION + ".post1"
+    updated_stage = package["tmp"] / ("package-source-" + updated_version)
+    _copy_python_package(updated_stage, distribution_version=updated_version)
     updated_wheel = _build_wheel(updated_stage, package["wheelhouse"])
     update = subprocess.run([str(package["python"]), "-m", "pip", "install", "--upgrade",
         "--no-deps", "--no-index", str(updated_wheel)], cwd=package["cwd"], env=_portable_env(),
         capture_output=True, text=True, encoding="utf-8", timeout=120, check=False)
-    assert update.returncode == 0 and _installed_version(package) == "0.3.0.post1"
+    assert update.returncode == 0 and _installed_version(package) == updated_version
     after_update = _setup(package, data_root, config_root)
     assert after_update["db_id"] == initial["db_id"]
     with sqlite3.connect(database) as conn:
         assert conn.execute("SELECT value FROM meta WHERE key='db_id'").fetchone()[0] == db_id_before
-        assert int(conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0]) == 4
+        assert int(conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0]) == SCHEMA_VERSION
         assert conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] == event_count_before
 
     restore = subprocess.run([str(package["python"]), "-m", "pip", "install", "--force-reinstall",
         "--no-deps", "--no-index", str(package["wheel"])], cwd=package["cwd"], env=_portable_env(),
         capture_output=True, text=True, encoding="utf-8", timeout=120, check=False)
-    assert restore.returncode == 0 and _installed_version(package) == "0.3.0"
+    assert restore.returncode == 0 and _installed_version(package) == CORE_VERSION
     restored = _setup(package, data_root, config_root)
-    assert restored["db_id"] == db_id_before and restored["schema_version"] == 4
+    assert restored["db_id"] == db_id_before and restored["schema_version"] == SCHEMA_VERSION
     assert hashlib.sha256(package["wheel"].read_bytes()).hexdigest()
 
 

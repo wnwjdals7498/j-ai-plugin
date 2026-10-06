@@ -26,6 +26,7 @@ from .db import SCHEMA_VERSION
 from .errors import PmtError
 from .host.auth import HOST_SCHEMA_VERSION
 from .host.resources import HostResourceStore
+from .continuity.contracts import digest as continuity_digest, validate_metadata
 from .planning.graph import SCHEMA_VERSION as GRAPH_SCHEMA_VERSION
 from .util import canonical_json, fingerprint, new_id, utc_now
 from .workspace import canonical_workspace
@@ -35,10 +36,12 @@ MIGRATION_VERSION = 1
 TRANSFER_TABLES = (
     "scopes", "records", "artifacts", "plans", "step_specs", "execution_jobs",
     "execution_runs", "events", "project_baselines", "verifications", "artifact_refs",
+    "continuity_objects", "continuity_pointers", "continuity_events", "continuity_journal",
 )
 INSERT_ORDER = (
     "scopes", "records", "artifacts", "plans", "step_specs", "execution_jobs",
     "execution_runs", "events", "project_baselines", "verifications", "artifact_refs",
+    "continuity_objects", "continuity_pointers", "continuity_events", "continuity_journal",
 )
 QUIET_RUN_STATES = {"succeeded", "failed", "blocked", "canceled", "cancelled"}
 QUIET_JOURNAL_STATES = {"completed", "succeeded", "failed", "canceled", "cancelled", "aborted", "recovered", "done"}
@@ -209,6 +212,10 @@ def _assert_quiescent(conn: sqlite3.Connection, *, label: str) -> dict[str, int]
         count = _count(conn, "host_claim_leases", "WHERE state='active'")
         if count:
             busy["host_claim_leases"] = count
+    if _table_exists(conn, "continuity_journal"):
+        count = _count(conn, "continuity_journal", "WHERE state!='completed'")
+        if count:
+            busy["continuity_journal"] = count
     if busy:
         code = "migration_target_not_quiescent" if label.casefold().startswith("target") \
             else "migration_source_not_quiescent"
@@ -220,7 +227,8 @@ def _assert_quiescent(conn: sqlite3.Connection, *, label: str) -> dict[str, int]
             "phase3_outbox": _count(conn, "phase3_outbox"),
             "host_local_file_effect": _count(conn, "phase3_objects",
                 "WHERE kind='host_local_file_effect' AND state!='completed'"),
-            "operation_journal": _count(conn, "operation_journal")}
+            "operation_journal": _count(conn, "operation_journal"),
+            "continuity_journal": _count(conn, "continuity_journal")}
 
 
 def _git(mapping: dict, repository_id: str) -> WorkspaceMapping:
@@ -481,6 +489,28 @@ def _sanitize_row(table: str, row: dict, mappings: list[WorkspaceMapping], stats
             "snapshot_hash": prior.get("snapshot_hash"),
             "snapshot": {"verification_scope_id": (prior.get("snapshot") or {}).get("verification_scope_id")}})
         result["state"] = "migrated_stale"
+    elif table in {"continuity_objects", "continuity_journal"}:
+        # Imported continuity records stay tied to the previous identity;
+        # backup/import cannot turn private data or an effect into a new grant.
+        for key in ("owner_actor", "owner_session"):
+            value = result.get(key)
+            if isinstance(value, str):
+                result[key] = "migration:" + _digest_bytes(value.encode("utf-8"))[:24]
+        # Continuity bodies are immutable and body_hash-bound. Validate and
+        # retain their semantic JSON exactly; path/secret sanitization here
+        # would silently invalidate the stored hash and references.
+        for column in (("body_json",) if table == "continuity_objects" else
+                       ("body_json", "outcome_json")):
+            if result.get(column) is None:
+                continue
+            try:
+                value = json.loads(result[column])
+            except (TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise PmtError("migration_source_corrupt", f"Continuity {column} is invalid", 5) from exc
+            validate_metadata(value)
+            if column == "body_json" and continuity_digest(value) != result["body_hash"]:
+                raise PmtError("migration_source_corrupt", "Continuity metadata hash is invalid", 5)
+            result[column] = canonical_json(value)
     elif table == "artifacts":
         if not _HEX64.fullmatch(str(result.get("sha256", ""))) or type(result.get("size_bytes")) is not int:
             raise PmtError("migration_source_corrupt", "Artifact metadata is invalid", 5)
@@ -555,8 +585,20 @@ def _create_staged_database(snapshot: sqlite3.Connection, path: Path, mappings: 
             if table != "meta":
                 staged.execute(f"DELETE FROM {_quote(table)}")
         table_stats = {}
+        private_continuity_ids = {
+            row[0] for row in snapshot.execute(
+                "SELECT id FROM continuity_objects WHERE visibility='private'")
+        } if _table_exists(snapshot, "continuity_objects") else set()
         for table in INSERT_ORDER:
             source_rows = _canonical_rows(snapshot, table)
+            if table == "continuity_objects":
+                source_rows = [row for row in source_rows if row["visibility"] != "private"]
+            elif table == "continuity_events":
+                source_rows = [row for row in source_rows if row["object_id"] not in private_continuity_ids]
+            elif table == "artifact_refs":
+                source_rows = [row for row in source_rows
+                               if not (row["owner_type"] == "continuity"
+                                       and row["owner_id"] in private_continuity_ids)]
             transformed = [_sanitize_row(table, row, mappings, stats) for row in source_rows]
             transformed = _sortable_rows(snapshot, table, transformed)
             cols = _columns(staged, table)
@@ -750,6 +792,15 @@ class MigrationCoordinator:
                             "host_resource_journal", "host_resource_requests", "host_resource_metadata",
                             "host_transfer_receipts")
                         excluded = {name: _excluded_table_digest(snapshot, name) for name in excluded_names}
+                        private_continuity_rows = (_canonical_rows(snapshot, "continuity_objects")
+                            if _table_exists(snapshot, "continuity_objects") else [])
+                        private_continuity_ids = sorted(row["id"] for row in private_continuity_rows
+                                                        if row["visibility"] == "private")
+                        continuity_private_invalidated = {
+                            "count": len(private_continuity_ids),
+                            "ids_sha256": fingerprint(private_continuity_ids),
+                            "reason": "private_session_projection_requires_recreation_by_current_owner",
+                        }
                         core_graph_version = GRAPH_SCHEMA_VERSION
                         resource_info = [{key: value for key, value in spec.items() if key != "bundle_path"}
                                          | {"bundle_path": spec["bundle_path"]} for spec in resource_specs]
@@ -773,6 +824,7 @@ class MigrationCoordinator:
                             if source_kind == "host" else "supplied_local_git_mappings_checked"),
                         "tables": table_stats, "resources": resource_info, "resource_objects": assets,
                         "excluded_history": excluded,
+                        "continuity_private_invalidated": continuity_private_invalidated,
                         "request_id_history": request_history,
                         "derived_state_invalidated": excluded["phase3_objects"],
                         "terminal_runner_spool_preserved_in_place": spool_before,

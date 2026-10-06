@@ -15,8 +15,9 @@ from .paths import resolve_roots
 from .util import canonical_json, fingerprint, new_id, utc_now
 from .phase2_schema import SCHEMA as PHASE2_SCHEMA, SCHEMA_VERSION as PHASE2_SCHEMA_VERSION
 from .phase3_schema import SCHEMA as PHASE3_SCHEMA, SCHEMA_VERSION as PHASE3_SCHEMA_VERSION
+from .phase4_schema import SCHEMA as PHASE4_SCHEMA, SCHEMA_VERSION as PHASE4_SCHEMA_VERSION
 
-SCHEMA_VERSION = PHASE3_SCHEMA_VERSION
+SCHEMA_VERSION = PHASE4_SCHEMA_VERSION
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS scopes (
@@ -139,7 +140,7 @@ class Database:
                 if version > SCHEMA_VERSION:
                     raise PmtError("schema_version_unsupported", "Database schema is newer than this runtime", 2, False,
                                    {"schema_version": version, "supported": SCHEMA_VERSION})
-                if version not in (0, 1, 2, 3, SCHEMA_VERSION):
+                if version not in (0, 1, 2, 3, 4, SCHEMA_VERSION):
                     raise PmtError("schema_migration_unsupported", "No migration is available for this schema version", 2, False,
                                    {"schema_version": version})
                 if version == SCHEMA_VERSION:
@@ -214,6 +215,9 @@ class Database:
                     for statement in PHASE3_SCHEMA.split(";"):
                         if statement.strip():
                             conn.execute(statement)
+                    for statement in PHASE4_SCHEMA.split(";"):
+                        if statement.strip():
+                            conn.execute(statement)
                     self._put_meta(conn, "schema_version", str(SCHEMA_VERSION))
                     self._put_meta(conn, "db_id", self._meta_value(conn, "db_id") or new_id())
                     self._put_meta(conn, "environment_id", self.environment_id)
@@ -225,7 +229,7 @@ class Database:
             with closing(self.connect()) as conn:
                 current_version = int(self._meta_value(conn, "schema_version") or 0)
                 if current_version == PHASE2_SCHEMA_VERSION:
-                    self.diagnostics.emit("schema_migration_started", schema_version=SCHEMA_VERSION,
+                    self.diagnostics.emit("schema_migration_started", schema_version=PHASE3_SCHEMA_VERSION,
                                           transaction_outcome="started")
                     owner = "schema4-" + new_id()
                     conn.execute("BEGIN IMMEDIATE")
@@ -255,10 +259,10 @@ class Database:
                         for statement in PHASE3_SCHEMA.split(";"):
                             if statement.strip():
                                 conn.execute(statement)
-                        self._put_meta(conn, "schema_version", str(SCHEMA_VERSION))
+                        self._put_meta(conn, "schema_version", str(PHASE3_SCHEMA_VERSION))
                         self._put_meta(conn, "maintenance_owner", "")
                         conn.commit()
-                        self.diagnostics.emit("schema_migration_completed", schema_version=SCHEMA_VERSION,
+                        self.diagnostics.emit("schema_migration_completed", schema_version=PHASE3_SCHEMA_VERSION,
                                               transaction_outcome="commit")
                     except Exception:
                         if conn.in_transaction:
@@ -269,8 +273,9 @@ class Database:
                         except sqlite3.Error:
                             pass
                         self.diagnostics.emit("schema_migration_failed", level=logging.ERROR,
-                                              schema_version=SCHEMA_VERSION, transaction_outcome="rollback")
+                                              schema_version=PHASE3_SCHEMA_VERSION, transaction_outcome="rollback")
                         raise
+            self._migrate_continuity()
             self.diagnostics.emit("database_init_succeeded", duration_ms=int((time.monotonic()-started)*1000),
                                   schema_version=SCHEMA_VERSION)
         except Exception as exc:
@@ -283,6 +288,55 @@ class Database:
                 time.sleep(min(0.025 * (2 ** retries), 0.5))
                 return self._initialize()
             raise
+
+    def _migrate_continuity(self):
+        """Back up schema 4 before adding continuity tables, preserving all IDs."""
+        owner = "schema5-" + new_id()
+        with closing(self.connect()) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            version = int(self._meta_value(conn, "schema_version") or 0)
+            if version == SCHEMA_VERSION:
+                conn.rollback()
+                return
+            if version != PHASE3_SCHEMA_VERSION:
+                conn.rollback()
+                raise PmtError("schema_migration_unsupported", "Schema changed during continuity migration", 2)
+            if self._meta_value(conn, "maintenance_owner"):
+                conn.rollback()
+                raise PmtError("maintenance_active", "Database is in maintenance", 4, True)
+            self._put_meta(conn, "maintenance_owner", owner)
+            conn.commit()
+            self.diagnostics.emit("schema_migration_started", schema_version=SCHEMA_VERSION,
+                                  transaction_outcome="started")
+            backup_path = self.root / ("pmt-schema4-" + new_id() + ".sqlite3")
+            try:
+                with closing(self.connect()) as source, closing(sqlite3.connect(str(backup_path))) as target:
+                    source.backup(target)
+                    target.execute("UPDATE meta SET value='' WHERE key='maintenance_owner'")
+                    target.commit()
+                conn.execute("BEGIN IMMEDIATE")
+                if self._meta_value(conn, "maintenance_owner") != owner:
+                    raise PmtError("maintenance_lost", "Continuity migration gate was lost", 4, True)
+                for statement in PHASE4_SCHEMA.split(";"):
+                    if statement.strip():
+                        conn.execute(statement)
+                self._put_meta(conn, "schema_version", str(SCHEMA_VERSION))
+                self._put_meta(conn, "maintenance_owner", "")
+                conn.commit()
+                self.diagnostics.emit("schema_migration_completed", schema_version=SCHEMA_VERSION,
+                                      transaction_outcome="commit")
+            except Exception:
+                if conn.in_transaction:
+                    conn.rollback()
+                try:
+                    with conn:
+                        if self._meta_value(conn, "maintenance_owner") == owner:
+                            self._put_meta(conn, "maintenance_owner", "")
+                except sqlite3.Error:
+                    pass
+                self.diagnostics.emit("schema_migration_failed", level=logging.ERROR,
+                                      schema_version=SCHEMA_VERSION, transaction_outcome="rollback")
+                raise
 
     @staticmethod
     def _table_exists(conn, name):
@@ -322,7 +376,13 @@ class Database:
         except sqlite3.OperationalError as exc:
             if conn.in_transaction:
                 conn.rollback()
-            raise self._sqlite_error(exc) from exc
+            error = self._sqlite_error(exc)
+            self.diagnostics.emit("database_write_failed", level=logging.ERROR,
+                                  error_code=error.code, retryable=error.retryable,
+                                  sqlite_errorcode=getattr(exc, "sqlite_errorcode", None),
+                                  sqlite_errorname=getattr(exc, "sqlite_errorname", None),
+                                  exit_code=error.exit_code, transaction_outcome="rollback")
+            raise error from exc
         except Exception:
             if conn.in_transaction:
                 conn.rollback()
@@ -417,7 +477,9 @@ class Database:
             self.diagnostics.emit("request_failed", level=logging.ERROR, request_id=request_id,
                                   operation=request.get("operation") if isinstance(request, dict) else None,
                                   outcome="error", error_code=err.code, retryable=err.retryable,
-                                  exit_code=err.exit_code, transaction_outcome="rollback")
+                                  exit_code=err.exit_code, transaction_outcome="rollback",
+                                  sqlite_errorcode=getattr(exc, "sqlite_errorcode", None),
+                                  sqlite_errorname=getattr(exc, "sqlite_errorname", None))
             return self._response(request_id, False, None, err.as_dict(), []), err.exit_code
 
     def _response(self, request_id, ok, result, error, warnings):

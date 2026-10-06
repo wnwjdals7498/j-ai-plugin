@@ -254,10 +254,11 @@ def test_session_start_injects_saved_context_from_real_isolated_cli(tmp_path):
     native = json.loads(completed.stdout)
     assert native["hookSpecificOutput"]["hookEventName"] == "SessionStart"
     context = native["hookSpecificOutput"]["additionalContext"]
-    assert "Saved PMT context" in context
-    assert "Persisted project direction" in context
-    assert "Run the acceptance checks" in context
-    assert "Unselected Item" not in context and "must stay outside" not in context
+    assert "metadata overview" in context
+    assert '"current_status"' in context
+    assert "Persisted project direction" not in context
+    assert "Run the acceptance checks" not in context
+    assert "This must stay outside the selected context." not in context
     assert "fresh-codex-session" not in context
     with db.connect() as conn:
         assert conn.execute("SELECT count(*) FROM events WHERE event_type='session_started'").fetchone()[0] == 1
@@ -300,15 +301,18 @@ def test_opencode_context_bridge_uses_core_cli_and_reports_configuration_errors(
     env["PMT_SCOPE_ID"] = scope_id
     bridge = Path(__file__).resolve().parents[1] / "integrations" / "opencode" / "bridge.py"
     result = subprocess.run([sys.executable, str(bridge), "--product", "opencode", "--read-context"],
-                            input=json.dumps({"session_id": "fresh-opencode-session"}), text=True,
+                            input=json.dumps({"session_id": "fresh-opencode-session",
+                                              "native_event": "session.created"}), text=True,
                             capture_output=True, env=env, timeout=5, check=False)
     assert result.returncode == 0
     response = json.loads(result.stdout)
     assert response["status"] == "ok"
-    assert "Persisted project direction" in response["context_markdown"]
+    assert '"current_status"' in response["context_markdown"]
+    assert "Persisted project direction" not in response["context_markdown"]
     env.pop("PMT_SCOPE_ID")
     missing = subprocess.run([sys.executable, str(bridge), "--product", "opencode", "--read-context"],
-                             input=json.dumps({"session_id": "fresh-opencode-session"}), text=True,
+                             input=json.dumps({"session_id": "fresh-opencode-session",
+                                               "native_event": "session.created"}), text=True,
                              capture_output=True, env=env, timeout=5, check=False)
     assert json.loads(missing.stdout)["status"] == "not_configured"
 

@@ -514,6 +514,13 @@ def _acquire_maintenance(db, operation: str, request_id: str):
                 if same:
                     raise PmtError("file_job_active", "The same request is still processing", 4, True)
             raise PmtError("maintenance_unavailable", "Active file work prevents maintenance", 4, True)
+        if db._table_exists(conn, "continuity_journal"):
+            pending = conn.execute("SELECT state,COUNT(*) FROM continuity_journal "
+                "WHERE state!='completed' GROUP BY state ORDER BY state").fetchall()
+            if pending:
+                counts = {row[0]: row[1] for row in pending}
+                raise PmtError("backup_not_quiescent", "Unresolved continuity effects must be recovered before backup", 3,
+                    False, {"continuity_journal": counts})
         conn.execute("UPDATE meta SET value=? WHERE key='maintenance_owner'", (owner,))
         conn.execute("INSERT INTO file_jobs(id,operation,owner,state,started_at,updated_at) VALUES(?,?,?,?,?,?)",
                      (job, operation, request_id, "active", utc_now(), utc_now()))
@@ -631,7 +638,10 @@ def _validate_backup(backup_path: str):
         raise PmtError("backup_manifest_invalid", "Backup manifest is missing or invalid") from exc
     if not isinstance(manifest, dict) or manifest.get("format_version") != 1 or manifest.get("state", "ready") != "ready":
         raise PmtError("backup_manifest_invalid", "Backup manifest format is unsupported")
-    if manifest.get("schema_version") not in {2, SCHEMA_VERSION}:
+    # Keep explicit compatibility for schema 4 archives so isolated restore
+    # can run the additive schema-5 migration before the restored root is
+    # published. Unknown future versions remain rejected.
+    if manifest.get("schema_version") not in {2, 4, SCHEMA_VERSION}:
         raise PmtError("backup_schema_unsupported", "Backup schema is not supported by this runtime")
     db_info = manifest.get("database")
     if not isinstance(db_info, dict) or db_info.get("path") != _DB_FILE:
