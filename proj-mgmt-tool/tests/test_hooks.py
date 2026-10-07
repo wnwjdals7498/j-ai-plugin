@@ -206,7 +206,7 @@ def test_claude_command_args_use_official_exec_form():
     manifest = json.loads((root / "hooks" / "hooks.json").read_text(encoding="utf-8"))
     for groups in manifest["hooks"].values():
         hook = groups[0]["hooks"][0]
-        assert hook["type"] == "command" and hook["command"] == "python"
+        assert hook["type"] == "command" and hook["command"] == "${user_config.python_path}"
         assert hook["args"][:2] == ["${CLAUDE_PLUGIN_ROOT}/integrations/claude/hook.py", "--event"]
         if "SessionStart" in hook["args"]:
             assert hook["args"][-1] == "--with-context"

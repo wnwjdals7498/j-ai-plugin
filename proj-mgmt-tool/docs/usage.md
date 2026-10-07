@@ -13,7 +13,7 @@ py -3.13 scripts/build_plugins.py --output-dir dist/plugins --version 0.3.0
 각 제품 디렉터리에 독립 실행 본체·스킬·훅과 파일 hash manifest가 생깁니다. 같은 출력 버전은 덮어쓰지 않습니다. 사용자 DB·리소스·설정은 패키지에 넣지 않습니다.
 
 - Codex: `codex plugin marketplace add <절대경로>/dist/plugins/0.3.0/codex` → `codex plugin add pmt-lifecycle@pmt-local`. 새 세션의 `/hooks`에서 설치된 실행 명령을 검토해 활성화합니다. 검증한 제품 버전의 legacy manifest와 기본 hooks 경로를 함께 제공합니다.
-- Claude Code: `claude plugin marketplace add <절대경로>/dist/plugins/0.3.0/claude` → `claude plugin install pmt-lifecycle@pmt-local`. 범위는 제품의 user/project/local 선택을 따릅니다.
+- Claude Code: `claude plugin marketplace add <절대경로>/dist/plugins/0.3.0/claude` → `claude plugin install pmt-lifecycle@pmt-local`. 범위는 제품의 user/project/local 선택을 따릅니다. 훅 실행기는 PATH의 `python`을 찾지 않고 필수 플러그인 옵션 `python_path`(Python 3.13 이상 절대 경로)를 exec form으로 실행합니다. 설치 후 `claude plugin configure pmt-lifecycle@pmt-local --values-stdin`에 `{"python_path":"<절대경로>"}`를 전달하거나 `/plugin`에서 설정합니다. 옵션이 비어 있으면 Claude Code가 훅을 실행하지 않습니다.
 - OpenCode: 프로젝트 `.opencode/plugins/pmt-loader.js`에서 설치한 번들을 참조합니다. 아래 경로는 복사해 보존한 OpenCode 번들 안의 실제 파일 URI로 바꿉니다. 번들의 `skills/proj-mgmt-tool`도 공식 스킬 검색 경로 `.opencode/skills/proj-mgmt-tool`에 등록합니다.
 
 ```javascript

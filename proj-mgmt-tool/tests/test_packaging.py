@@ -101,6 +101,16 @@ def test_pkg_01_three_separate_bundles_manifest_and_zip_hashes(tmp_path):
     claude_market = json.loads((claude / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
     assert {"name", "owner", "plugins"} <= claude_market.keys()
     assert claude_market["plugins"][0]["source"] == "./"
+    claude_plugin = json.loads((claude / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    python_option = claude_plugin["userConfig"]["python_path"]
+    assert python_option["type"] == "file" and python_option["required"] is True
+    assert "default" not in python_option
+    claude_hooks = json.loads((claude / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
+    for groups in claude_hooks.values():
+        for hook in (item for group in groups for item in group["hooks"]):
+            # Exec form keeps the configured absolute interpreter a single argv entry.
+            assert hook["command"] == "${user_config.python_path}"
+            assert hook["args"][0] == "${CLAUDE_PLUGIN_ROOT}/integrations/claude/hook.py"
 
     opencode = Path(built["products"]["opencode"]["directory"])
     package_json = json.loads((opencode / "package.json").read_text(encoding="utf-8"))

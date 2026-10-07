@@ -1,5 +1,13 @@
 {
   "name": "pmt-lifecycle",
   "version": "0.1.0",
-  "description": "Record minimal Claude Code lifecycle events in PMT."
+  "description": "Record minimal Claude Code lifecycle events in PMT.",
+  "userConfig": {
+    "python_path": {
+      "type": "file",
+      "title": "Python 3.13+ executable",
+      "description": "Absolute path of the Python 3.13 or later interpreter that runs PMT hooks, for example /opt/python3.13/bin/python3.13 or C:\\Python313\\python.exe.",
+      "required": true
+    }
+  }
 }
