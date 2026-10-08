@@ -1,0 +1,47 @@
+Obtaining file:///C:/PMT/src/j-ai-plugin/proj-mgmt-tool
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: pytest>=8 in C:\PMT\src\venv-dev\Lib\site-packages (from proj-mgmt-tool==0.4.1) (9.1.1)
+Requirement already satisfied: fastapi in C:\PMT\src\venv-dev\Lib\site-packages (from proj-mgmt-tool==0.4.1) (0.142.4)
+Requirement already satisfied: pydantic>=2 in C:\PMT\src\venv-dev\Lib\site-packages (from proj-mgmt-tool==0.4.1) (2.13.5)
+Requirement already satisfied: uvicorn in C:\PMT\src\venv-dev\Lib\site-packages (from proj-mgmt-tool==0.4.1) (0.54.0)
+Requirement already satisfied: cryptography in C:\PMT\src\venv-dev\Lib\site-packages (from proj-mgmt-tool==0.4.1) (50.0.2)
+Requirement already satisfied: annotated-types>=0.6.0 in C:\PMT\src\venv-dev\Lib\site-packages (from pydantic>=2->proj-mgmt-tool==0.4.1) (0.8.0)
+Requirement already satisfied: pydantic-core==2.46.5 in C:\PMT\src\venv-dev\Lib\site-packages (from pydantic>=2->proj-mgmt-tool==0.4.1) (2.46.5)
+Requirement already satisfied: typing-extensions>=4.14.1 in C:\PMT\src\venv-dev\Lib\site-packages (from pydantic>=2->proj-mgmt-tool==0.4.1) (4.16.0)
+Requirement already satisfied: typing-inspection>=0.4.2 in C:\PMT\src\venv-dev\Lib\site-packages (from pydantic>=2->proj-mgmt-tool==0.4.1) (0.4.4)
+Requirement already satisfied: colorama>=0.4 in C:\PMT\src\venv-dev\Lib\site-packages (from pytest>=8->proj-mgmt-tool==0.4.1) (0.4.6)
+Requirement already satisfied: iniconfig>=1.0.1 in C:\PMT\src\venv-dev\Lib\site-packages (from pytest>=8->proj-mgmt-tool==0.4.1) (2.3.1)
+Requirement already satisfied: packaging>=22 in C:\PMT\src\venv-dev\Lib\site-packages (from pytest>=8->proj-mgmt-tool==0.4.1) (26.3)
+Requirement already satisfied: pluggy<2,>=1.5 in C:\PMT\src\venv-dev\Lib\site-packages (from pytest>=8->proj-mgmt-tool==0.4.1) (1.6.0)
+Requirement already satisfied: pygments>=2.7.2 in C:\PMT\src\venv-dev\Lib\site-packages (from pytest>=8->proj-mgmt-tool==0.4.1) (2.21.0)
+Requirement already satisfied: cffi>=2.0.0 in C:\PMT\src\venv-dev\Lib\site-packages (from cryptography->proj-mgmt-tool==0.4.1) (2.1.1)
+Requirement already satisfied: pycparser in C:\PMT\src\venv-dev\Lib\site-packages (from cffi>=2.0.0->cryptography->proj-mgmt-tool==0.4.1) (3.0)
+Requirement already satisfied: starlette>=0.46.0 in C:\PMT\src\venv-dev\Lib\site-packages (from fastapi->proj-mgmt-tool==0.4.1) (1.7.0)
+Requirement already satisfied: annotated-doc>=0.0.2 in C:\PMT\src\venv-dev\Lib\site-packages (from fastapi->proj-mgmt-tool==0.4.1) (0.0.5)
+Requirement already satisfied: opentelemetry-api>=1.44.0 in C:\PMT\src\venv-dev\Lib\site-packages (from fastapi->proj-mgmt-tool==0.4.1) (1.45.1)
+Requirement already satisfied: anyio<5,>=4.0.0 in C:\PMT\src\venv-dev\Lib\site-packages (from starlette>=0.46.0->fastapi->proj-mgmt-tool==0.4.1) (4.15.1)
+Requirement already satisfied: idna>=2.8 in C:\PMT\src\venv-dev\Lib\site-packages (from anyio<5,>=4.0.0->starlette>=0.46.0->fastapi->proj-mgmt-tool==0.4.1) (3.20)
+Requirement already satisfied: click>=7.0 in C:\PMT\src\venv-dev\Lib\site-packages (from uvicorn->proj-mgmt-tool==0.4.1) (8.5.0)
+Requirement already satisfied: h11>=0.8 in C:\PMT\src\venv-dev\Lib\site-packages (from uvicorn->proj-mgmt-tool==0.4.1) (0.16.0)
+Building wheels for collected packages: proj-mgmt-tool
+  Building editable for proj-mgmt-tool (pyproject.toml): started
+  Building editable for proj-mgmt-tool (pyproject.toml): finished with status 'done'
+  Created wheel for proj-mgmt-tool: filename=proj_mgmt_tool-0.4.1-0.editable-py3-none-any.whl size=1703 sha256=e7011d6e021d2c3c1b6d74a5ed9ddec361e4834b4ebf4eea1c5818af16f7a007
+  Stored in directory: D:\Users\jjm\AppData\Local\Temp\pip-ephem-wheel-cache-8338vxyd\wheels\33\3d\a1\926ac610b0ec690750bb83d6780741e83a9911aef08c0a05ae
+Successfully built proj-mgmt-tool
+Installing collected packages: proj-mgmt-tool
+  Attempting uninstall: proj-mgmt-tool
+    Found existing installation: proj-mgmt-tool 0.4.0
+    Uninstalling proj-mgmt-tool-0.4.0:
+      Successfully uninstalled proj-mgmt-tool-0.4.0
+Successfully installed proj-mgmt-tool-0.4.1
+
+[notice] A new release of pip is available: 26.1 -> 26.2.1
+[notice] To update, run: C:\PMT\src\venv-dev\Scripts\python.exe -m pip install --upgrade pip

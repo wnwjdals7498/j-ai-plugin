@@ -1,0 +1,58 @@
+--- final-switch-hosted-output.txt ---
+Switched to hosted; local database remains in place.
+Endpoint: https://127.0.0.1:18765
+Namespace: e8ae81bb-fcb5-4c38-8174-039c14880e92
+Actor: e2-switch-test
+Scopes: 5198d1c4-c5bb-408d-bb72-2aefaf8ef0ea
+Permissions: read, review, runtime, write
+Compatibility (Host probe): Core 0.4.1; DB schema 5; graph schema 1; protocol [1]
+Public CA SHA-256: 9735458a52d4b36b69741fa4b6026e4bb2a52614122d5a89b44ef904a97a4627
+Export bundle: C:\PMT\work\phase5-test\E2\real\export-final.zip | files 2 | manifest 7d2e69522ee1e7cf5056fa020ee2dd5a9f967f88f602ee2b42cef449d5dc52dd
+switch-to-hosted exit=0 db-hash-unchanged=True
+--- final-switch-local-output.txt ---
+Switched to local; existing local database and project mappings were reused.
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\E2\real\config
+switch-to-local exit=0 status-exit=0 db-hash-unchanged=True protected-credential-retained=True
+--- offline-guard-setup.txt ---
+Switched to hosted; local database remains in place.
+Endpoint: https://127.0.0.1:18765
+Namespace: e8ae81bb-fcb5-4c38-8174-039c14880e92
+Actor: e2-switch-test
+Scopes: 5198d1c4-c5bb-408d-bb72-2aefaf8ef0ea
+Permissions: read, review, runtime, write
+Compatibility (Host probe): Core 0.4.1; DB schema 5; graph schema 1; protocol [1]
+Public CA SHA-256: 9735458a52d4b36b69741fa4b6026e4bb2a52614122d5a89b44ef904a97a4627
+rehost exit=0 db-hash-unchanged=True
+--- offline-switch-output.txt ---
+실패(switch_state_unverifiable): Current Host claim state could not be verified; local mode was not opened
+offline-switch exit=3 hosted-profile-unchanged=True db-hash-unchanged=True
+--- final-switch-hosted-output.txt ---
+Switched to hosted; local database remains in place.
+Endpoint: https://127.0.0.1:18765
+Namespace: e8ae81bb-fcb5-4c38-8174-039c14880e92
+Actor: e2-switch-test
+Scopes: 5198d1c4-c5bb-408d-bb72-2aefaf8ef0ea
+Permissions: read, review, runtime, write
+Compatibility (Host probe): Core 0.4.1; DB schema 5; graph schema 1; protocol [1]
+Public CA SHA-256: 9735458a52d4b36b69741fa4b6026e4bb2a52614122d5a89b44ef904a97a4627
+Export bundle: C:\PMT\work\phase5-test\E2\real\export-final.zip | files 2 | manifest 7d2e69522ee1e7cf5056fa020ee2dd5a9f967f88f602ee2b42cef449d5dc52dd
+switch-to-hosted exit=0 db-hash-unchanged=True
+--- final-switch-local-output.txt ---
+Switched to local; existing local database and project mappings were reused.
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\E2\real\config
+switch-to-local exit=0 status-exit=0 db-hash-unchanged=True protected-credential-retained=True
+--- offline-guard-setup.txt ---
+Switched to hosted; local database remains in place.
+Endpoint: https://127.0.0.1:18765
+Namespace: e8ae81bb-fcb5-4c38-8174-039c14880e92
+Actor: e2-switch-test
+Scopes: 5198d1c4-c5bb-408d-bb72-2aefaf8ef0ea
+Permissions: read, review, runtime, write
+Compatibility (Host probe): Core 0.4.1; DB schema 5; graph schema 1; protocol [1]
+Public CA SHA-256: 9735458a52d4b36b69741fa4b6026e4bb2a52614122d5a89b44ef904a97a4627
+rehost exit=0 db-hash-unchanged=True
+--- offline-switch-output.txt ---
+실패(switch_state_unverifiable): Current Host claim state could not be verified; local mode was not opened
+offline-switch exit=3 hosted-profile-unchanged=True db-hash-unchanged=True

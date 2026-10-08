@@ -1,0 +1,14 @@
+{
+  "name": "pmt-server",
+  "version": "0.5.0",
+  "description": "Configure and operate the PMT storage Host.",
+  "author": {
+    "name": "PMT"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PMT Server",
+    "shortDescription": "PMT Host configuration and operations"
+  },
+  "hooks": []
+}

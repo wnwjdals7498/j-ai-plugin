@@ -1,0 +1,11 @@
+.........s.........s.................................................... [ 23%]
+..............................................s......................... [ 46%]
+........................................................s............... [ 69%]
+........................................................................ [ 92%]
+......................                                                   [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\client_setup\test_b1_client_setup.py:194: POSIX permission checks require a POSIX filesystem
+SKIPPED [1] tests\client_setup\test_b1_client_setup.py:259: POSIX symlink fixture needs POSIX link support
+SKIPPED [1] tests\server_admin\test_d1_registry.py:265: persistent D2 sample is created only by explicit D1 evidence run
+SKIPPED [1] tests\server_admin\test_server_admin.py:333: POSIX mode check
+306 passed, 4 skipped in 133.27s (0:02:13)

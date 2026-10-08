@@ -1,0 +1,8 @@
+  warning: skill is from graphify 0.8.34, package is 0.8.35. Run 'graphify install' to update.
+  warning: skill is from graphify 0.8.34, package is 0.8.35. Run 'graphify install' to update.
+Re-extracting code files in . (no LLM needed)...
+  AST extraction: 387/387 files (100%) [8 workers]
+[graphify watch] Rebuilt (no clustering): 9551 nodes, 37525 edges
+[graphify watch] graph.json updated in graphify-out
+Code graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.
+Tip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.

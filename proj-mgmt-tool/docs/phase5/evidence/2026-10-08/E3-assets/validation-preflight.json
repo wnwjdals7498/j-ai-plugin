@@ -1,0 +1,39 @@
+{
+  "source_commit": "de5c989",
+  "stage": "asset preflight before E2 closure",
+  "claude_cli": "2.1.280",
+  "validators": [
+    {
+      "command": "claude plugin validate C:/PMT/src/j-ai-plugin",
+      "kind": "marketplace",
+      "exit_code": 0
+    },
+    {
+      "command": "claude plugin validate C:/PMT/src/j-ai-plugin/proj-mgmt-tool",
+      "kind": "client manifest",
+      "exit_code": 0
+    },
+    {
+      "command": "claude plugin validate C:/PMT/src/j-ai-plugin/pmt-server",
+      "kind": "server manifest; hooks/claude.json",
+      "exit_code": 0
+    },
+    {
+      "command": "D:/Application/Python314/python.exe D:/Users/jjm/.codex/skills/.system/skill-creator/scripts/quick_validate.py <server skill>",
+      "exit_code": 0
+    },
+    {
+      "command": "same quick_validate.py <client skill>",
+      "exit_code": 0
+    },
+    {
+      "command": "validate_config(parsed templates/host-config.example.json)",
+      "exit_code": 0
+    }
+  ],
+  "external_runtime_changes": "none; isolated Codex home only",
+  "limitations": [
+    "full package source freeze and full pytest remain after E2",
+    "operating Host/F1 and interactive product sessions/F2/F3 unexecuted"
+  ]
+}

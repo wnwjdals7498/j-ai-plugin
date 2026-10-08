@@ -1,0 +1,8 @@
+{
+  "passed": 2,
+  "failed": 3,
+  "errors": 0,
+  "exit_code": 1,
+  "scope": "5 installed/portable-package tests after installing declared build backend; product source unchanged",
+  "remaining_failure_reason": "Pinned historical 0.3.0 package-snapshot fixture absent. Per handoff A0, no past evidence files added/deleted."
+}

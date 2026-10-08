@@ -1,0 +1,6 @@
+# Keep portable launchers runnable after a Windows checkout.
+proj-mgmt-tool/bin/pmt text eol=lf
+proj-mgmt-tool/integrations/claude/bin/pmt text eol=lf
+pmt-server/bin/pmt-server text eol=lf
+*.sh text eol=lf
+*.service text eol=lf

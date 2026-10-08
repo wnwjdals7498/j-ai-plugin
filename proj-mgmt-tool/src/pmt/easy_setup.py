@@ -17,6 +17,7 @@ from pathlib import Path
 
 from .errors import PmtError
 from .storage_config import _read_profile, configure_storage
+from .client_setup import mode as client_mode
 
 CREDENTIAL_ENV = "PMT_HOST_CREDENTIAL"
 OPTION_PREFIX = "CLAUDE_PLUGIN_OPTION_"
@@ -25,23 +26,12 @@ REQUIRED_OPTIONS = ("host_url", "device_id", "namespace_id", "actor", "device_cr
 
 def default_roots(env):
     """Return the per-user ConfigRoot/DataRoot outside any checkout."""
-    home = Path(env.get("HOME") or Path.home())
-    config_base = Path(env.get("XDG_CONFIG_HOME") or home / ".config")
-    data_base = Path(env.get("XDG_DATA_HOME") or home / ".local" / "share")
-    config_root = Path(env.get("PMT_CONFIG_ROOT") or config_base / "pmt")
-    data_root = Path(env.get("PMT_DATA_ROOT") or data_base / "pmt" / "data")
-    return config_root, data_root
+    return client_mode.default_roots(env)
 
 
 def read_options(env):
     """Return ``(options, missing)`` from the product's exported plugin options."""
-    options = {}
-    for key in REQUIRED_OPTIONS + ("host_ca_file",):
-        value = env.get(OPTION_PREFIX + key.upper())
-        if isinstance(value, str) and value.strip():
-            options[key] = value.strip()
-    missing = [key for key in REQUIRED_OPTIONS if key not in options]
-    return options, missing
+    return client_mode.read_options(env, product="claude")
 
 
 def _desired_connection(options):
@@ -115,7 +105,7 @@ def select_mapping(profile, root, branch):
 def session_environment(config_root, data_root, python, options, mapping):
     """Variables the hook process and later Bash commands need."""
     env = {"PMT_CONFIG_ROOT": str(config_root), "PMT_DATA_ROOT": str(data_root),
-           "PMT_PYTHON": python, CREDENTIAL_ENV: options["device_credential"]}
+           "PMT_PYTHON": python}
     if mapping is not None:
         env["PMT_SCOPE_ID"] = mapping["project_id"]
     return env
@@ -123,44 +113,18 @@ def session_environment(config_root, data_root, python, options, mapping):
 
 def write_env_file(path, variables):
     """Append ``export`` lines for Claude Code's ``CLAUDE_ENV_FILE``."""
-    lines = "".join(f"export {key}={shlex.quote(value)}\n" for key, value in variables.items())
+    lines = "".join(f"export {key}={shlex.quote(value)}\n" for key, value in variables.items()
+                     if key != CREDENTIAL_ENV)
     fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
     with os.fdopen(fd, "a", encoding="utf-8") as stream:
         stream.write(lines)
 
 
-def prepare(env, cwd, *, configure=configure_storage, python=None):
+def prepare(env, cwd, *, configure=configure_storage, python=None, product="claude"):
     """Apply plugin options for one hook call.
 
     Returns a dict with ``status`` (``unconfigured``, ``ready`` or ``error``),
     the environment to apply, the selected mapping reason and a short message.
     Never raises for configuration problems; hooks must stay non-blocking.
     """
-    options, missing = read_options(env)
-    if missing:
-        return {"status": "unconfigured", "env": {}, "missing": missing,
-                "message": "PMT is not configured. Open /plugin and fill in the PMT Host settings."}
-    config_root, data_root = default_roots(env)
-    python = python or env.get("PMT_PYTHON") or sys.executable
-    previous = os.environ.get(CREDENTIAL_ENV)
-    os.environ[CREDENTIAL_ENV] = options["device_credential"]
-    try:
-        config_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        data_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        changed, profile = ensure_profile(config_root, options, configure=configure)
-    except PmtError as error:
-        return {"status": "error", "env": {}, "error_code": error.code,
-                "message": f"PMT Host setup failed ({error.code}). Check the /plugin values."}
-    except OSError:
-        return {"status": "error", "env": {}, "error_code": "easy_setup_io_error",
-                "message": "PMT setup could not write its local configuration."}
-    finally:
-        if previous is None:
-            os.environ.pop(CREDENTIAL_ENV, None)
-        else:
-            os.environ[CREDENTIAL_ENV] = previous
-    root, branch = git_checkout(cwd)
-    mapping, reason = select_mapping(profile, root, branch)
-    return {"status": "ready", "env": session_environment(config_root, data_root, python, options, mapping),
-            "configured_now": changed, "link": reason, "root": root, "branch": branch,
-            "scope_id": mapping["project_id"] if mapping else None}
+    return client_mode.prepare(env, cwd, product=product, configure=configure, python=python)

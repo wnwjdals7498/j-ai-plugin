@@ -1,0 +1,13 @@
+{
+  "scope": "A1 common + D1 preflight + B1/B2/B3/C1 + original hooks",
+  "passed": 169,
+  "skipped": 3,
+  "failed": 0,
+  "errors": 0,
+  "exit_code": 0,
+  "duration_seconds": 56.09,
+  "python": "3.14.5rc1",
+  "source_head": "06e18ec",
+  "source_dirty": "owned client/server/main changes, writers paused before test",
+  "operating_host_changed": false
+}

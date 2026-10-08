@@ -1,0 +1,206 @@
+{
+  "commit_metadata_matches_head_prefix": true,
+  "source_declared_git_archive_only": true,
+  "source_root_exists": true,
+  "build_exit": 0,
+  "version_metadata": {
+    "version": "0.5.0",
+    "core_version": "0.4.1",
+    "schema_version": 5
+  },
+  "all_zip_contents_match_directory": true,
+  "all_zip_sha256_match_build_metadata": true,
+  "all_zip_members_created_as_unix": true,
+  "key_mode_checks": {
+    "claude": {
+      "bin/pmt": {
+        "actual": "0o100755",
+        "expected": "0o100755",
+        "match": true,
+        "creator": 3
+      },
+      "bin/pmt.cmd": {
+        "actual": "0o100644",
+        "expected": "0o100644",
+        "match": true,
+        "creator": 3
+      },
+      "scripts/pmt_easy.py": {
+        "actual": "0o100644",
+        "expected": "0o100644",
+        "match": true,
+        "creator": 3
+      }
+    },
+    "codex": {
+      "bin/pmt": {
+        "actual": "0o100755",
+        "expected": "0o100755",
+        "match": true,
+        "creator": 3
+      },
+      "bin/pmt.cmd": {
+        "actual": "0o100644",
+        "expected": "0o100644",
+        "match": true,
+        "creator": 3
+      },
+      "scripts/pmt_easy.py": {
+        "actual": "0o100644",
+        "expected": "0o100644",
+        "match": true,
+        "creator": 3
+      }
+    },
+    "server": {
+      "bin/pmt-server": {
+        "actual": "0o100755",
+        "expected": "0o100755",
+        "match": true,
+        "creator": 3
+      },
+      "bin/pmt-server.cmd": {
+        "actual": "0o100644",
+        "expected": "0o100644",
+        "match": true,
+        "creator": 3
+      }
+    }
+  },
+  "all_client_core_copies_match_archive_source": true,
+  "canonical_frontdoor_source_matches": {
+    "proj-mgmt-tool/bin/pmt->claude/bin/pmt": {
+      "source_exists": true,
+      "bundle_exists": true,
+      "same_sha256": true,
+      "sha256": "38c865b3813a14e7b6a0aaec1ef0b322ccdfa8dd9b97186620d443289034f60b"
+    },
+    "proj-mgmt-tool/bin/pmt.cmd->claude/bin/pmt.cmd": {
+      "source_exists": true,
+      "bundle_exists": true,
+      "same_sha256": true,
+      "sha256": "39d798e75cdcfea436a89677e6a07e070301ec15722e6ed9595f3200790e6dc4"
+    },
+    "proj-mgmt-tool/scripts/pmt_easy.py->claude/scripts/pmt_easy.py": {
+      "source_exists": true,
+      "bundle_exists": true,
+      "same_sha256": true,
+      "sha256": "357e6eb9196d2e6872f5870743afe3943384f98c879eabbc7473897646c93f8b"
+    },
+    "proj-mgmt-tool/bin/pmt->codex/bin/pmt": {
+      "source_exists": true,
+      "bundle_exists": true,
+      "same_sha256": true,
+      "sha256": "38c865b3813a14e7b6a0aaec1ef0b322ccdfa8dd9b97186620d443289034f60b"
+    },
+    "proj-mgmt-tool/bin/pmt.cmd->codex/bin/pmt.cmd": {
+      "source_exists": true,
+      "bundle_exists": true,
+      "same_sha256": true,
+      "sha256": "39d798e75cdcfea436a89677e6a07e070301ec15722e6ed9595f3200790e6dc4"
+    },
+    "proj-mgmt-tool/scripts/pmt_easy.py->codex/scripts/pmt_easy.py": {
+      "source_exists": true,
+      "bundle_exists": true,
+      "same_sha256": true,
+      "sha256": "357e6eb9196d2e6872f5870743afe3943384f98c879eabbc7473897646c93f8b"
+    }
+  },
+  "no_runtime_data_files": true,
+  "versions": {
+    "claude": {
+      "core_version": "0.4.1",
+      "plugin_version": "0.5.0",
+      "schema_version": 5
+    },
+    "codex": {
+      "core_version": "0.4.1",
+      "plugin_version": "0.5.0",
+      "schema_version": 5
+    },
+    "opencode": {
+      "core_version": "0.4.1",
+      "plugin_version": "0.5.0",
+      "schema_version": 5
+    },
+    "server": {
+      "core_version": "0.4.1",
+      "plugin_version": "0.5.0",
+      "schema_version": 5
+    }
+  },
+  "server_boundary": {
+    "src_tree_present": false,
+    "root_pmt_frontdoors_present": false,
+    "generic_hooks_json_present": false,
+    "claude_manifest_hook_path": "./hooks/claude.json",
+    "claude_events": [
+      "SessionStart"
+    ],
+    "claude_session_start_commands": 1
+  },
+  "markdown_links": {
+    "claude": {
+      "checked": 11,
+      "broken": 0
+    },
+    "codex": {
+      "checked": 11,
+      "broken": 0
+    },
+    "opencode": {
+      "checked": 11,
+      "broken": 0
+    },
+    "server": {
+      "checked": 5,
+      "broken": 0
+    }
+  },
+  "claude_validator_all_exit_zero_no_errors": true,
+  "server_marketplace_warnings": [],
+  "launcher_checks": [
+    {
+      "name": "client-cmd-explicit",
+      "exit": 0,
+      "creates_no_roots": true,
+      "mode_unconfigured": true,
+      "server_json_version": null
+    },
+    {
+      "name": "client-bash-explicit",
+      "exit": 0,
+      "creates_no_roots": true,
+      "mode_unconfigured": true,
+      "server_json_version": null
+    },
+    {
+      "name": "client-cmd-metadata",
+      "exit": 0,
+      "creates_no_roots": true,
+      "mode_unconfigured": true,
+      "server_json_version": null
+    },
+    {
+      "name": "client-bash-metadata",
+      "exit": 0,
+      "creates_no_roots": true,
+      "mode_unconfigured": true,
+      "server_json_version": null
+    },
+    {
+      "name": "server-powershell",
+      "exit": 0,
+      "creates_no_roots": true,
+      "mode_unconfigured": false,
+      "server_json_version": "0.5.0"
+    },
+    {
+      "name": "server-bash",
+      "exit": 0,
+      "creates_no_roots": true,
+      "mode_unconfigured": false,
+      "server_json_version": "0.5.0"
+    }
+  ]
+}

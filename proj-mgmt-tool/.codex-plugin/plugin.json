@@ -1,10 +1,14 @@
 {
   "name": "pmt-lifecycle",
-  "version": "0.4.0",
-  "description": "Project memory and lifecycle events for Codex.",
+  "version": "0.5.0",
+  "description": "PMT: project memory and lifecycle events with local or hosted storage.",
   "author": {
     "name": "PMT"
   },
   "skills": "./skills/",
-  "hooks": "./integrations/codex/hooks/hooks.json"
+  "hooks": "./integrations/codex/hooks/hooks.json",
+  "interface": {
+    "displayName": "PMT",
+    "shortDescription": "Project memory with local or hosted storage"
+  }
 }

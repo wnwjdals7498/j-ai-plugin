@@ -1,0 +1,8 @@
+.........s.........s.................................................... [ 36%]
+..............................s......................................... [ 73%]
+.....................................................                    [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\client_setup\test_b1_client_setup.py:194: POSIX permission checks require a POSIX filesystem
+SKIPPED [1] tests\client_setup\test_b1_client_setup.py:259: POSIX symlink fixture needs POSIX link support
+SKIPPED [1] tests\server_admin\test_server_admin.py:333: POSIX mode check
+194 passed, 3 skipped in 89.97s (0:01:29)
