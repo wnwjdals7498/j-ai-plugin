@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import stat
 import tempfile
+import uuid
 from contextlib import nullcontext
 from pathlib import Path
 
@@ -125,13 +127,78 @@ def _connect_summary(document, result=None, *, dry_run=False):
             "ca_sha256": host.get("ca_sha256")}
 
 
+def _scope_metadata(document, result):
+    preflight = result.get("host_preflight") if isinstance(result, dict) else None
+    authenticated = preflight.get("scopes") if isinstance(preflight, dict) else None
+    if preflight is not None:
+        if (result.get("device_id") != document["device"]["device_id"]
+                or result.get("namespace_id") != document["namespace_id"]
+                or result.get("actor") != document["device"]["actor"]
+                or not isinstance(authenticated, list) or not authenticated):
+            raise PmtError("host_scope_unverifiable", "Authenticated Host identity or scope grants are incomplete", 3)
+        for scope in authenticated:
+            try:
+                if not isinstance(scope, str) or str(uuid.UUID(scope)) != scope:
+                    raise ValueError
+            except (ValueError, TypeError, AttributeError) as error:
+                raise PmtError("host_scope_unverifiable", "Authenticated Host scopes are not canonical", 3) from error
+        if not set(document["device"]["scopes"]) <= set(authenticated):
+            raise PmtError("host_scope_unverifiable", "Handoff scopes differ from authenticated Host grants", 3)
+    if not isinstance(authenticated, list):
+        authenticated = []
+    return {"schema_version": 1, "actor": document["device"]["actor"],
+            "device_id": document["device"]["device_id"], "namespace_id": document["namespace_id"],
+            "handoff_scopes": sorted(document["device"]["scopes"]),
+            "authenticated_scopes": sorted(authenticated)}
+
+
+def _merge_client_metadata_extra(config_root, expected_current, extra):
+    """Merge only internal nonsecret client metadata under the shared Root lock."""
+    def check(value):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if any(marker in str(key).casefold() for marker in ("credential", "token", "secret", "password")):
+                    raise PmtError("client_metadata_invalid", "Switch metadata cannot contain secret fields")
+                check(child)
+        elif isinstance(value, list):
+            for child in value:
+                check(child)
+        elif not isinstance(value, (str, int, float, bool, type(None))):
+            raise PmtError("client_metadata_invalid", "Switch metadata contains an unsupported value")
+
+    if not isinstance(extra, dict):
+        raise PmtError("client_metadata_invalid", "Switch metadata must be an object")
+    check(extra)
+    path = Path(config_root) / "client.json"
+    with _config_lock(Path(config_root)):
+        try:
+            current = path.read_bytes()
+        except FileNotFoundError:
+            current = None
+        if current != expected_current:
+            raise PmtError("storage_config_conflict", "Client metadata changed during switch")
+        try:
+            metadata = json.loads(current.decode("utf-8")) if current else {}
+        except (UnicodeError, ValueError) as error:
+            raise PmtError("client_metadata_invalid", "Client metadata is invalid; switch metadata was not saved") from error
+        if not isinstance(metadata, dict):
+            raise PmtError("client_metadata_invalid", "Client metadata must be an object")
+        metadata.update(extra)
+        wire = (json.dumps(metadata, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+        if len(wire) > 4096:
+            raise PmtError("client_metadata_invalid", "Switch metadata exceeds its size limit")
+        _atomic_file(path, wire)
+        return wire
+
+
 def setup_lock(config_root):
     """Lock managed setup shared by CLI connect and Claude SessionStart."""
     return local_commands._state_lock(config_root, "client-setup")
 
 
 def connect(config_root, handoff_path, *, credential=None, dry_run=False, environ=None,
-            configure=configure_storage):
+            configure=configure_storage, _allow_local_switch=False, _setup_locked=False,
+            _client_metadata_extra=None):
     """Validate, authenticate, and atomically adopt one D1 handoff.
 
     ``credential`` is already read from the CLI's bounded file or stdin input;
@@ -144,7 +211,7 @@ def connect(config_root, handoff_path, *, credential=None, dry_run=False, enviro
         raise PmtError("handoff_invalid", "Handoff credential reference must be PMT_HOST_CREDENTIAL")
 
     prior_profile, config_hash = _read_profile(root)
-    if prior_profile and prior_profile["mode"] == "local":
+    if prior_profile and prior_profile["mode"] == "local" and not _allow_local_switch:
         raise PmtError("local_profile_exists", "Local PMT data exists; use `pmt storage switch` to change modes")
     # Parse both sidecars before any new directories or files are published.
     local_commands._read_projects(root)
@@ -194,7 +261,8 @@ def connect(config_root, handoff_path, *, credential=None, dry_run=False, enviro
         return {"dry_run": True, "project_count": len(document.get("projects", [])),
                 "connect_summary": _connect_summary(document, dry_run=True)}
 
-    with setup_lock(root):
+    setup_guard = nullcontext() if _setup_locked else setup_lock(root)
+    with setup_guard:
         current_profile, current_hash = _read_profile(root)
         if current_profile != prior_profile or current_hash != config_hash:
             raise PmtError("storage_config_conflict", "Storage settings changed while connect was preparing")
@@ -203,11 +271,11 @@ def connect(config_root, handoff_path, *, credential=None, dry_run=False, enviro
         if client.has_client_metadata(root) and current_metadata is None:
             raise PmtError("client_metadata_invalid", "Existing PMT client metadata is invalid; it was preserved")
         return _persist_connect(root, prior_profile, config_hash, document, rows, selected,
-                                ca_bytes, ca_path, configure)
+                                ca_bytes, ca_path, configure, _client_metadata_extra)
 
 
 def _persist_connect(root, prior_profile, config_hash, document, rows, selected,
-                     ca_bytes, ca_path, configure):
+                     ca_bytes, ca_path, configure, client_metadata_extra=None):
     """Commit validated client state while the shared client-setup lock is held."""
     prior_credential = snapshot_credential(root)
     storage_file = storage_path(root)
@@ -244,7 +312,13 @@ def _persist_connect(root, prior_profile, config_hash, document, rows, selected,
     client_after = None
     profile_created_bytes = None
     configure_result = None
-    project_data = list(prior_profile.get("workspace_mappings", [])) if prior_profile else []
+    existing_mappings = list(prior_profile.get("workspace_mappings", [])) if prior_profile else []
+    if prior_profile and prior_profile.get("mode") == "local":
+        valid_pairs = {(row["project_id"], row["repository_id"]) for row in rows}
+        project_data = [mapping for mapping in existing_mappings
+                        if (mapping["project_id"], mapping["repository_id"]) in valid_pairs]
+    else:
+        project_data = existing_mappings
     request = {"mode": "hosted", "expected_config_sha256": config_hash,
                "endpoint": document["host"]["url"], "credential_env": ENV_NAME,
                "device_id": document["device"]["device_id"], "namespace_id": document["namespace_id"],
@@ -285,6 +359,9 @@ def _persist_connect(root, prior_profile, config_hash, document, rows, selected,
         prior_projects, projects_after = local_commands.merge_handoff_projects(root, rows)
         _written_client_file, prior_client, client_after = client.write_client_metadata_snapshot(
             root, source="connect", python_path=os.path.realpath(os.sys.executable), mode="hosted")
+        metadata_extra = dict(client_metadata_extra or {})
+        metadata_extra["host_scope_snapshot"] = _scope_metadata(document, result)
+        client_after = _merge_client_metadata_extra(root, client_after, metadata_extra)
         if _sha(storage_file.read_bytes()) != result.get("config_sha256"):
             published_profile = None
             raise PmtError("storage_config_conflict", "Storage settings changed before connect completed")

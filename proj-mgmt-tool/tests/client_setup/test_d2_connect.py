@@ -94,8 +94,10 @@ def test_connect_return_summary_has_public_connection_details_and_ca_digest(tmp_
         raw = (json.dumps({"test_profile": request}, sort_keys=True) + "\n").encode()
         storage_path(config_root).write_bytes(raw)
         return {"actor": "d2-test", "config_sha256": hashlib.sha256(raw).hexdigest(),
+                "device_id": document["device"]["device_id"], "namespace_id": document["namespace_id"],
                 "host_preflight": {"core_version": "0.4.2", "db_schema": 5,
-                                   "graph_schema": 1, "protocol_versions": [1]}}
+                                   "graph_schema": 1, "protocol_versions": [1],
+                                   "scopes": document["device"]["scopes"]}}
 
     result = connect_module.connect(root, handoff_path, credential=SECRET_A, configure=probed_configure)
     summary = result["connect_summary"]
@@ -257,7 +259,7 @@ def test_claude_session_start_handoff_uses_connect_transaction(tmp_path, monkeyp
             return {"compatible": True, "actor": document["device"]["actor"],
                     "device_id": self.device_id, "namespace_id": self.namespace_id,
                     "core_version": "0.4.1", "db_schema": 5, "graph_schema": 1,
-                    "protocol_versions": [1], "scopes": [], "permissions": []}
+                    "protocol_versions": [1], "scopes": document["device"]["scopes"], "permissions": []}
 
         def register_session(self, session_id):
             return {"session_id": session_id, "environment_id": self.environment_id,
