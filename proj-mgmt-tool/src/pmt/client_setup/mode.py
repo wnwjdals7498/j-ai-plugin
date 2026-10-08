@@ -87,18 +87,36 @@ def prepare(environ, cwd, *, product="claude", configure=configure_storage, prob
     """Prepare selected storage; hook callers receive a credential-free environment."""
     profile = None
     try:
-        options, missing = read_options(environ, product=product)
         config_root, data_root = default_roots(environ)
+        profile, current_hash = _read_profile(config_root)
+        try:
+            options, missing = read_options(environ, product=product)
+        except PmtError:
+            if not profile or profile.get("mode") != "local":
+                raise
+            options, missing = {}, []
+        hosted_requested = bool(options.get("host_url"))
+        host_settings_present = any(options.get(key) for key in
+                                    ("handoff_file", "host_url", "device_id", "namespace_id", "actor", "host_ca_file"))
+        if profile and profile.get("mode") == "local":
+            prefix = CLAUDE_PREFIX if product == "claude" else "PMT_"
+            host_settings_present = host_settings_present or any(
+                isinstance(environ.get(prefix + key.upper()), str) and environ[prefix + key.upper()].strip()
+                for key in ("handoff_file", "host_url", "device_id", "namespace_id", "actor", "host_ca_file"))
+        codex_profile = product == "codex" and profile and profile.get("mode") == "hosted" and not options.get("handoff_file")
+        if profile and profile.get("mode") == "hosted" and not host_settings_present and not codex_profile:
+            raise PmtError("hosted_settings_missing", "Hosted profile settings are missing; local storage was not opened")
+        if profile and profile.get("mode") != "local" and host_settings_present and missing:
+            raise PmtError("handoff_invalid", "Host setup is missing required fields: " + ", ".join(missing),
+                           details={"missing": missing})
+        if profile is None and host_settings_present and missing:
+            raise PmtError("handoff_invalid", "Host setup is missing required fields: " + ", ".join(missing),
+                           details={"missing": missing})
         config_root.mkdir(parents=True, exist_ok=True, mode=0o700)
         data_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        profile, current_hash = _read_profile(config_root)
-        hosted_requested = bool(options.get("host_url"))
-        codex_profile = product == "codex" and profile and profile.get("mode") == "hosted" and not options.get("handoff_file")
-        if profile and profile.get("mode") == "hosted" and not hosted_requested and not codex_profile:
-            raise PmtError("hosted_settings_missing", "Hosted profile settings are missing; local storage was not opened")
         if profile and profile.get("mode") == "local":
             changed = _local(config_root, data_root, profile, current_hash, configure, product) if not (data_root / "pmt.sqlite3").exists() else False
-            warning = "Host settings are present. Use pmt storage switch --to hosted to change modes." if hosted_requested else None
+            warning = "Host settings are present. Use pmt storage switch --to hosted to change modes." if host_settings_present else None
             mode = "local"
         elif codex_profile:
             load_credential(config_root, environ)
@@ -149,14 +167,18 @@ def prepare(environ, cwd, *, product="claude", configure=configure_storage, prob
                 "message": warning}
     except PmtError as error:
         return {"status": "error", "mode": profile.get("mode") if 'profile' in locals() and profile else None,
-                "env": {}, "error_code": error.code, "message": _safe_message(error.code)}
+                "env": {}, "error_code": error.code, "missing": (error.details or {}).get("missing", []),
+                "message": _safe_message(error.code, error.details)}
     except OSError:
         return {"status": "error", "env": {}, "error_code": "easy_setup_io_error",
                 "message": "PMT setup could not write its local configuration."}
 
 
-def _safe_message(code):
+def _safe_message(code, details=None):
     if code.startswith("handoff"):
+        missing = (details or {}).get("missing")
+        if code == "handoff_invalid" and isinstance(missing, list) and missing:
+            return "PMT Host setup is missing: " + ", ".join(missing)
         return f"PMT handoff setup failed ({code}). Check the handoff file."
     if code in {"credential_unavailable", "credential_store_unreadable", "credential_store_insecure"}:
         return f"PMT credential setup failed ({code}). Check the credential store."
