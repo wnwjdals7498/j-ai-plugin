@@ -25,6 +25,7 @@ Windows 저장 서버와 개발 서버의 실제 사용 준비는 [배포 순서
 | [2. 모델 분배](02-model-routing.md) | 자연어 요구 트리 → 구현 요구 트리·기능 명세 → Step 지시 → 병렬 실행·제품 단계별 판정 | 1단계 저장소 + 내부 지시 리소스 |
 | [3. 문서·문맥 효율화와 서버 연결](03-hosted-storage.md) | 정형 변경·관계 영향·부분 생성·문맥/재사용/제어 최적화 → 저장 API·환경 간 공유 | Git 원본 + 로컬 또는 Host SQLite |
 | [4. AI 세션 연속성과 변경 기반 재개](04-session-continuity.md) | 현재 사실/checkpoint → 실제 변경·영향/근거·방향 반영 → 제한된 재개 문맥·Hook → 실제 새 세션 검증 | 기존 원본 + 참조형 변경/체크포인트 metadata |
+| [5. pmt / pmt-server 플러그인 분리](05-plugin-split.md) | local·hosted 공통 클라이언트 → 선언형 Host 설정·운영 명령 → 인계 파일 → Windows/Linux 실측 | 기존 저장 계약 유지 + Host `host-config.json` |
 
 각 단계의 완료 기준을 실제로 확인한 뒤 다음 단계로 진행한다. 2단계까지는 PMT 서버 없이 사용할 수 있어야 한다. 3단계에서도 모델 분배·코드 실행은 각 작업 환경에 유지한다.
 
