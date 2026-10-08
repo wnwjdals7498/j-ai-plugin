@@ -292,15 +292,27 @@ def cmd_add(args):
 
 def cmd_start(args):
     record = _find(args.item)
-    if _roots()[2]["mode"] == "local":
+    config_root, data_root, profile, _config_hash = _roots()
+    if profile["mode"] == "local":
         from .client_setup.local_commands import start
-        return start(sys.modules[__name__], record)
-    result = execute("claim_task", {}, record_id=_rid(record), expected_revision=record["revision"])
-    data_root = easy_setup.default_roots(os.environ)[1]
-    claims = _load_claims(data_root)
-    claims[_rid(record)] = {"claim_ref": result["claim_ref"], "session_id": _session_id(),
-                            "revision": result["revision"]}
-    _save_claims(data_root, claims)
+        from .client_setup.connect import setup_lock
+        with setup_lock(config_root):
+            current_profile, _digest = _read_profile(config_root)
+            if not current_profile or current_profile["mode"] != "local":
+                raise EasyError("storage_config_conflict", "Storage mode changed while this claim was preparing; retry the command.")
+            return start(sys.modules[__name__], record)
+    # C09 switch shares this lock so a new Host claim cannot race a verified
+    # hosted-to-local transition on this ConfigRoot.
+    from .client_setup.connect import setup_lock
+    with setup_lock(config_root):
+        current_profile, _digest = _read_profile(config_root)
+        if not current_profile or current_profile["mode"] != "hosted":
+            raise EasyError("storage_config_conflict", "Storage mode changed while this claim was preparing; retry the command.")
+        result = execute("claim_task", {}, record_id=_rid(record), expected_revision=record["revision"])
+        claims = _load_claims(data_root)
+        claims[_rid(record)] = {"claim_ref": result["claim_ref"], "session_id": _session_id(),
+                                "revision": result["revision"]}
+        _save_claims(data_root, claims)
     print(f"점유함: {record.get('title')} (rev {result['revision']})")
     return 0
 
@@ -569,6 +581,14 @@ def build_parser():
     storage_sub = storage.add_subparsers(dest="storage_command", required=True)
     storage_sub.add_parser("status", help="저장된 연결 설정을 읽기 전용으로 표시").set_defaults(func=cmd_storage_status)
     storage_sub.add_parser("probe", help="Host 연결과 호환성을 실제 확인").set_defaults(func=cmd_storage_probe)
+    switch = storage_sub.add_parser("switch", help="local/hosted 저장 모드 전환")
+    switch.add_argument("--to", required=True, choices=("hosted", "local"))
+    switch.add_argument("--handoff")
+    switch.add_argument("--export")
+    switch_credentials = switch.add_mutually_exclusive_group()
+    switch_credentials.add_argument("--credential-file")
+    switch_credentials.add_argument("--credential-stdin", action="store_true")
+    switch.set_defaults(func=cmd_storage_switch)
     sub.add_parser("check", help="연결·인증·기록·재전송 확인").set_defaults(func=cmd_check)
     link = sub.add_parser("link", help="현재 checkout을 PMT project에 연결")
     link.add_argument("project", nargs="?")
@@ -649,9 +669,13 @@ def cmd_connect(args):
     config_root, _data_root = easy_setup.default_roots(os.environ)
     from .client_setup.connect import connect
     result = connect(config_root, args.handoff, credential=_read_credential_input(args), dry_run=args.dry_run)
-    summary = result["connect_summary"]
-    print("Handoff validated only; no files written and no Host contact." if args.dry_run
-          else "Connected to PMT Host; protected credential and profile saved.")
+    _print_connect_summary(result["connect_summary"], dry_run=args.dry_run)
+    return 0
+
+
+def _print_connect_summary(summary, *, dry_run=False, status=None):
+    print(status or ("Handoff validated only; no files written and no Host contact." if dry_run
+                     else "Connected to PMT Host; protected credential and profile saved."))
     print(f"Endpoint: {summary['endpoint']}")
     print(f"Namespace: {summary['namespace_id']}")
     print(f"Actor: {summary['actor']}")
@@ -665,6 +689,29 @@ def cmd_connect(args):
     print(f"Compatibility ({summary['compatibility_source']}): {versions}")
     ca_sha256 = summary.get("ca_sha256")
     print(f"Public CA SHA-256: {ca_sha256}" if ca_sha256 else "CA trust: system trust store")
+
+
+def cmd_storage_switch(args):
+    from .client_setup.switch import switch_storage
+    config_root, data_root = easy_setup.default_roots(os.environ)
+    if args.to == "local" and (args.handoff or args.credential_file or args.credential_stdin or args.export):
+        raise PmtError("switch_arguments_invalid", "Handoff, credential, and export options apply only to --to hosted", 2)
+    result = switch_storage(config_root, data_root, to=args.to, handoff_path=args.handoff,
+                            credential=_read_credential_input(args) if args.to == "hosted" else None,
+                            export_path=args.export, environ=os.environ)
+    if result.get("unchanged"):
+        print(f"Storage mode is already {result['mode']}.")
+    elif args.to == "hosted":
+        summary = result.get("connect_summary")
+        if summary:
+            _print_connect_summary(summary, status="Switched to hosted; local database remains in place.")
+        else:
+            print("Switched to hosted; local database remains in place.")
+        if result.get("export"):
+            details = result["export"]
+            print(f"Export bundle: {args.export} | files {details['file_count']} | manifest {details['manifest_sha256']}")
+    else:
+        print("Switched to local; existing local database and project mappings were reused.")
     return 0
 
 
