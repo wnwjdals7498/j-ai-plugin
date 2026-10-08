@@ -1,16 +1,27 @@
-"""PMT server entry point; administrative commands extend this boundary."""
+"""PMT server administrative CLI. Secret bytes never appear in output."""
 from __future__ import annotations
 
 import argparse
+import base64
 import importlib.metadata
 import importlib.util
+import hashlib
 import sys
+import copy
+import json
+import os
+import sqlite3
+from pathlib import Path
 
 from .. import __version__
 from ..db import SCHEMA_VERSION
+from ..errors import PmtError
 from ..handoff import PLUGIN_VERSION
 from ..host.auth import HOST_SCHEMA_VERSION
 from ..util import canonical_json
+from .config import _process_lock, _publish_config_locked, config_path, config_sha256, load_config, load_config_snapshot, publish_config, validate_config
+from .init import init_host
+from .secrets import check_source, create_key_reference, read_key, store_key
 
 
 def version_info():
@@ -32,22 +43,193 @@ def main(argv=None):
     parser.add_argument("--config-root")
     parser.add_argument("--json", action="store_true")
     commands = parser.add_subparsers(dest="command", required=True)
-    version = commands.add_parser("version")
-    version.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+
+    def command(name, **kwargs):
+        sub = commands.add_parser(name, **kwargs)
+        sub.add_argument("--config-root", default=argparse.SUPPRESS)
+        sub.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+        return sub
+
+    command("version")
+    config = command("config").add_subparsers(dest="config_command", required=True)
+    for name in ("show", "validate"):
+        sub = config.add_parser(name); sub.add_argument("--json", action="store_true", default=argparse.SUPPRESS); sub.add_argument("--config-root", default=argparse.SUPPRESS)
+    set_cmd = config.add_parser("set")
+    set_cmd.add_argument("key"); set_cmd.add_argument("value"); set_cmd.add_argument("--expected-sha256", required=True)
+    set_cmd.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+    set_cmd.add_argument("--config-root", default=argparse.SUPPRESS)
+    init = command("init")
+    init.add_argument("--public-url", required=True); init.add_argument("--listen", default="0.0.0.0:8765")
+    init.add_argument("--data-root"); init.add_argument("--log-dir"); init.add_argument("--backup-dir"); init.add_argument("--app-root")
+    init.add_argument("--service", choices=("windows-task", "systemd", "none")); init.add_argument("--account")
+    init.add_argument("--allow", action="append"); init.add_argument("--tls-cert"); init.add_argument("--tls-key"); init.add_argument("--tls-ca")
+    init.add_argument("--claim-key-id", default="primary"); init.add_argument("--claim-key-env"); init.add_argument("--retained", action="append")
+    init.add_argument("--adopt", action="store_true"); init.add_argument("--host-config-root"); init.add_argument("--apply", action="store_true")
+    secret = command("secret").add_subparsers(dest="secret_command", required=True)
+    keyinit = secret.add_parser("init-claim-key"); keyinit.add_argument("--key-id", default="primary"); keyinit.add_argument("--apply", action="store_true")
+    rotate = secret.add_parser("rotate-claim-key"); rotate.add_argument("--new-key-id", required=True); rotate.add_argument("--apply", action="store_true")
+    retire = secret.add_parser("retire-claim-key"); retire.add_argument("--key-id", required=True); retire.add_argument("--apply", action="store_true")
+    migrate = secret.add_parser("migrate-claim-key"); migrate.add_argument("--key-id", required=True); migrate.add_argument("--to", choices=("dpapi", "file"), required=True); migrate.add_argument("--apply", action="store_true")
+    secret.add_parser("check")
+    for child in secret.choices.values():
+        child.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+        child.add_argument("--config-root", default=argparse.SUPPRESS)
+
     args = parser.parse_args(argv)
-    result = version_info()
-    missing = [name for name, installed in result["dependencies"].items() if installed is None]
-    if missing:
-        value = {"ok": False, "result": result,
-                 "error": {"code": "host_dependency_missing", "message": "Install proj-mgmt-tool[host]", "retryable": False}}
-        print(canonical_json(value) if args.json else "Install proj-mgmt-tool[host]")
-        return 5
-    if args.json:
-        print(canonical_json(result))
+    root = Path(getattr(args, "config_root", None) or os.environ.get("PMT_HOST_CONFIG_ROOT") or (r"C:\ProgramData\PMT\host-config" if os.name == "nt" else "/etc/pmt-host"))
+    try:
+        if args.command == "version":
+            result = version_info()
+            missing = [name for name, installed in result["dependencies"].items() if installed is None]
+            if missing:
+                value = {"ok": False, "result": result, "error": {"code": "host_dependency_missing", "message": "Install proj-mgmt-tool[host]", "retryable": False}}
+                print(canonical_json(value) if args.json else "Install proj-mgmt-tool[host]")
+                return 5
+        elif args.command == "init":
+            result = init_host(args, root)
+        elif args.command == "config":
+            path = config_path(root)
+            if args.config_command == "show":
+                config_value, digest = load_config_snapshot(path)
+                result = {"ok": True, "config": config_value, "sha256": digest}
+            elif args.config_command == "validate":
+                _, digest = load_config_snapshot(path); result = {"ok": True, "valid": True, "sha256": digest}
+            else:
+                current, digest = load_config_snapshot(path)
+                if digest != args.expected_sha256:
+                    raise PmtError("config_conflict", "Host configuration changed; reload and retry")
+                updated = copy.deepcopy(current)
+                try: value = json.loads(args.value)
+                except json.JSONDecodeError: value = args.value
+                keys = args.key.split(".")
+                target = updated
+                for key in keys[:-1]:
+                    if not isinstance(target, dict) or key not in target: raise PmtError("config_invalid", "Unknown configuration field")
+                    target = target[key]
+                if not isinstance(target, dict) or keys[-1] not in target: raise PmtError("config_invalid", "Unknown configuration field")
+                target[keys[-1]] = value; updated["revision"] += 1; validate_config(updated)
+                publish_config(root, updated, args.expected_sha256)
+                result = {"ok": True, "revision": updated["revision"], "sha256": config_sha256(path)}
+        else:
+            result = _secret_command(args, root)
+        if args.command == "version" and not args.json:
+            print(f"PMT Server {result['version']} | Core {result['core_version']}")
+            print(f"SQLite {result['db_schema']} | graph {result['graph_schema']} | protocol {result['protocol']}")
+        elif args.json:
+            print(canonical_json(result))
+        else:
+            print(_human_result(args, result))
+        return 0
+    except PmtError as exc:
+        value = {"ok": False, "error": {"code": exc.code, "message": str(exc)}}
+        print(canonical_json(value) if args.json else f"Error {exc.code}: {exc}")
+        return getattr(exc, "exit_code", 2)
+    except (OSError, sqlite3.Error) as exc:
+        value = {"ok": False, "error": {"code": "host_io_error", "message": "The operation failed without changing existing state"}}
+        print(canonical_json(value) if args.json else "Error host_io_error: The operation failed without changing existing state")
+        return 2
+
+
+def _secret_command(args, root):
+    with _process_lock(Path(root) / ".host-config.lock"):
+        return _secret_command_locked(args, root)
+
+
+def _secret_command_locked(args, root):
+    path = config_path(root)
+    config, digest = load_config_snapshot(path)
+    current = config["claim_key"]
+    account = config["service"]["account"]
+    if args.secret_command == "check":
+        return {"ok": True, "primary": check_source(current["source"], account=account),
+                "retained": [{"key_id": item["key_id"], **check_source(item["source"], account=account)} for item in current.get("retained", [])]}
+    if not args.apply:
+        target_id = getattr(args, "new_key_id", None) or getattr(args, "key_id", None)
+        return {"ok": True, "applied": False, "key_id": target_id, "operation": args.secret_command}
+
+    created_target = None
+    created_digest = None
+    if args.secret_command == "init-claim-key":
+        if args.key_id != current["key_id"]:
+            raise PmtError("config_invalid", "init-claim-key must match the configured primary key id")
+        source = current["source"]
+        if source["kind"] == "env":
+            raise PmtError("host_key_unavailable", "An environment key reference cannot be regenerated")
+        created_target = Path(source["path"])
+        if created_target.exists():
+            raise PmtError("config_exists", "The configured primary claim key already exists")
+        store_key(base64.b64encode(os.urandom(48)), created_target, source["kind"], account=account)
+        created_digest = _file_digest(created_target)
+    elif args.secret_command == "rotate-claim-key":
+        if args.new_key_id == current["key_id"] or any(item["key_id"] == args.new_key_id for item in current.get("retained", [])):
+            raise PmtError("config_invalid", "New claim key id is already configured")
+        source = create_key_reference(root, args.new_key_id, account=account)
+        created_target = Path(source["path"])
+        created_digest = _file_digest(created_target)
+        config["claim_key"]["retained"] = [{"key_id": current["key_id"], "source": current["source"]}, *current.get("retained", [])]
+        config["claim_key"]["key_id"], config["claim_key"]["source"] = args.new_key_id, source
+    elif args.secret_command == "migrate-claim-key":
+        item = current if current["key_id"] == args.key_id else next((entry for entry in current.get("retained", []) if entry["key_id"] == args.key_id), None)
+        if item is None:
+            raise PmtError("host_key_unavailable", "Claim key id is not configured")
+        if item["source"]["kind"] == args.to:
+            check_source(item["source"], account=account)
+            return {"ok": True, "applied": True, "key_id": args.key_id, "unchanged": True}
+        value = base64.b64encode(read_key(item["source"], account=account))
+        suffix = ".dpapi" if args.to == "dpapi" else ".key"
+        created_target = root / "secrets" / f"claim-{args.key_id}{suffix}"
+        item["source"] = store_key(value, created_target, args.to, account=account)
+        created_digest = _file_digest(created_target)
+    elif args.secret_command == "retire-claim-key":
+        item = current if current["key_id"] == args.key_id else next((entry for entry in current.get("retained", []) if entry["key_id"] == args.key_id), None)
+        if item is None:
+            raise PmtError("host_key_unavailable", "Claim key id is not configured")
+        database = Path(config["paths"]["data_root"]) / "pmt.sqlite3"
+        try:
+            with sqlite3.connect(f"file:{database.as_posix()}?mode=ro", uri=True) as conn:
+                active = conn.execute("SELECT 1 FROM host_claim_leases WHERE key_id=? AND state='active' LIMIT 1", (args.key_id,)).fetchone()
+        except sqlite3.Error as exc:
+            raise PmtError("host_schema_unsupported", "Could not verify active claim leases") from exc
+        if active:
+            raise PmtError("claim_key_in_use", "Claim key has an active lease")
+        if item is current:
+            if not current.get("retained"):
+                raise PmtError("config_invalid", "Cannot retire the only configured claim key")
+            replacement = current["retained"].pop(0)
+            current["key_id"], current["source"] = replacement["key_id"], replacement["source"]
+        else:
+            current["retained"].remove(item)
     else:
-        print(f"PMT Server {result['version']} | Core {result['core_version']}")
-        print(f"SQLite {result['db_schema']} | graph {result['graph_schema']} | protocol {result['protocol']}")
-    return 0
+        raise PmtError("config_invalid", "Unsupported secret command")
+
+    config["revision"] += 1
+    try:
+        _publish_config_locked(root, config, digest)
+    except Exception:
+        if created_target is not None and created_digest is not None:
+            try:
+                if _file_digest(created_target) == created_digest: created_target.unlink()
+            except OSError:
+                pass
+        raise
+    return {"ok": True, "applied": True, "revision": config["revision"]}
+
+
+def _file_digest(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _human_result(args, result):
+    if args.command == "init":
+        return ("Plan" if not result.get("applied") else "Initialized") + f" {result.get('config_path', '')}"
+    if args.command == "config":
+        return "Configuration valid" if result.get("valid") else f"Configuration revision {result.get('revision', result.get('config', {}).get('revision', '?'))}"
+    if args.command == "secret": return "Claim key check complete" if args.secret_command == "check" else "Claim key plan complete" if not result.get("applied") else "Claim key configuration updated"
+    return canonical_json(result)
 
 
 if __name__ == "__main__":
