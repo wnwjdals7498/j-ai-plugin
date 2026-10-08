@@ -3,14 +3,14 @@
 - 기준: `origin/master` `8054c83a85b73356f0e2e52322855b9e03b419ce`.
 - 작업 checkout: `C:\PMT\src\j-ai-plugin`, 브랜치 `feat/phase5-plugin-split`.
 - 메인: Codex. 구현 작업자는 A1 완료와 사용자 결정 확정 뒤 `gpt-6-luna`로 소유 영역을 분리한다.
-- 현재 관문: D1~D8 사용자 응답 대기. `codex-phase5-host.md` §3.3에 따라 A1 이후 미착수.
+- 현재 단계: 사용자 D1~D8 일괄 확정 완료. A0 기준선 기록을 재사용하고 A1 공통 계약을 시작한다.
 - 운영 금지 영역: `D:\PMTHostState\host-data`, `D:\PMTHostState\host-config`, `D:\PMTHostState\secrets`, 기존 release/venv, 작업 `PMT-Host`, TCP 8765.
 - 개발 시험: checkout의 `.pmt-test`, loopback 18765. 운영 경로는 시험에 사용하지 않는다.
 
 | ID | 상태 | commit(시험 대상) | 시험(명령·결과) | 증거 경로 | 미해결·다음 할 일 |
 |---|---|---|---|---|---|
-| A0 | 진행 | 기준 `8054c83` | 필수 파일 존재; marketplace/plugin validate exit 0; 전체 pytest 650 passed/23 failed/2 errors/4 skipped, exit 1; 설치 재검증 2 passed/3 failed/0 errors, exit 1 | `evidence/2026-10-08/A0/` | 첫 실행 119 passed, 1 failed, 559 errors: 559 errors만 `.pmt-test` 부모 디렉터리 누락. 별도 redirect 실패는 원인 미확정이며 3.13/3.14 독립 진단에서 재현 안 됨. 최초 증거 보존, 폴더 준비 후 전체 재시험 종료. 결과는 summary.json. 전체 suite 2 errors는 선언된 setuptools 빌드 backend 누락; 제품 코드 수정 없이 설치 재검증 2 passed/3 failed/0 errors. 남은 3 설치 실패는 과거 package-snapshot fixture 부족; 원본 과거 증거 미수정. D1~D8 확정 대기 |
-| A1 | 미착수 | — | 미실행 | — | A0·사용자 결정 확정 필요 |
+| A0 | 완료 | 기준 `8054c83` | 필수 파일 존재; marketplace/plugin validate exit 0; 전체 pytest 650 passed/23 failed/2 errors/4 skipped, exit 1; 설치 재검증 2 passed/3 failed/0 errors, exit 1 | `evidence/2026-10-08/A0/` | 첫 실행 119 passed, 1 failed, 559 errors: 559 errors만 `.pmt-test` 부모 디렉터리 누락. 별도 redirect 실패는 원인 미확정이며 3.13/3.14 독립 진단에서 재현 안 됨. 최초 증거 보존, 폴더 준비 후 전체 재시험 종료. 결과는 summary.json. 전체 suite 2 errors는 선언된 setuptools 빌드 backend 누락; 제품 코드 수정 없이 설치 재검증 2 passed/3 failed/0 errors. 남은 3 설치 실패는 과거 package-snapshot fixture 부족; 원본 과거 증거 미수정. D1~D8 사용자 확정 완료; 기존 nonpassing baseline 보존 |
+| A1 | 진행 | 기준 9710d45 | handoff schema/Host serve 회귀 준비 | evidence/2026-10-08/A1/ | 공통 manifest·entrypoint·handoff·Host 런처·기기 조회 구현 |
 | B1 | 미착수 | — | 미실행 | — | A1 선행, 클라이언트 |
 | B2 | 미착수 | — | 미실행 | — | B1 선행, 클라이언트 |
 | B3 | 미착수 | — | 미실행 | — | B1 선행, 클라이언트 |
@@ -38,5 +38,5 @@
 
 ## 현재 재개 지점
 
-A0 기준선·Host 조사·환경 복구 검증 기록 완료. D1~D8 사용자 확인 대기이므로 A0 전체는 진행 상태, A1 이후 미착수다. 다음 세션은 decisions.md와 이 상태를 읽고, 확인 응답이 있으면 결정표를 확정한 뒤 A1부터 진행한다. 전체 suite의 nonzero baseline을 숨기거나 통과로 재분류하지 않는다.
-- A0 체크포인트 문서·증거의 독립 검증 pass. 실제 전체 시험은 nonpassing이며 관문 대기는 그대로 유지한다. Graphify 생성 graphify-out/은 로컬 분석 자료로 커밋하지 않는다.
+2026-10-08 D1~D8 확정 완료. A0 기준선·Host 조사·환경 복구 기록은 동일 source/환경의 유효한 근거로 재사용한다. A1 공통 계약 구현·시험 진행. A0 전체 시험 nonpassing을 숨기지 않으며 handoff 지시대로 기존 실패를 고치지 않는다. 이후 전체 회귀는 동일 Python3.14 환경에서 baseline과 비교하고 새 실패를 식별한다.
+Graphify 출력은 로컬 분석 자료이며 커밋하지 않는다. E3의 push/PR 승인과 F1의 운영 단계별 승인은 아직 받지 않았다.
