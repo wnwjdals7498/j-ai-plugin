@@ -3,7 +3,7 @@
 - 기준: `origin/master` `8054c83a85b73356f0e2e52322855b9e03b419ce`.
 - 작업 checkout: `C:\PMT\src\j-ai-plugin`, 브랜치 `feat/phase5-plugin-split`.
 - 메인: Codex. 구현 작업자는 A1 완료와 사용자 결정 확정 뒤 `gpt-6-luna`로 소유 영역을 분리한다.
-- 현재 단계: A0/A1/B1/B2/B3/C1 완료. C2 완료. D1/D2/E1 완료. E2 완료. E3 코드·문서·검증 완료, push/PR승인 대기.
+- 현재 단계: A0/A1/B1/B2/B3/C1 완료. C2 완료. D1/D2/E1 완료. E2 완료. E3 코드·문서·검증 및 승인된 push/PR 완료. F1-1 새 venv 설치 승인 대기.
 - 운영 금지 영역: `D:\PMTHostState\host-data`, `D:\PMTHostState\host-config`, `D:\PMTHostState\secrets`, 기존 release/venv, 작업 `PMT-Host`, TCP 8765.
 - 개발 시험: checkout의 `.pmt-test`, loopback 18765. 운영 경로는 시험에 사용하지 않는다.
 
@@ -20,8 +20,8 @@
 | D2 | 완료 | 기준 e4bb21a; 기록 commit은 git log | worker80pass/2skip; broad129pass/2skip; review20pass approve; actualD1TLS 연결 | evidence/2026-10-08/D2/ | defaultHTTPS·secret-free CA/권한/compat 요약·CAS/동시writer 보존 검증. 최초broad10fail은 신규B2/D2fixture env격리 문제, 수정후0fail |
 | E1 | 완료 | 기준 81d410a; 기록 commit은 git log | worker21pass; parent85pass/2skip; closure approve | evidence/2026-10-08/E1/ | plan/apply/service/firewall/timer 명령 모형, 실제 등록·도달성·재부팅은 F1/F2 미실행. 운영8765진단 guard 승인 의존 |
 | E2 | 완료 | 서버9130945; 클라이언트 기록commit은git log | 서버12focused/85adjacent2skip; client19focused/148broad2skip; final3.13client39pass; independent closures approve | evidence/2026-10-08/E2-server/, E2-client/, E2-integration/ | 실제격리TLS 양방향switch/export/DBhash불변/offline거부. 실제pip/service/운영upgrade 미실행 |
-| E3 | 완료 | source aa39931; evidence commit은git log | whole926pass/21A0기존fail/0error/8skip exit1; comparisonnewfail0/누락0 exit0; committedreleasebuild0/Claude5checks0/PS+GitBash6checks0 | evidence/2026-10-08/E3/, E3-release-final/, E3-codex/ | E3push/PR승인관문 대기. 실제Linux/제품새세션/F1운영변경 미실행 |
-| F1 | 미착수 | — | 미실행 | — | E3·push된 commit 선행. 운영 변경은 인계 문서 §6 각 승인 관문 필요 |
+| E3 | 완료 | source aa39931; evidence commit은git log | whole926pass/21A0기존fail/0error/8skip exit1; comparisonnewfail0/누락0 exit0; committedreleasebuild0/Claude5checks0/PS+GitBash6checks0 | evidence/2026-10-08/E3/, E3-release-final/, E3-codex/ | E3push/PR 승인·완료, PR #1. 설치 고정 SHA 06235fd. 실제Linux/제품새세션/F1운영변경 미실행 |
+| F1 | 미착수(계획 준비) | 설치 고정 SHA 06235fd | 설치·운영 변경 미실행 | f1-install-plan.md | E3 선행 완료. F1-1 새 venv 설치 승인 대기; 각 단계는 인계 문서 §6 승인 관문 필요 |
 | F2 | 미착수 | — | 이 컴퓨터에서 실행 금지 | — | F1의 비밀 없는 실값으로 Linux 개발 서버 인계 작성 |
 | F3 | 미착수 | — | 이 컴퓨터에서 실행 금지 | — | F1의 비밀 없는 실값으로 Windows 개발 PC 인계 작성 |
 
@@ -41,6 +41,6 @@
 최종fullpytest 926pass/21fail/0error/8skip, exit1. 남은21개는 A0실패 목록의 subset; 비교 exit0, 신규실패0, 기존test-ID누락0. A0first650pass/23fail/2error/4skip과모든중간실패/재검증근거보존. 역사phase3/4evidence 미변경.
 Gitarchive aa39931 source만으로 immutable release 성공. 네target/two logicalplugin, hashes/UnixZIPmetadata 검증. Claude5 validators exit0/no warning, WindowsPS/GitBash6실행0, 실제isolatedCodexskills/list 발견과hooks/list0개 확인. 실제interactive제품/NativeLinux는 F2/F3.
 Graphify AST-only 갱신 완료(10792nodes/136084edges); graphify-out은 로컬분석자료로만 보관, 미커밋.
-다음은 handoff §5 E3 종료관문: 사용자 branch push/PR 승인. 아직push/PR/F1새venv/stop/backup/service/FW/reboot/keymigrate/운영device발급 없음. 기존운영Host는이번개발·시험대상이아니었다.
+2026-10-08 사용자 E3 승인 후 branch push와 master 대상 PR #1 생성·첨부 완료: https://github.com/wnwjdals7498/j-ai-plugin/pull/1 . 원격 head 06235fd25fcf28208a633f0fb5412d51939a9c15, master 8054c83a85b73356f0e2e52322855b9e03b419ce 일치 확인. PR open, 병합 충돌 없음; 병합하지 않음. 이후 기록 전용 커밋은 구현·시험 소스를 바꾸지 않는다. F1 설치 고정 SHA는 위 06235fd다. 다음은 [F1-1 설치 계획](f1-install-plan.md) 승인. 아직 F1새venv/stop/backup/service/FW/reboot/keymigrate/운영device발급 없음. 기존운영Host는이번개발·시험대상이아니었다.
 F1은push된SHA로사용자단계별승인뒤진행한다. 특히기존supervisor claimkey는보호파일→childenv 주입이라관리자환경에키값이있다고가정하지않는다. 운영8765 doctor/status진단guard 제거는자동승인검토가거부해보존했고F1별도승인항목이다.
 F2/F3실행금지. 완성인계프롬프트는F1의실제namespace/device/프로젝트/commit등비밀없는실값확정후작성한다. 현재테스트UUID를운영값으로사용하지않는다.
