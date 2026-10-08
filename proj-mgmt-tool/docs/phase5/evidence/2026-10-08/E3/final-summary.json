@@ -1,0 +1,18 @@
+{
+  "source_commit": "aa39931835204ee4508e53df01a4cc53ef01434c",
+  "python": "3.14.5rc1",
+  "whole_exit_code": 1,
+  "comparison_exit_code": 0,
+  "tests": 955,
+  "passed": 926,
+  "failed": 21,
+  "errors": 0,
+  "skipped": 8,
+  "duration_seconds": 1242.27,
+  "new_failures": 0,
+  "missing_baseline_tests": 0,
+  "new_tests": 276,
+  "operating_changes": false,
+  "approval_gate": "E3 branch push + PR not yet approved",
+  "release_source": "git archive aa39931; plugin0.5.0/Core0.4.1/schema5"
+}

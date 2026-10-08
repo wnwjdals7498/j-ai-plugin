@@ -1,0 +1,14 @@
+{
+  "commit": "aa39931",
+  "source": "git archive of committed tree; no worktree input",
+  "source_root": "C:\\PMT\\work\\phase5-test\\E3-source-aa39931",
+  "command": [
+    "C:\\PMT\\src\\venv-dev\\Scripts\\python.exe",
+    "C:\\PMT\\work\\phase5-test\\E3-source-aa39931\\proj-mgmt-tool\\scripts\\build_plugins.py",
+    "--output-dir",
+    "C:\\PMT\\work\\phase5-test\\E3-release-aa39931"
+  ],
+  "exit_code": 0,
+  "stdout": "{\"ok\": true, \"version\": \"0.5.0\", \"core_version\": \"0.4.1\", \"schema_version\": 5, \"output\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\", \"products\": {\"codex\": {\"directory\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\codex\", \"zip\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\codex.zip\", \"zip_sha256\": \"1de6071cace7be972cb97485001dc2e91a4314c824895e55b27e6e19993992f9\", \"manifest_sha256\": \"671a0d385ff7d0076d7b376d6ea1b51bb4e5b664c0498b01e24a595b3683e214\"}, \"claude\": {\"directory\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\claude\", \"zip\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\claude.zip\", \"zip_sha256\": \"32c995d40e9bcaad292c21ad617ff3ffdd25e3c88f65c557149d49ee6b369e3e\", \"manifest_sha256\": \"71ca016f4b24d3017418fb55f74fc2bd180e4e0af9ca60605bc32baf9e38b6d5\"}, \"opencode\": {\"directory\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\opencode\", \"zip\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\opencode.zip\", \"zip_sha256\": \"869afe3a37eb94844e7b8f37500b8a1aba8306aea4c4a7d7e5d77ae160d881df\", \"manifest_sha256\": \"8039053f0e08edd8865639f0c633ca7b9e27f22aafccc43f3a0880ab055285dc\"}, \"server\": {\"directory\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\server\", \"zip\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\server.zip\", \"zip_sha256\": \"fb730f43ef04b5b04fafb86c350067c336c2faa1b39efbac0289c3e6ce944318\", \"manifest_sha256\": \"ad836bccbef4611230b9425e79c4cb24f0a6cb0e7ad1900f9d56c8450d819255\"}}}\n",
+  "stderr": ""
+}

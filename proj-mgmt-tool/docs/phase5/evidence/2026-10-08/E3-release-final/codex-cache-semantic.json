@@ -1,0 +1,15 @@
+{
+  "prior_codex_app_server_rpc": "skills/list and hooks/list from isolated CODEX_HOME; no new RPC or product session in this final check",
+  "skill_discovered": true,
+  "skill_source_path": "C:\\PMT\\work\\phase5-test\\E3-codex\\isolated-i4nq_3zq\\codex-home\\plugins\\cache\\j-ai-plugins\\pmt-server\\0.5.0\\skills\\pmt-server\\SKILL.md",
+  "skill_path_matches_isolated_cache": true,
+  "cached_skill_matches_final_archive_text": true,
+  "cached_codex_manifest_matches_final_archive": true,
+  "cached_claude_hook_matches_final_archive": true,
+  "generic_hooks_absent_in_final_cache_archive_bundle": true,
+  "codex_hook_manifest_empty": true,
+  "prior_hooks_list_count": 0,
+  "prior_hook_warnings": [],
+  "prior_hook_errors": [],
+  "app_server_child_stopped": true
+}
