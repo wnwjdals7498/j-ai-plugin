@@ -5,6 +5,22 @@ description: Use the configured PMT CLI for durable project context, two require
 
 # PMT project workflow
 
+## Short commands (hosted Claude Code setup)
+
+When the SessionStart message says PMT is ready, use the `pmt` command in Bash instead of writing JSON requests. It fills actor, scope, session, request IDs, revisions and claim references itself.
+
+| Need | Command |
+|---|---|
+| Check connection, auth, write/read and replay | `pmt check` |
+| Link this checkout/branch to a PMT project (first time per repository needs `--project` and `--repository` from the Host handoff) | `pmt link` |
+| List records, states and this machine's claims | `pmt status` |
+| Add work / item | `pmt add work "<title>"`, `pmt add item "<title>" --parent <work> --criteria "<criterion>"` |
+| Claim an item before working on it | `pmt start <item>` |
+| Finish: commit first, then run the test and record verification | `pmt done <item> --test "<test command>" --result "<one line>"` |
+| Stop without finishing | `pmt pause <item> --next "<next step>"` |
+
+Record IDs accept a unique prefix. If a command fails, report its error code; do not retry with guessed values. `pmt done` refuses uncommitted changes and leaves the item in progress when the test fails.
+
 Use PMT as the shared source of project state when it is installed and configured. Read [the reference](references/cli-workflow.md) for the request envelope and operation examples.
 
 For planning, model selection or parallel Step work, read [the phase-two workflow](references/model-workflow.md). This is the main session's tool-calling procedure; installing the skill does not create native tools or authorize a provider API connection.

@@ -1,0 +1,9 @@
+#!/bin/sh
+# PMT short commands. The Claude SessionStart hook exports PMT_PYTHON and the
+# Host settings into this session; nothing here reads a bare `python`.
+if [ -z "$PMT_PYTHON" ]; then
+    echo "PMT is not ready in this session. Fill in /plugin settings and start a new session." >&2
+    exit 3
+fi
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+PYTHONPATH="$root/src${PYTHONPATH:+:$PYTHONPATH}" exec "$PMT_PYTHON" -B -m pmt.easy_cli "$@"

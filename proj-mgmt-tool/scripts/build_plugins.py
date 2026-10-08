@@ -84,6 +84,8 @@ def _source_map(root: Path, product: str) -> dict[Path, PurePosixPath]:
     add_tree("docs/usage.md", "USAGE.md")
     if product in {"codex", "claude"}:
         add_tree(f"integrations/{product}/hooks/hooks.json", "hooks/hooks.json")
+        if product == "claude":
+            add_tree("integrations/claude/bin/pmt", "bin/pmt")
         add_tree(f"integrations/{product}/{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json",
                  f"{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json")
     elif product == "opencode":
@@ -95,6 +97,9 @@ def _source_map(root: Path, product: str) -> dict[Path, PurePosixPath]:
 def _copy_one(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, destination)
+    if destination.parent.name == "bin":
+        # Plugin bin/ entries are placed on the Bash tool PATH and must be executable.
+        destination.chmod(0o755)
 
 
 def _version_manifest(source: dict[str, Any], product: str, version: str, file_hashes: dict[str, str]) -> dict[str, Any]:
@@ -228,7 +233,7 @@ def _make_zip(package: Path, destination: Path) -> None:
                 raise BuildError("Package ZIP contains an unsafe path")
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o100644 << 16
+            info.external_attr = (0o100755 if name.startswith("bin/") else 0o100644) << 16
             archive.writestr(info, path.read_bytes())
 
 

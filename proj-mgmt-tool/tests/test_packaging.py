@@ -105,6 +105,12 @@ def test_pkg_01_three_separate_bundles_manifest_and_zip_hashes(tmp_path):
     python_option = claude_plugin["userConfig"]["python_path"]
     assert python_option["type"] == "file" and python_option["required"] is True
     assert "default" not in python_option
+    launcher = claude / "bin" / "pmt"
+    assert launcher.is_file() and launcher.stat().st_mode & 0o111
+    with zipfile.ZipFile(built["products"]["claude"]["zip"]) as zipped:
+        assert (zipped.getinfo("bin/pmt").external_attr >> 16) & 0o777 == 0o755
+    assert {"host_url", "device_id", "namespace_id", "actor", "device_credential"} <= set(claude_plugin["userConfig"])
+    assert claude_plugin["userConfig"]["device_credential"]["sensitive"] is True
     claude_hooks = json.loads((claude / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
     for groups in claude_hooks.values():
         for hook in (item for group in groups for item in group["hooks"]):
