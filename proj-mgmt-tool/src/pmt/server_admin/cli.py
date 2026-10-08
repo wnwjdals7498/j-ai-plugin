@@ -27,6 +27,9 @@ from .logging import read_logs
 from .serve import serve_host
 from .status import read_status
 from .tls import check_tls, register_tls
+from .registry import list_projects, project_add, project_repo_add
+from .devices import (device_grants, device_issue, device_list, device_revoke,
+                      device_rotate, handoff_create)
 
 
 def version_info():
@@ -93,6 +96,40 @@ def main(argv=None):
     command("status")
     logs = command("logs"); logs.add_argument("--tail", type=int, default=200)
 
+    project = command("project").add_subparsers(dest="project_command", required=True)
+    project_add_cmd = project.add_parser("add")
+    project_add_cmd.add_argument("--name", required=True); project_add_cmd.add_argument("--title"); project_add_cmd.add_argument("--apply", action="store_true")
+    project_repo = project.add_parser("repo").add_subparsers(dest="repo_command", required=True)
+    repo_add = project_repo.add_parser("add")
+    repo_add.add_argument("--project", required=True); repo_add.add_argument("--name", required=True)
+    repo_add.add_argument("--remote", required=True); repo_add.add_argument("--graph-path", default="docs/pmt-docs/graph.json")
+    repo_add.add_argument("--apply", action="store_true")
+    project.add_parser("list")
+    for child in (project_add_cmd, repo_add, project.choices["list"]):
+        child.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+        child.add_argument("--config-root", default=argparse.SUPPRESS)
+
+    device = command("device").add_subparsers(dest="device_command", required=True)
+    device.add_parser("list")
+    issue = device.add_parser("issue")
+    issue.add_argument("--actor", required=True); issue.add_argument("--project", action="append", required=True)
+    issue.add_argument("--permission", action="append"); issue.add_argument("--allow-admin", action="store_true")
+    issue.add_argument("--credential-out"); issue.add_argument("--handoff-out"); issue.add_argument("--include-ca", action="store_true"); issue.add_argument("--apply", action="store_true")
+    rotate_device = device.add_parser("rotate")
+    rotate_device.add_argument("--device", required=True); rotate_device.add_argument("--credential-out"); rotate_device.add_argument("--apply", action="store_true")
+    grants = device.add_parser("grants")
+    grants.add_argument("--device", required=True); grants.add_argument("--project", action="append", required=True)
+    grants.add_argument("--permission", action="append", required=True); grants.add_argument("--allow-admin", action="store_true"); grants.add_argument("--apply", action="store_true")
+    revoke_device = device.add_parser("revoke")
+    revoke_device.add_argument("--device", required=True); revoke_device.add_argument("--apply", action="store_true")
+    handoff = command("handoff").add_subparsers(dest="handoff_command", required=True)
+    handoff_create_cmd = handoff.add_parser("create")
+    handoff_create_cmd.add_argument("--device", required=True); handoff_create_cmd.add_argument("--out", required=True)
+    handoff_create_cmd.add_argument("--include-ca", action="store_true"); handoff_create_cmd.add_argument("--apply", action="store_true")
+    for child in (*device.choices.values(), handoff_create_cmd):
+        child.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+        child.add_argument("--config-root", default=argparse.SUPPRESS)
+
     args = parser.parse_args(argv)
     root = Path(getattr(args, "config_root", None) or os.environ.get("PMT_HOST_CONFIG_ROOT") or (r"C:\ProgramData\PMT\host-config" if os.name == "nt" else "/etc/pmt-host"))
     try:
@@ -117,6 +154,23 @@ def main(argv=None):
             config_value = load_config(root / "host-config.json")
             if args.tls_command == "check": result = check_tls(config_value)
             else: result = register_tls(root, args.cert, args.key, args.ca, apply=args.apply)
+        elif args.command == "project":
+            if args.project_command == "add": result = project_add(root, args.name, title=args.title, apply=args.apply)
+            elif args.project_command == "repo":
+                result = project_repo_add(root, args.project, args.name, args.remote, args.graph_path, apply=args.apply)
+            else: result = list_projects(root)
+        elif args.command == "device":
+            if args.device_command == "list": result = device_list(root)
+            elif args.device_command == "issue":
+                result = device_issue(root, args.actor, args.project, args.permission, allow_admin=args.allow_admin,
+                                      credential_out=args.credential_out, handoff_out=args.handoff_out,
+                                      include_ca=args.include_ca, apply=args.apply)
+            elif args.device_command == "rotate": result = device_rotate(root, args.device, credential_out=args.credential_out, apply=args.apply)
+            elif args.device_command == "grants":
+                result = device_grants(root, args.device, args.project, args.permission, allow_admin=args.allow_admin, apply=args.apply)
+            else: result = device_revoke(root, args.device, apply=args.apply)
+        elif args.command == "handoff":
+            result = handoff_create(root, args.device, args.out, include_ca=args.include_ca, apply=args.apply)
         elif args.command == "config":
             path = config_path(root)
             if args.config_command == "show":
@@ -271,6 +325,14 @@ def _human_result(args, result):
     if args.command == "doctor": return "Host diagnostics passed" if result.get("ok") else "Host diagnostics found failures"
     if args.command == "status": return f"Host {'running' if result['service']['running'] else 'not running'}; namespace {result.get('namespace_id') or 'unavailable'}"
     if args.command == "tls": return "TLS check complete" if args.tls_command == "check" else "TLS registration plan complete" if not result.get("applied") else "TLS files registered"
+    if args.command == "project":
+        if args.project_command == "list": return "\n".join(f"{item['name']}\t{item['project_id']}" for item in result["projects"]) or "No projects registered"
+        return "Project registration plan complete" if not result.get("applied") else "Project registered"
+    if args.command == "device":
+        if args.device_command == "list": return "\n".join(f"{item['device_id']}\t{item['actor']}\t{item['state']}\t{','.join(item['permissions'])}" for item in result["devices"])
+        if "credential" in result: return canonical_json(result)
+        return "Device plan complete" if not result.get("applied") else "Device operation complete"
+    if args.command == "handoff": return "Handoff plan complete" if not result.get("applied") else "Handoff file created"
     return canonical_json(result)
 
 
