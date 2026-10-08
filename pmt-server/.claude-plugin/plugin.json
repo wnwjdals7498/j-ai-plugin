@@ -1,0 +1,25 @@
+{
+  "name": "pmt-server",
+  "version": "0.5.0",
+  "displayName": "PMT Server",
+  "description": "Configure and operate the PMT storage Host.",
+  "author": {
+    "name": "PMT"
+  },
+  "hooks": "./hooks/claude.json",
+  "skills": "./skills/",
+  "userConfig": {
+    "server_python": {
+      "type": "file",
+      "title": "Host venv Python",
+      "description": "Absolute Python path inside the installed PMT Host venv (Python 3.13+).",
+      "required": true
+    },
+    "host_config_root": {
+      "type": "directory",
+      "title": "Host configuration folder",
+      "description": "Absolute folder containing host-config.json.",
+      "required": true
+    }
+  }
+}

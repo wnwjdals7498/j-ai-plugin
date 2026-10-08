@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="15" time="4.010" timestamp="2026-10-08T16:20:25.563160+09:00" hostname="FKNPOC83BVCHY1L"><testcase classname="tests.test_phase5_server_plugin" name="test_server_plugin_declares_claude_only_hook_asset" time="0.002" /><testcase classname="tests.test_phase5_server_plugin" name="test_session_start_exports_only_server_paths_without_host_setup" time="0.124" /><testcase classname="tests.test_phase5_server_plugin" name="test_session_start_exports_fresh_absolute_root_without_creating_it" time="0.118" /><testcase classname="tests.test_phase5_server_plugin" name="test_session_start_invalid_input_is_native_nonblocking_json[args0]" time="0.109" /><testcase classname="tests.test_phase5_server_plugin" name="test_session_start_invalid_input_is_native_nonblocking_json[args1]" time="0.111" /><testcase classname="tests.test_phase5_server_plugin" name="test_session_start_exports_paths_even_when_existing_config_is_malformed" time="0.116" /><testcase classname="tests.test_phase5_server_plugin" name="test_session_start_bad_env_file_is_nonblocking_native_json" time="0.118" /><testcase classname="tests.test_phase5_server_plugin" name="test_windows_cmd_wrapper_uses_venv_and_preserves_paths_and_arguments" time="0.797"><failure message="AssertionError: ('', 'Traceback (most recent call last):&#10;    File &quot;&lt;frozen runpy&gt;&quot;, line 203, in _run_module_as_main&#10;    File &quot;&lt;frozen r... &lt;module&gt;&#10;      from .upgrade import upgrade_host&#10;  ModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'&#10;  ')&#10;assert 1 == 0&#10; +  where 1 = CompletedProcess(args=['powershell.exe', '-NoProfile', '-NonInteractive', '-File', 'C:\\PMT\\work\\phase5-test\\E3-cod... &lt;module&gt;\n    from .upgrade import upgrade_host\nModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'\n').returncode">tmp_path = WindowsPath('C:/PMT/work/phase5-test/E3-codex/pytest-temp-after-layout/test_windows_cmd_wrapper_uses_0')
+
+    @pytest.mark.skipif(os.name != "nt" or not PYTHON.is_file(), reason="Windows installed-dev-venv wrapper check")
+    def test_windows_cmd_wrapper_uses_venv_and_preserves_paths_and_arguments(tmp_path):
+        config_root = tmp_path / "host config 한글"
+        _write_config(config_root)
+        ps = tmp_path / "invoke wrapper.ps1"
+        _write_powershell_cmd_runner(ps)
+        env = _env(PMT_SERVER_PYTHON=str(PYTHON), PMT_HOST_CONFIG_ROOT=str(config_root))
+        env.pop("CLAUDE_ENV_FILE", None)
+        run = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-NonInteractive", "-File", str(ps), str(PLUGIN / "bin" / "pmt-server.cmd")],
+            cwd=tmp_path, env=env, text=True, capture_output=True, check=False,
+        )
+&gt;       _assert_version_result(run)
+
+proj-mgmt-tool\tests\test_phase5_server_plugin.py:187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+run = CompletedProcess(args=['powershell.exe', '-NoProfile', '-NonInteractive', '-File', 'C:\\PMT\\work\\phase5-test\\E3-cod... &lt;module&gt;\n    from .upgrade import upgrade_host\nModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'\n')
+
+    def _assert_version_result(run):
+&gt;       assert run.returncode == 0, (run.stdout, run.stderr)
+E       AssertionError: ('', 'Traceback (most recent call last):
+E           File "&lt;frozen runpy&gt;", line 203, in _run_module_as_main
+E           File "&lt;frozen r... &lt;module&gt;
+E             from .upgrade import upgrade_host
+E         ModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'
+E         ')
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['powershell.exe', '-NoProfile', '-NonInteractive', '-File', 'C:\\PMT\\work\\phase5-test\\E3-cod... &lt;module&gt;\n    from .upgrade import upgrade_host\nModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'\n').returncode
+
+proj-mgmt-tool\tests\test_phase5_server_plugin.py:158: AssertionError</failure></testcase><testcase classname="tests.test_phase5_server_plugin" name="test_git_bash_wrapper_uses_venv_from_unrelated_cwd" time="0.620"><failure message="AssertionError: ('', 'Traceback (most recent call last):&#10;    File &quot;&lt;frozen runpy&gt;&quot;, line 203, in _run_module_as_main&#10;    File &quot;&lt;frozen r... &lt;module&gt;&#10;      from .upgrade import upgrade_host&#10;  ModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'&#10;  ')&#10;assert 1 == 0&#10; +  where 1 = CompletedProcess(args=['D:\\Application\\Git\\bin\\bash.exe', '-c', '&quot;$1&quot; version --json', '_', '/c/PMT/src/j-ai-plugi... &lt;module&gt;\n    from .upgrade import upgrade_host\nModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'\n').returncode">tmp_path = WindowsPath('C:/PMT/work/phase5-test/E3-codex/pytest-temp-after-layout/test_git_bash_wrapper_uses_ven0')
+
+    @pytest.mark.skipif(os.name != "nt" or not PYTHON.is_file() or not GIT_BASH.is_file(), reason="Windows Git Bash wrapper check")
+    def test_git_bash_wrapper_uses_venv_from_unrelated_cwd(tmp_path):
+        config_root = tmp_path / "host config 한글"
+        _write_config(config_root)
+        env = _env(PMT_SERVER_PYTHON=str(PYTHON), PMT_HOST_CONFIG_ROOT=str(config_root))
+        env.pop("CLAUDE_ENV_FILE", None)
+        wrapper_path = PLUGIN / "bin" / "pmt-server"
+        wrapper = f"/{wrapper_path.drive[0].lower()}/{str(wrapper_path)[3:].replace(chr(92), '/')}"
+        run = subprocess.run(
+            [str(GIT_BASH), "-c", '"$1" version --json', "_", wrapper],
+            cwd=tmp_path, env=env, text=True, capture_output=True, check=False,
+        )
+&gt;       _assert_version_result(run)
+
+proj-mgmt-tool\tests\test_phase5_server_plugin.py:203: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+run = CompletedProcess(args=['D:\\Application\\Git\\bin\\bash.exe', '-c', '"$1" version --json', '_', '/c/PMT/src/j-ai-plugi... &lt;module&gt;\n    from .upgrade import upgrade_host\nModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'\n')
+
+    def _assert_version_result(run):
+&gt;       assert run.returncode == 0, (run.stdout, run.stderr)
+E       AssertionError: ('', 'Traceback (most recent call last):
+E           File "&lt;frozen runpy&gt;", line 203, in _run_module_as_main
+E           File "&lt;frozen r... &lt;module&gt;
+E             from .upgrade import upgrade_host
+E         ModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'
+E         ')
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['D:\\Application\\Git\\bin\\bash.exe', '-c', '"$1" version --json', '_', '/c/PMT/src/j-ai-plugi... &lt;module&gt;\n    from .upgrade import upgrade_host\nModuleNotFoundError: No module named \'pmt.server_admin.upgrade\'\n').returncode
+
+proj-mgmt-tool\tests\test_phase5_server_plugin.py:158: AssertionError</failure></testcase><testcase classname="tests.test_phase5_server_plugin" name="test_windows_cmd_missing_setting_exits_three[PMT_SERVER_PYTHON]" time="0.344" /><testcase classname="tests.test_phase5_server_plugin" name="test_windows_cmd_missing_setting_exits_three[PMT_HOST_CONFIG_ROOT]" time="0.352" /><testcase classname="tests.test_phase5_server_plugin" name="test_windows_cmd_invalid_python_exits_three" time="0.379" /><testcase classname="tests.test_phase5_server_plugin" name="test_git_bash_missing_setting_exits_three[PMT_SERVER_PYTHON]" time="0.177" /><testcase classname="tests.test_phase5_server_plugin" name="test_git_bash_missing_setting_exits_three[PMT_HOST_CONFIG_ROOT]" time="0.168" /><testcase classname="tests.test_phase5_server_plugin" name="test_git_bash_invalid_python_exits_three" time="0.300" /></testsuite></testsuites>

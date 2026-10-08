@@ -215,11 +215,15 @@ claude plugin install pmt-lifecycle@j-ai-plugins
 ```powershell
 codex plugin marketplace add wnwjdals7498/j-ai-plugin
 codex plugin add pmt-lifecycle@j-ai-plugins
-py -3.13 "<플러그인 경로>\scripts\pmt_easy.py" connect --handoff "$env:APPDATA\pmt\handoff\yss-codex.handoff.json" --credential-file <전달받은 파일>
+# 같은 ConfigRoot를 공유하면 Claude에서 설정한 identity와 보호 credential을 그대로 사용.
+# 별도 Codex device를 발급받았다면 별도 경로를 제품 시작 전에 지정.
+$env:PMT_CONFIG_ROOT = 'C:\PMT\clients\codex-config'
+$env:PMT_DATA_ROOT = 'C:\PMT\clients\codex-data'
+py -3.13 "<플러그인 경로>\scripts\pmt_easy.py" connect --handoff <Codex-handoff.json> --credential-file <전달받은 파일>
 [Environment]::SetEnvironmentVariable("PMT_PYTHON", (py -3.13 -c "import sys;print(sys.executable)"), "User")
 ```
 
-Codex를 다시 시작하고 `/hooks`에서 PMT 명령을 검토·신뢰한다. Codex Hook은 `py -3`로 시작하므로 `py -3`가 3.13 이상을 가리키는지 `py -3 --version`으로 확인한다. Claude와 Codex가 같은 PC면 같은 ConfigRoot·DataRoot·credential 저장소를 공유하되, Host에는 제품별로 다른 기기(actor)를 발급받는 것을 권장한다.
+Codex를 다시 시작하고 `/hooks`에서 PMT 명령을 검토·신뢰한다. Codex Hook은 명시 PMT_PYTHON을 우선하고 없으면 Python 탐색을 사용한다. 실제 선택 interpreter가 3.13 이상인지 확인한다. 같은 ConfigRoot·DataRoot·credential 저장소를 공유하면 Host 기기 identity도 공유한다. 제품별 actor/device를 발급받았다면 서로 다른 PMT_CONFIG_ROOT(필요하면 PMT_DATA_ROOT)로 제품을 시작한다.
 
 ### 2.6 확인
 

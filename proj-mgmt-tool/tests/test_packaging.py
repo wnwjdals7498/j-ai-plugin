@@ -111,6 +111,8 @@ def test_pkg_01_three_separate_bundles_manifest_and_zip_hashes(tmp_path):
         assert (zipped.getinfo("bin/pmt").external_attr >> 16) & 0o777 == 0o755
     assert {"host_url", "device_id", "namespace_id", "actor", "device_credential"} <= set(claude_plugin["userConfig"])
     assert claude_plugin["userConfig"]["device_credential"]["sensitive"] is True
+    assert "handoff_file" in claude_plugin["userConfig"]
+    assert all(not value.get("required", False) for key, value in claude_plugin["userConfig"].items() if key != "python_path")
     claude_hooks = json.loads((claude / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
     for groups in claude_hooks.values():
         for hook in (item for group in groups for item in group["hooks"]):
@@ -193,6 +195,7 @@ def test_pkg_01_source_mutation_during_copy_aborts_publication(tmp_path, monkeyp
     source_root = tmp_path / "source"
     import shutil
     shutil.copytree(ROOT, source_root, ignore=shutil.ignore_patterns(".git", ".venv", ".pytest_cache", ".pytest-tmp", ".pmt-test", "__pycache__"))
+    shutil.copytree(ROOT.parent / "pmt-server", source_root.parent / "pmt-server")
     monkeypatch.setattr(BUILDER, "_copy_one", mutate_after_copy)
     with pytest.raises(BUILDER.BuildError, match="source changed"):
         BUILDER.build_plugins(output, "0.1.1", source_root)
@@ -259,6 +262,7 @@ def test_pkg_01_source_drift_during_publish_retry_aborts_and_cleans_stage(tmp_pa
     import shutil
     shutil.copytree(ROOT, source_root, ignore=shutil.ignore_patterns(
         ".git", ".venv", ".pytest_cache", ".pytest-tmp", ".pmt-test", "__pycache__"))
+    shutil.copytree(ROOT.parent / "pmt-server", source_root.parent / "pmt-server")
     actual_replace = BUILDER.os.replace
     attempts = 0
 
@@ -279,3 +283,66 @@ def test_pkg_01_source_drift_during_publish_retry_aborts_and_cleans_stage(tmp_pa
     assert attempts == 1
     assert not (output / "0.1.1").exists()
     assert not list(output.glob(".pmt-build-*"))
+
+def test_phase5_four_targets_two_logical_plugins_and_default_release(tmp_path):
+    built = build(tmp_path)
+    assert built["version"] == "0.5.0"
+    assert built["core_version"] == CORE_VERSION == "0.4.1"
+    assert set(built["products"]) == {"codex", "claude", "opencode", "server"}
+    logical_names = set()
+    for product, artifact in built["products"].items():
+        package = Path(artifact["directory"])
+        manifest = json.loads((package / "pmt-package.json").read_text(encoding="utf-8"))
+        logical_names.add(manifest["plugin_name"])
+        assert manifest["schema_version"] == 5
+        for relative, digest in manifest["files"].items():
+            assert sha256(package / relative) == digest
+        with zipfile.ZipFile(artifact["zip"]) as zipped:
+            assert set(zipped.namelist()) == set(tree_hashes(package))
+            assert all(info.create_system == 3 for info in zipped.infolist())
+            for info in zipped.infolist():
+                expected_mode = 0o755 if info.filename.startswith("bin/") and not info.filename.endswith(".cmd") else 0o644
+                assert (info.external_attr >> 16) & 0o777 == expected_mode
+    assert logical_names == {"pmt-lifecycle", "pmt-server"}
+    server = Path(built["products"]["server"]["directory"])
+    assert not (server / "src").exists() and not (server / "scripts/pmt.py").exists()
+    assert (server / "skills/pmt-server/SKILL.md").is_file()
+    codex = json.loads((server / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+    assert codex["hooks"] == []
+    assert not (server / "hooks/hooks.json").exists()
+    claude = json.loads((server / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+    assert set(claude["userConfig"]) == {"server_python", "host_config_root"}
+    assert claude["hooks"] == "./hooks/claude.json"
+    assert (server / claude["hooks"]).is_file()
+    client_manifest = json.loads((Path(built["products"]["claude"]["directory"]) / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+    options = client_manifest["userConfig"]
+    assert {name for name, value in options.items() if value.get("required")} == {"python_path"}
+    assert options["device_credential"]["sensitive"] is True and "handoff_file" in options
+    for product in ("codex", "claude"):
+        package = Path(built["products"][product]["directory"])
+        for name in ("bin/pmt", "bin/pmt.cmd", "scripts/pmt_easy.py"):
+            assert sha256(package / name) == sha256(ROOT / name)
+        with zipfile.ZipFile(built["products"][product]["zip"]) as zipped:
+            assert zipped.getinfo("bin/pmt").external_attr >> 16 & 0o777 == 0o755
+    with zipfile.ZipFile(built["products"]["server"]["zip"]) as zipped:
+        assert zipped.getinfo("bin/pmt-server").external_attr >> 16 & 0o777 == 0o755
+
+
+def test_server_hook_exports_only_paths_without_host_or_lifecycle_mutation(tmp_path):
+    env_file = tmp_path / "session environment"
+    config = tmp_path / "config not created"
+    env = os.environ.copy()
+    env["CLAUDE_ENV_FILE"] = str(env_file)
+    env["PMT_HOST_CREDENTIAL"] = "synthetic-hook-credential-never-exported"
+    hook = ROOT.parent / "pmt-server/hooks/session_start.py"
+    completed = subprocess.run([sys.executable, str(hook), "--config-root", str(config)],
+                               input='{"session_id":"metadata-only"}', text=True, capture_output=True,
+                               env=env, cwd=tmp_path, timeout=10)
+    assert completed.returncode == 0
+    assert set(json.loads(completed.stdout)) <= {"systemMessage"}
+    text = env_file.read_text(encoding="utf-8")
+    assert len(text.splitlines()) == 2
+    assert text.startswith("export PMT_SERVER_PYTHON=")
+    assert "export PMT_HOST_CONFIG_ROOT=" in text
+    assert env["PMT_HOST_CREDENTIAL"] not in text + completed.stdout + completed.stderr
+    assert not config.exists()

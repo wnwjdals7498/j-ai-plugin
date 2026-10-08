@@ -95,7 +95,9 @@ def test_config_loader_rejects_duplicate_keys_and_oversized_json(tmp_path):
     with pytest.raises(PmtError): load_config_snapshot(path)
 
 
-def test_config_cas_serializes_independent_processes_with_one_winner(tmp_path):
+def test_config_cas_serializes_independent_processes_with_one_winner(tmp_path, monkeypatch):
+    # Spawned children must find the package before the same-named CLI launcher.
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / 'src'))
     root, data_root = tmp_path / "config", tmp_path / "data"
     root.mkdir()
     initial = _config(root, data_root)
@@ -116,7 +118,9 @@ def test_config_cas_serializes_independent_processes_with_one_winner(tmp_path):
     assert load_config(path)["revision"] == 2
 
 
-def test_concurrent_init_has_one_winner(tmp_path):
+def test_concurrent_init_has_one_winner(tmp_path, monkeypatch):
+    # Spawned children must find the package before the same-named CLI launcher.
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2] / 'src'))
     context = multiprocessing.get_context("spawn")
     ready, start, output = context.Queue(), context.Event(), context.Queue()
     roots = [tmp_path / name for name in ("config", "data", "logs", "backup")]

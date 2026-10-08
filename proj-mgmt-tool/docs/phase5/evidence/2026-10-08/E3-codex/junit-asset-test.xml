@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.042" timestamp="2026-10-08T16:20:51.467060+09:00" hostname="FKNPOC83BVCHY1L"><testcase classname="tests.test_phase5_server_plugin" name="test_server_plugin_declares_claude_only_hook_asset" time="0.002" /></testsuite></testsuites>

@@ -1,0 +1,14 @@
+{
+  "source_commit": "ff683b612c09f14db2cb696d25d36eca7a43126b",
+  "dirty_assets": "E3 manifests/builder/docs; source frozen during whole run",
+  "python": "3.14.5rc1",
+  "exit_code": 1,
+  "passed": 921,
+  "failed": 26,
+  "errors": 0,
+  "skipped": 8,
+  "seconds": 1274.44,
+  "new_failure_count": 6,
+  "historical_phase3_4_evidence_changed": false,
+  "status": "six new failures under triage; ZIP creator fix afterward; not final acceptance"
+}

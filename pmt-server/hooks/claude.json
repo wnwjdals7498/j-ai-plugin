@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.server_python}",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/session_start.py",
+              "--config-root",
+              "${user_config.host_config_root}"
+            ],
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}

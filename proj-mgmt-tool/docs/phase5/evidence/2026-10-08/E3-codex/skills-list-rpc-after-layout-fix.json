@@ -1,0 +1,55 @@
+{
+  "process_started": true,
+  "initialize": {
+    "received": true,
+    "ok": true,
+    "error": null
+  },
+  "skills_list": {
+    "received": true,
+    "error": null,
+    "result_keys": [
+      "data"
+    ],
+    "pmt_server_matches": [
+      {
+        "name": "pmt-server:pmt-server",
+        "description": "Install, configure, diagnose, and operate a PMT storage Host using its installed host venv and pmt-server CLI. Use on the Host administrator computer for server tasks; client connection and project work use the pmt skill.",
+        "path": "C:\\PMT\\work\\phase5-test\\E3-codex\\isolated-i4nq_3zq\\codex-home\\plugins\\cache\\j-ai-plugins\\pmt-server\\0.5.0\\skills\\pmt-server\\SKILL.md",
+        "enabled": true,
+        "pluginId": "pmt-server@j-ai-plugins"
+      }
+    ],
+    "discovered_names": [
+      "defuddle",
+      "imagegen",
+      "json-canvas",
+      "obsidian-bases",
+      "obsidian-cli",
+      "obsidian-markdown",
+      "openai-docs",
+      "pmt-server:pmt-server",
+      "review-agent",
+      "skill-creator",
+      "skill-installer"
+    ]
+  },
+  "hooks_list": {
+    "received": true,
+    "error": null,
+    "result_keys": [
+      "data"
+    ],
+    "result": {
+      "data": [
+        {
+          "cwd": "C:\\PMT\\src\\j-ai-plugin",
+          "hooks": [],
+          "warnings": [],
+          "errors": []
+        }
+      ]
+    }
+  },
+  "process_stopped": true
+}

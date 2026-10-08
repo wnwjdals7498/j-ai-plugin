@@ -19,8 +19,8 @@
 | T-S04-4 | C1 | DPAPI LocalMachine + 실제 run-account SID ACL, 넓은 권한 거부 | native unit 시험; 실제 서비스 계정은 F1 |
 | T-S05-1~3 / T-S06-* / T-S07-1~2 | C2 | TLS pair/SAN/chain, doctor 실패 주입, 실제 설정 기반 serve·중복 거부 | C2 35pass/1skip; BC2 parent194pass/3skip; actual TLS health/compat |
 | T-S11-1~2 / T-S12-1~4 / T-S13-1 | D1 | 실제 TLS 정식 scope 생성/기기 수명주기/권한/비밀 없는 인계 파일 | preflight 2 actualTLS pass: 실제 repository parent 필요 |
-| T-C03-1~4 / T-C06-2 / T-S13-2 | D2 | D1 실제 생성 파일로 connect/link/check, 잘못된 credential·CA 보존 | D1 sample 인계 뒤 실제 isolated client |
-| T-S08-1~2 | E1 | 계획 명령/반복 적용 모델 결과 동일, 실제 등록하지 않음 | task/firewall/systemd는 dry-run/fixture만; F1과 구별 |
+| T-C03-1~4 / T-C06-2 / T-S13-2 | D2 | D1 실제 생성 파일로 connect/link/check, 잘못된 credential·CA 보존 | D2 실제 isolatedTLS connect/status/link/check 완료, broad129pass/2POSIXskip |
+| T-S08-1~2 | E1 | 계획 명령/반복 적용 모델 결과 동일, 실제 등록하지 않음 | E1 worker21pass +parent85pass/2skip; task/firewall/systemd는 generated/fake-adapter만; F1과 구별 |
 | T-S15-1~3 / T-S17-2 / T-C09-1~3 | E2 | 일관 backup/빈 target restore-check/import/upgrade 실패 보존/switch busy 및 DB hash | D1/D2 뒤, 기존 migration 경계 사용 |
 | T-S18-1·3 / T-C02-1 / X-01~04 | E3 | 두 논리 plugin·manifest·파일 목록·번들 검증·새 실패 없는 전체 회귀 | source 고정 뒤 whole pytest 및 A0 test-ID 차이 비교 |
 | F1 실제 운영 | F1 | 같은 namespace/devices/keys, 백업·롤백·서비스/FW/재부팅·계정 | E3 push/PR 승인 뒤, 운영 단계별 별도 승인 필요 |
