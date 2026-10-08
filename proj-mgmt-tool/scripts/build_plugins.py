@@ -86,7 +86,7 @@ def _source_map(root: Path, product: str) -> dict[Path, PurePosixPath]:
         add_tree(f"integrations/{product}/hooks/hooks.json", "hooks/hooks.json")
         if product == "claude":
             add_tree("integrations/claude/bin/pmt", "bin/pmt")
-        add_tree(f"integrations/{product}/{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json",
+        add_tree(f"{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json",
                  f"{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json")
     elif product == "opencode":
         add_tree("integrations/opencode/bridge.py", "integrations/opencode/bridge.py")
@@ -162,6 +162,7 @@ def _write_generated_files(package: Path, product: str, version: str,
         compat_path = package / ".codex-plugin" / "plugin.json"
         compat = json.loads(compat_path.read_text(encoding="utf-8"))
         compat["version"] = version
+        compat["hooks"] = "./hooks/hooks.json"
         compat.setdefault("author", {"name": "PMT"})
         compat_path.write_text(json.dumps(compat, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         marketplace_root = package / ".agents" / "plugins"
@@ -181,6 +182,7 @@ def _write_generated_files(package: Path, product: str, version: str,
         plugin_path = package / ".claude-plugin" / "plugin.json"
         plugin = json.loads(plugin_path.read_text(encoding="utf-8"))
         plugin["version"] = version
+        plugin["hooks"] = "./hooks/hooks.json"
         plugin.setdefault("author", {"name": "PMT"})
         plugin_path.write_text(json.dumps(plugin, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         marketplace = {

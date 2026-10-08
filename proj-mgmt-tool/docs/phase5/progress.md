@@ -10,7 +10,7 @@
 | ID | 상태 | commit(시험 대상) | 시험(명령·결과) | 증거 경로 | 미해결·다음 할 일 |
 |---|---|---|---|---|---|
 | A0 | 완료 | 기준 `8054c83` | 필수 파일 존재; marketplace/plugin validate exit 0; 전체 pytest 650 passed/23 failed/2 errors/4 skipped, exit 1; 설치 재검증 2 passed/3 failed/0 errors, exit 1 | `evidence/2026-10-08/A0/` | 첫 실행 119 passed, 1 failed, 559 errors: 559 errors만 `.pmt-test` 부모 디렉터리 누락. 별도 redirect 실패는 원인 미확정이며 3.13/3.14 독립 진단에서 재현 안 됨. 최초 증거 보존, 폴더 준비 후 전체 재시험 종료. 결과는 summary.json. 전체 suite 2 errors는 선언된 setuptools 빌드 backend 누락; 제품 코드 수정 없이 설치 재검증 2 passed/3 failed/0 errors. 남은 3 설치 실패는 과거 package-snapshot fixture 부족; 원본 과거 증거 미수정. D1~D8 사용자 확정 완료; 기존 nonpassing baseline 보존 |
-| A1 | 진행 | 기준 9710d45 | handoff schema/Host serve 회귀 준비 | evidence/2026-10-08/A1/ | 공통 manifest·entrypoint·handoff·Host 런처·기기 조회 구현 |
+| A1 | 완료 | 기준 6161335; 기록 commit은 git log | 최신52 tests pass, exit0; 실제 HTTPS health/compat; console script smoke; Claude validate; independent review approve | evidence/2026-10-08/A1/ | 공통 API 인계: implementation-interfaces.md. B1/C1 독립 착수 가능 |
 | B1 | 미착수 | — | 미실행 | — | A1 선행, 클라이언트 |
 | B2 | 미착수 | — | 미실행 | — | B1 선행, 클라이언트 |
 | B3 | 미착수 | — | 미실행 | — | B1 선행, 클라이언트 |
@@ -38,5 +38,5 @@
 
 ## 현재 재개 지점
 
-2026-10-08 D1~D8 확정 완료. A0 기준선·Host 조사·환경 복구 기록은 동일 source/환경의 유효한 근거로 재사용한다. A1 공통 계약 구현·시험 진행. A0 전체 시험 nonpassing을 숨기지 않으며 handoff 지시대로 기존 실패를 고치지 않는다. 이후 전체 회귀는 동일 Python3.14 환경에서 baseline과 비교하고 새 실패를 식별한다.
+2026-10-08 D1~D8 확정 완료. A0 기준선·Host 조사·환경 복구 기록은 동일 source/환경의 유효한 근거로 재사용한다. A1 공통 계약 구현·검증 완료. 다음 작업 B1/C1은 두 독립 소유 영역으로 병렬 착수한다. A0 전체 시험 nonpassing을 숨기지 않으며 handoff 지시대로 기존 실패를 고치지 않는다. 이후 전체 회귀는 동일 Python3.14 환경에서 baseline과 비교하고 새 실패를 식별한다.
 Graphify 출력은 로컬 분석 자료이며 커밋하지 않는다. E3의 push/PR 승인과 F1의 운영 단계별 승인은 아직 받지 않았다.

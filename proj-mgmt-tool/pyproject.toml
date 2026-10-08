@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proj-mgmt-tool"
-version = "0.4.0"
+version = "0.4.1"
 description = "Local SQLite project memory and agent lifecycle integration"
 requires-python = ">=3.13"
 dependencies = []
@@ -17,6 +17,7 @@ host-test = ["cryptography"]
 [project.scripts]
 pmt = "pmt.cli:main"
 pmt-host = "pmt.host.cli:main"
+pmt-server = "pmt.server_admin.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
