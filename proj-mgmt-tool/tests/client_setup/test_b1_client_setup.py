@@ -285,6 +285,7 @@ def test_c04_env_file_never_contains_credential_even_if_passed(tmp_path):
 
 def test_c10_shared_hook_preserves_event_and_keeps_env_file_secret_free(monkeypatch, tmp_path):
     env_file = tmp_path / "claude-env"
+    config, data = tmp_path / "hook-config", tmp_path / "hook-data"
     captured = {}
     def prepare(environ, cwd, *, product):
         captured["product"] = product
@@ -294,10 +295,11 @@ def test_c10_shared_hook_preserves_event_and_keeps_env_file_secret_free(monkeypa
         print('{"continue":true}')
         return 0
     monkeypatch.setattr(easy_hook, "bridge_main", bridge)
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture"}'), encoding="utf-8")
+    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","hook_event_name":"SessionStart","session_id":"codex-session"}'), encoding="utf-8")
     stdout = io.StringIO()
     result = easy_hook.run(["--product", "codex", "--event", "SessionStart"], stdin=stdin, stdout=stdout,
-                           environ={"CLAUDE_ENV_FILE": str(env_file)}, prepare=prepare)
+                           environ={"CLAUDE_ENV_FILE": str(env_file), "PMT_CONFIG_ROOT": str(config),
+                                    "PMT_DATA_ROOT": str(data)}, prepare=prepare)
     assert result == 0 and captured == {"product": "codex", "argv": ["--product", "codex", "--event", "SessionStart"]}
     assert json.loads(stdout.getvalue())["continue"] is True
     assert not env_file.exists()
@@ -306,11 +308,12 @@ def test_c10_shared_hook_preserves_event_and_keeps_env_file_secret_free(monkeypa
 def test_c01_invalid_handoff_is_a_sanitized_nonblocking_hook_error(tmp_path):
     missing_path = tmp_path / "private-handoff-name.json"
     env = {"CLAUDE_PLUGIN_OPTION_HANDOFF_FILE": str(missing_path),
-           "CLAUDE_PLUGIN_OPTION_DEVICE_CREDENTIAL": "credential-fixture"}
+           "CLAUDE_PLUGIN_OPTION_DEVICE_CREDENTIAL": "credential-fixture",
+           "PMT_CONFIG_ROOT": str(tmp_path / "config"), "PMT_DATA_ROOT": str(tmp_path / "data")}
     result = mode.prepare(env, tmp_path)
     assert result["status"] == "error" and result["error_code"] == "handoff_invalid"
     assert str(missing_path) not in result["message"] and "credential-fixture" not in result["message"]
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture"}'), encoding="utf-8")
+    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","hook_event_name":"SessionStart","session_id":"managed-session"}'), encoding="utf-8")
     stdout = io.StringIO()
     assert easy_hook.run(["--event", "SessionStart"], stdin=stdin, stdout=stdout, environ=env) == 0
     assert "handoff_invalid" in stdout.getvalue()
@@ -342,7 +345,7 @@ def test_c10_codex_uses_hosted_profile_and_protected_credential_without_options(
         print('{"continue":true}')
         return 0
     monkeypatch.setattr(easy_hook, "bridge_main", bridge)
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture"}'), encoding="utf-8")
+    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","hook_event_name":"SessionStart","session_id":"codex-session"}'), encoding="utf-8")
     stdout = io.StringIO()
     assert easy_hook.run(["--product", "codex", "--event", "SessionStart"], stdin=stdin,
                          stdout=stdout, environ=env) == 0
@@ -357,19 +360,22 @@ def test_c10_actual_core_parser_receives_product_for_both_products(monkeypatch, 
                         lambda passed_product, raw: captured.append((passed_product, raw)) or {"continue": True})
     def prepare(_environ, _cwd, *, product):
         return {"status": "ready", "mode": "local", "env": {}, "link": "not_linked"}
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","session_id":"s"}'), encoding="utf-8")
+    native = {"cwd": "fixture", "session_id": "s", "hook_event_name": "SessionStart"}
+    stdin = io.TextIOWrapper(io.BytesIO(json.dumps(native).encode("utf-8")), encoding="utf-8")
     stdout = io.StringIO()
     argv = ["--event", "SessionStart", "--with-context"]
     if product == "codex":
         argv = ["--product", product, *argv]
-    result = easy_hook.run(argv, stdin=stdin, stdout=stdout, environ={}, prepare=prepare)
+    result = easy_hook.run(argv, stdin=stdin, stdout=stdout,
+                           environ={"PMT_CONFIG_ROOT": str(tmp_path / "config"),
+                                    "PMT_DATA_ROOT": str(tmp_path / "data")}, prepare=prepare)
     assert result == 0
-    assert captured == [(product, {"cwd": "fixture", "session_id": "s"})]
+    assert captured == [(product, native)]
     assert json.loads(stdout.getvalue())["continue"] is True
 
 
 def test_c10_incomplete_product_arguments_are_nonblocking(tmp_path):
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture"}'), encoding="utf-8")
+    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","hook_event_name":"SessionStart","session_id":"legacy-session"}'), encoding="utf-8")
     stdout = io.StringIO()
     result = easy_hook.run(["--product", "--event", "SessionStart"], stdin=stdin, stdout=stdout, environ={})
     assert result == 0 and "hook_arguments_invalid" in stdout.getvalue()
@@ -394,7 +400,7 @@ def test_c10_legacy_hosted_hook_loads_credential_before_bridge(monkeypatch, tmp_
         print('{"continue":true}')
         return 0
     monkeypatch.setattr(core_hooks, "process_hook", lambda product, event, _raw: bridge([product, event]))
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture"}'), encoding="utf-8")
+    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","hook_event_name":"SessionStart","session_id":"local-session"}'), encoding="utf-8")
     stdout = io.StringIO()
     assert easy_hook.run(["--event", "SessionStart"], stdin=stdin, stdout=stdout, environ=env) == 0
     assert observed == [True]
@@ -407,7 +413,7 @@ def test_easy_hook_empty_explicit_root_runs_managed_local_setup(monkeypatch, tmp
     captured = []
     monkeypatch.setattr(core_hooks, "process_session_start",
                         lambda product, _raw: captured.append(product) or {"continue": True})
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture"}'), encoding="utf-8")
+    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","hook_event_name":"SessionStart","session_id":"managed-session"}'), encoding="utf-8")
     stdout = io.StringIO()
     result = easy_hook.run(["--event", "SessionStart", "--with-context"], stdin=stdin, stdout=stdout,
                            environ={"PMT_CONFIG_ROOT": str(config), "PMT_DATA_ROOT": str(data)})
@@ -433,19 +439,34 @@ def test_easy_hook_managed_hosted_profile_removed_options_stops_without_bridge(m
     write_client_metadata(config, source="plugin", python_path=sys.executable, mode="hosted")
     bridge_called = []
     setup_errors = []
+    legacy_checks = []
+    event_calls = []
     actual_prepare = easy_setup.prepare
+    actual_legacy = easy_hook.is_legacy_root
+    actual_normalize = easy_hook.normalize_event
+    def observe_normalize(product, event, raw, *, environ):
+        event_calls.append((product, event))
+        return actual_normalize(product, event, raw, environ=environ)
+    monkeypatch.setattr(easy_hook, "normalize_event", observe_normalize)
+    def observe_legacy(path):
+        result = actual_legacy(path)
+        legacy_checks.append((str(path), result))
+        return result
+    monkeypatch.setattr(easy_hook, "is_legacy_root", observe_legacy)
     def observe_prepare(environ, cwd, *, product):
         result = actual_prepare(environ, cwd, product=product)
         setup_errors.append(result.get("error_code"))
         return result
     monkeypatch.setattr(core_hooks, "process_session_start", lambda *_args: bridge_called.append(True))
-    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture"}'), encoding="utf-8")
+    stdin = io.TextIOWrapper(io.BytesIO(b'{"cwd":"fixture","hook_event_name":"SessionStart","session_id":"managed-session"}'), encoding="utf-8")
     stdout = io.StringIO()
     result = easy_hook.run(["--event", "SessionStart", "--with-context"], stdin=stdin, stdout=stdout,
                            environ={"PMT_CONFIG_ROOT": str(config), "PMT_DATA_ROOT": str(data)},
                            prepare=observe_prepare)
-    assert result == 0 and bridge_called == []
+    assert event_calls == [("claude", "SessionStart")]
+    assert legacy_checks == [(str(config), False)]
     assert setup_errors == ["hosted_settings_missing"]
+    assert result == 0 and bridge_called == []
     assert "Hosted PMT settings are missing" in stdout.getvalue()
     assert not (data / "pmt.sqlite3").exists()
 

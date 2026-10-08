@@ -1,4 +1,4 @@
-"""Short ``pmt`` commands for people and agents on a hosted PMT profile.
+"""Short ``pmt`` commands over local or hosted PMT storage.
 
 Every command builds the normal protocol-v1 request and runs it through the
 same ``select_store`` path as the JSON CLI.  Callers never write request IDs,
@@ -31,10 +31,26 @@ class EasyError(Exception):
 def _roots():
     config_root, data_root = easy_setup.default_roots(os.environ)
     profile, config_hash = _read_profile(config_root)
-    if profile is None or profile.get("mode") != "hosted":
-        raise EasyError("not_configured", "PMT is not configured. Fill in /plugin settings and start a new session.")
-    if not os.environ.get(easy_setup.CREDENTIAL_ENV):
-        raise EasyError("credential_missing", "PMT credential is not in this session. Start a new Claude session.")
+    if profile is None:
+        from .client_setup.mode import prepare
+        state = prepare(os.environ, os.getcwd())
+        if state["status"] != "ready":
+            raise EasyError(state.get("error_code", "not_configured"), state.get("message", "PMT setup failed."))
+        profile, config_hash = _read_profile(config_root)
+    if profile and profile.get("mode") == "local" and not (Path(data_root) / "pmt.sqlite3").is_file():
+        from .client_setup.mode import prepare
+        state = prepare(os.environ, os.getcwd())
+        if state["status"] != "ready":
+            raise EasyError(state.get("error_code", "local_setup_failed"), state.get("message", "Local PMT setup failed."))
+        profile, config_hash = _read_profile(config_root)
+    if profile and profile.get("mode") == "hosted":
+        from .client_setup.credentials import load_credential
+        try:
+            load_credential(config_root, os.environ)
+        except PmtError as error:
+            raise EasyError(error.code, "PMT credential is unavailable; check the protected credential store.") from error
+    if profile is None:
+        raise EasyError("not_configured", "PMT storage profile could not be prepared.")
     return config_root, data_root, profile, config_hash
 
 
@@ -64,17 +80,20 @@ def _save_claims(data_root, claims):
 
 
 def execute(operation, payload=None, *, record_id=None, expected_revision=None, scope_id=None,
-            request_id=None, session_id=None):
+            request_id=None, session_id=None, allow_unscoped=False):
     """Send one request through the selected hosted store; raise on failure."""
     from .service import normalize_request
     from .storage_config import select_store
 
     config_root, data_root, profile, _ = _roots()
+    selected_scope = None if allow_unscoped and operation == "create_scope" and profile["mode"] == "local" else (
+        scope_id or os.environ.get("PMT_SCOPE_ID") or _current_scope(profile))
     request = {"protocol_version": 1, "operation": operation,
-               "request_id": request_id or str(uuid.uuid4()), "actor": profile["actor"],
-               "session_id": session_id or _session_id(),
-               "scope_id": scope_id or os.environ.get("PMT_SCOPE_ID"), "payload": payload or {}}
-    if request["scope_id"] is None:
+               "request_id": request_id or str(uuid.uuid4()), "actor": profile.get("actor", "local"),
+               "session_id": session_id or _session_id(), "payload": payload or {}}
+    if selected_scope is not None:
+        request["scope_id"] = selected_scope
+    if selected_scope is None and not (allow_unscoped and operation == "create_scope" and profile["mode"] == "local"):
         raise EasyError("project_not_linked", "This checkout is not linked to a PMT project. Run `pmt link`.")
     if record_id is not None:
         request["record_id"] = record_id
@@ -82,7 +101,17 @@ def execute(operation, payload=None, *, record_id=None, expected_revision=None, 
         request["expected_revision"] = expected_revision
     request = normalize_request(request)
     store = select_store(str(data_root), str(config_root), request, environ=os.environ)
-    result, exit_code = store.execute(request)
+    try:
+        result, exit_code = store.execute(request)
+    except PmtError as error:
+        if not error.retryable or not callable(getattr(store, "get_request_result", None)):
+            raise
+        previous = store.get_request_result(request["request_id"], request["actor"], request["session_id"],
+                                            expected_request=request)
+        if previous is not None:
+            result, exit_code = previous
+        else:
+            result, exit_code = store.execute(request)
     if exit_code != 0 or not result.get("ok"):
         error = result.get("error") or {}
         raise EasyError(error.get("code", "request_failed"), error.get("message", "PMT request failed"),
@@ -93,6 +122,14 @@ def execute(operation, payload=None, *, record_id=None, expected_revision=None, 
 def _records(scope_id=None):
     result = execute("read_context", {"limit": 200}, scope_id=scope_id)
     return result.get("records", [])
+
+
+def _current_scope(profile):
+    root, branch = easy_setup.git_checkout(os.getcwd())
+    if root is not None:
+        mapping, _reason = easy_setup.select_mapping(profile, root, branch)
+        return mapping["project_id"] if mapping else None
+    return os.environ.get("PMT_SCOPE_ID")
 
 
 def _find(record_ref):
@@ -108,34 +145,85 @@ def _rid(record):
     return record.get("record_id") or record.get("id")
 
 
+def _is_uuid(value):
+    try:
+        return str(uuid.UUID(value)) == value
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
 def cmd_check(args):
-    config_root, data_root, profile, _ = _roots()
+    try:
+        config_root, data_root, profile, _ = _roots()
+    except (EasyError, PmtError) as error:
+        _print_rows([("PMT setup", "FAIL", getattr(error, "code", "not_configured"))])
+        return 1
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import check
+        try:
+            return check(sys.modules[__name__])
+        except (EasyError, PmtError) as error:
+            _print_rows([("local check", "FAIL", getattr(error, "code", "check_failed"))])
+            return 1
     rows = []
-    probe = probe_storage(str(config_root))
+    try:
+        ca_note = _check_ca(profile)
+        probe = probe_storage(str(config_root))
+    except (EasyError, PmtError) as error:
+        _print_rows([("Host authentication/compatibility", "FAIL", getattr(error, "code", "remote_unavailable"))])
+        return 1
+    rows.append(("Host CA", "ok", ca_note))
     pre = probe.get("host_preflight") or {}
     rows.append(("Host 인증·호환", "ok", f"core {pre.get('core_version')} / db {pre.get('db_schema')} / "
                  f"graph {pre.get('graph_schema')} / protocol {pre.get('protocol_versions')}"))
-    scope = os.environ.get("PMT_SCOPE_ID")
+    scope = _current_scope(profile)
     if not scope:
         rows.append(("프로젝트 연결", "미연결", "pmt link 필요"))
         _print_rows(rows)
         return 1
-    records = _records()
-    rows.append(("조회", "ok", f"레코드 {len(records)}건"))
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    request_id = str(uuid.uuid5(CHECK_NAMESPACE, f"{profile['environment_id']}:{scope}:{day}"))
-    payload = {"kind": "fact", "title": f"pmt check {day} ({profile['actor']})",
-               "reason": "pmt check 연결 확인", "body": {}}
-    first = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
-    again = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
-    same = _rid(first) == _rid(again)
-    rows.append(("기록·재전송", "ok" if same else "FAIL", f"같은 요청 재전송 시 같은 레코드 {_rid(first)[:8]}"))
+    try:
+        records = _records()
+        rows.append(("조회", "ok", f"레코드 {len(records)}건"))
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        request_id = str(uuid.uuid5(CHECK_NAMESPACE, f"{profile['environment_id']}:{scope}:{day}"))
+        payload = {"kind": "fact", "title": f"pmt check {day} ({profile['actor']})",
+                   "reason": "pmt check 연결 확인", "body": {}}
+        first = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
+        again = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
+        same = _rid(first) == _rid(again)
+        rows.append(("기록·재전송", "ok" if same else "FAIL", f"같은 요청 재전송 시 같은 레코드 {_rid(first)[:8]}"))
+    except (EasyError, PmtError) as error:
+        rows.append(("Host check", "FAIL", getattr(error, "code", "check_failed")))
+        _print_rows(rows)
+        return 1
     _print_rows(rows)
     return 0 if same else 1
 
 
+def _check_ca(profile):
+    ca_file = profile.get("ca_file")
+    if not ca_file:
+        return "system trust store"
+    path = Path(ca_file)
+    if not path.is_file():
+        raise EasyError("host_ca_unavailable", "Configured Host CA file is missing.")
+    try:
+        import ssl
+        ssl.create_default_context(cafile=str(path))
+        certificate = ssl._ssl._test_decode_cert(str(path))
+        expires = datetime.fromtimestamp(ssl.cert_time_to_seconds(certificate["notAfter"]), timezone.utc)
+    except (OSError, ValueError, KeyError, ssl.SSLError) as error:
+        raise EasyError("host_ca_invalid", "Configured Host CA file is invalid.") from error
+    if expires <= datetime.now(timezone.utc):
+        raise EasyError("host_ca_expired", "Configured Host CA certificate has expired.")
+    return f"expires {expires.date().isoformat()}"
+
+
 def cmd_link(args):
     config_root, data_root, profile, config_hash = _roots()
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import link
+        return link(sys.modules[__name__], args)
     root, branch = easy_setup.git_checkout(os.getcwd())
     if root is None or branch is None:
         raise EasyError("not_a_branch_checkout", "Run pmt link inside a Git checkout on a branch.")
@@ -146,6 +234,9 @@ def cmd_link(args):
         return 0
     project = args.project or (same_root[0]["project_id"] if same_root else None)
     repository = args.repository or (same_root[0]["repository_id"] if same_root else None)
+    if project is not None and (not _is_uuid(project) or repository is None or not _is_uuid(repository)):
+        from .client_setup.local_commands import resolve_project
+        project, repository = resolve_project(sys.modules[__name__], config_root, profile, project, repository)
     if project is None or repository is None:
         known = {(m["project_id"], m["repository_id"]) for m in mappings}
         if len(known) == 1 and args.project is None and args.repository is None:
@@ -167,8 +258,13 @@ def cmd_link(args):
 
 
 def cmd_status(args):
+    _config_root, data_root, profile, _ = _roots()
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import load_claims
+        claims = load_claims(data_root)
+    else:
+        claims = _load_claims(data_root)
     records = _records()
-    claims = _load_claims(easy_setup.default_roots(os.environ)[1])
     rows = [(r.get("kind"), _rid(r)[:8], r.get("state") or r.get("status"), f"rev {r.get('revision')}",
              r.get("title"), "내 점유" if _rid(r) in claims else "") for r in records]
     _print_rows(rows) if rows else print("기록 없음")
@@ -182,6 +278,11 @@ def cmd_add(args):
             raise EasyError("item_fields_required", "Items need a parent work and at least one --criteria.")
         payload["parent_id"] = _rid(_find(args.parent))
         payload["body"] = {"criteria": [{"id": f"c{i}", "text": text} for i, text in enumerate(args.criteria, 1)]}
+        profile = _roots()[2]
+        if profile["mode"] == "local":
+            mapping, _reason = easy_setup.select_mapping(profile, *easy_setup.git_checkout(os.getcwd()))
+            if mapping:
+                payload["body"]["workspace"] = mapping["local_root"]
     elif args.parent:
         payload["parent_id"] = _rid(_find(args.parent))
     result = execute("save_change", payload)
@@ -191,6 +292,9 @@ def cmd_add(args):
 
 def cmd_start(args):
     record = _find(args.item)
+    if _roots()[2]["mode"] == "local":
+        from .client_setup.local_commands import start
+        return start(sys.modules[__name__], record)
     result = execute("claim_task", {}, record_id=_rid(record), expected_revision=record["revision"])
     data_root = easy_setup.default_roots(os.environ)[1]
     claims = _load_claims(data_root)
@@ -212,6 +316,9 @@ def _owned(record):
 
 def cmd_pause(args):
     record = _find(args.item)
+    if _roots()[2]["mode"] == "local":
+        from .client_setup.local_commands import pause
+        return pause(sys.modules[__name__], record, args)
     data_root, claims, claim = _owned(record)
     result = execute("release_claim", {"claim_ref": claim["claim_ref"], "status": "Paused",
                                        "reason": args.reason or "pmt pause", "resume": args.next},
@@ -318,13 +425,15 @@ def cmd_done(args):
     sibling helper Item provides it and is canceled again afterwards.
     """
     import platform
-    import shlex
     import sqlite3
     import subprocess
     from .util import canonical_json, fingerprint
 
     config_root, data_root, profile, _ = _roots()
     record = _find(args.item)
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import done
+        return done(sys.modules[__name__], args, record)
     item_id = _rid(record)
     _, claims, claim = _owned(record)
     session = claim["session_id"]
@@ -337,7 +446,11 @@ def cmd_done(args):
     criteria = (record.get("body") or {}).get("criteria") or []
     if not criteria:
         raise EasyError("criteria_missing", "The item has no completion criteria.")
-    command = shlex.split(args.test)
+    from .client_setup.local_commands import _parse_command
+    try:
+        command = _parse_command(args.test)
+    except (OSError, ValueError) as error:
+        raise EasyError("test_command_invalid", "The test command could not be parsed.") from error
     if not command:
         raise EasyError("test_required", "Give the test command with --test.")
 
@@ -446,10 +559,15 @@ def build_parser():
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("check", help="연결·인증·기록·재전송 확인").set_defaults(func=cmd_check)
     link = sub.add_parser("link", help="현재 checkout을 PMT project에 연결")
-    link.add_argument("--project")
+    link.add_argument("project", nargs="?")
+    link.add_argument("--new", metavar="TITLE")
+    link.add_argument("--yes", action="store_true")
     link.add_argument("--repository")
     link.add_argument("--graph-path", default="docs/pmt-docs/graph.json")
     link.set_defaults(func=cmd_link)
+    sub.add_parser("unlink", help="현재 branch의 project 연결 해제").set_defaults(func=cmd_unlink)
+    sub.add_parser("projects", help="알려진 PMT project 목록").set_defaults(func=cmd_projects)
+    sub.add_parser("mode", help="현재 저장 모드와 경로 표시").set_defaults(func=cmd_mode)
     sub.add_parser("status", help="현재 project 기록 목록").set_defaults(func=cmd_status)
     add = sub.add_parser("add", help="work/item 추가")
     add.add_argument("kind", choices=["work", "item"])
@@ -473,6 +591,21 @@ def build_parser():
     pause.add_argument("--reason")
     pause.set_defaults(func=cmd_pause)
     return parser
+
+
+def cmd_unlink(args):
+    from .client_setup.local_commands import unlink
+    return unlink(sys.modules[__name__])
+
+
+def cmd_projects(args):
+    from .client_setup.local_commands import list_projects
+    return list_projects(sys.modules[__name__])
+
+
+def cmd_mode(args):
+    from .client_setup.local_commands import mode
+    return mode(sys.modules[__name__])
 
 
 def main(argv=None):

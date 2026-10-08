@@ -127,8 +127,4 @@ def prepare(env, cwd, *, configure=configure_storage, python=None, product="clau
     the environment to apply, the selected mapping reason and a short message.
     Never raises for configuration problems; hooks must stay non-blocking.
     """
-    result = client_mode.prepare(env, cwd, product=product, configure=configure, python=python)
-    if result.get("error_code") == "hosted_settings_missing" and not _read_profile(default_roots(env)[0])[0]:
-        result["status"] = "unconfigured"
-        result["message"] = "PMT Host settings are incomplete. Configure a Host or check local setup."
-    return result
+    return client_mode.prepare(env, cwd, product=product, configure=configure, python=python)
