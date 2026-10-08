@@ -11,10 +11,10 @@
 |---|---|---|---|---|---|
 | A0 | 완료 | 기준 `8054c83` | 필수 파일 존재; marketplace/plugin validate exit 0; 전체 pytest 650 passed/23 failed/2 errors/4 skipped, exit 1; 설치 재검증 2 passed/3 failed/0 errors, exit 1 | `evidence/2026-10-08/A0/` | 첫 실행 119 passed, 1 failed, 559 errors: 559 errors만 `.pmt-test` 부모 디렉터리 누락. 별도 redirect 실패는 원인 미확정이며 3.13/3.14 독립 진단에서 재현 안 됨. 최초 증거 보존, 폴더 준비 후 전체 재시험 종료. 결과는 summary.json. 전체 suite 2 errors는 선언된 setuptools 빌드 backend 누락; 제품 코드 수정 없이 설치 재검증 2 passed/3 failed/0 errors. 남은 3 설치 실패는 과거 package-snapshot fixture 부족; 원본 과거 증거 미수정. D1~D8 사용자 확정 완료; 기존 nonpassing baseline 보존 |
 | A1 | 완료 | 기준 6161335; 기록 commit은 git log | 최신52 tests pass, exit0; 실제 HTTPS health/compat; console script smoke; Claude validate; independent review approve | evidence/2026-10-08/A1/ | 공통 API 인계: implementation-interfaces.md. B1/C1 독립 착수 가능 |
-| B1 | 미착수 | — | 미실행 | — | A1 선행, 클라이언트 |
-| B2 | 미착수 | — | 미실행 | — | B1 선행, 클라이언트 |
+| B1 | 완료 | 기준 938cc4e; 기록 commit은 git log | worker31 pass/2 POSIX skip; parent68 pass/2 skip; compile0; independent review approve | evidence/2026-10-08/B1/ | 구현/Windows 범위 검증 완료. 실제 Linux/다른 Windows 계정/제품 세션은 F2/F3, 실제 hosted 인계 D2 |
+| B2 | 진행 | B1 인계 | 준비 | evidence/2026-10-08/B2/ | gpt-6-luna: local commands/link/check/mode |
 | B3 | 미착수 | — | 미실행 | — | B1 선행, 클라이언트 |
-| C1 | 미착수 | — | 미실행 | — | A1 선행, 서버 |
+| C1 | 진행 | A1 938cc4e | 작업자 C1 범위 시험 준비 | evidence/2026-10-08/C1/ | gpt-6-luna: server_admin config/init/secrets/version; 운영 경로 사용 금지 |
 | C2 | 미착수 | — | 미실행 | — | C1 선행, 서버 |
 | D1 | 미착수 | — | 미실행 | — | C2 선행, 서버 |
 | D2 | 미착수 | — | 미실행 | — | B2·D1 인계 샘플 선행, 클라이언트 |
