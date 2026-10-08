@@ -1,0 +1,26 @@
+{
+  "data_root": "D:/PMTHostState/host-data",
+  "config_root": "D:/PMTHostState/host-config",
+  "host": "0.0.0.0",
+  "port": 8765,
+  "claim_key_env": "PMT_HOST_CLAIM_KEY",
+  "claim_key_id": "primary",
+  "ssl_certfile": "D:/PMTHostState/secrets/server-chain.pem",
+  "ssl_keyfile": "D:/PMTHostState/secrets/server-key.pem",
+  "python": "D:/Application/PMTHost/releases/9f555185db9e772d77b71060144d3c39ca42fed2/venv/Scripts/python.exe",
+  "working_directory": "D:/Application/PMTHost/releases/9f555185db9e772d77b71060144d3c39ca42fed2",
+  "deployment_commit": "9f555185db9e772d77b71060144d3c39ca42fed2",
+  "log_root": "D:/PMTHostState/logs",
+  "retained_keys": [],
+  "task_name": "PMT-Host",
+  "task_account": "jjm",
+  "host_version": "0.4.0",
+  "health": {
+    "api_version": 1,
+    "status_code": 200,
+    "status": "ok"
+  },
+  "process_metadata_limitation": "CIM does not expose live process command line or owner in this execution context; settings derived from active scheduled-task supervisor config.",
+  "SurveyUtc": "2026-10-08T02:08:27.1638726Z",
+  "python_version": "3.13.13"
+}

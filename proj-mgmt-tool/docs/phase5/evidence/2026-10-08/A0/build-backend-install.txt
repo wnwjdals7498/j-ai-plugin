@@ -1,0 +1,9 @@
+WARNING: Cache entry deserialization failed, entry ignored
+Collecting setuptools>=68
+  Using cached setuptools-84.0.0-py3-none-any.whl.metadata (6.6 kB)
+Using cached setuptools-84.0.0-py3-none-any.whl (818 kB)
+Installing collected packages: setuptools
+Successfully installed setuptools-84.0.0
+
+[notice] A new release of pip is available: 26.1 -> 26.2.1
+[notice] To update, run: C:\PMT\src\venv-dev\Scripts\python.exe -m pip install --upgrade pip

@@ -1,0 +1,27 @@
+{
+  "Task": "A0",
+  "Command": "C:\\PMT\\src\\venv-dev\\Scripts\\python.exe -m pytest -q --junitxml=docs/phase5/evidence/2026-10-08/A0/pytest.xml",
+  "StartedUtc": "2026-10-08T02:01:06.2551235Z",
+  "Commit": "8054c83a85b73356f0e2e52322855b9e03b419ce",
+  "Branch": "feat/phase5-plugin-split",
+  "Python": "Python 3.14.5rc1",
+  "OS": "Microsoft Windows NT 10.0.26100.0",
+  "ConfigRoot": "C:\\PMT\\src\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\baseline-config",
+  "DataRoot": "C:\\PMT\\src\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\baseline-data",
+  "RequiredFiles": [
+    ".claude-plugin\\marketplace.json",
+    ".agents\\plugins\\marketplace.json",
+    "proj-mgmt-tool\\.claude-plugin\\plugin.json",
+    "proj-mgmt-tool\\.codex-plugin\\plugin.json",
+    "proj-mgmt-tool\\scripts\\pmt.py",
+    "proj-mgmt-tool\\docs\\05-plugin-split.md",
+    "proj-mgmt-tool\\docs\\phase5\\README.md"
+  ],
+  "Dirty": [
+    "?? .codex/",
+    "?? AGENTS.md",
+    "?? graphify-out/"
+  ],
+  "ExitCode": 1,
+  "FinishedUtc": "2026-10-08T02:01:46.3566356Z"
+}
