@@ -44,3 +44,5 @@
 - E1 systemd LoadCredential alias는 claim-<key_id>/tls-key. runtime CREDENTIALS_DIRECTORY는 in-memory 경로만 변경하며 persisted config는 불변. placeholder offline source는 HostConfigRoot/secrets/claim-<key_id>.key와 HostConfigRoot/tls/tls-key. 근거: https://raw.githubusercontent.com/systemd/systemd/main/man/systemd.exec.xml Credentials LoadCredential lines3450-3460,3522-3532; Environment Variables CREDENTIALS_DIRECTORY lines3808-3814. 실제 Linux 실행은 F2 미실행.
 - 초기화된 Host의 ConfigRoot는 기존 environment profile을 읽기만 하므로 serve preflight는 read/traverse를 요구한다. data/log/backup은 read/write를 요구한다. E1의 관리자 소유·서비스 read-only config ACL과 일치하며 missing profile은 여전히 거부한다.
 - 운영 포트8765 doctor/status health 제한 제거는 자동 승인 검토가 운영 안전 경계 약화로 거부했다. 제한을 보존했다. F1 승인 후 별도 재검토할 항목이며 개발 시험에서는 운영 경로·포트를 사용하지 않는다.
+- C03 클라이언트 프로필은 기존 Core 규약대로 HTTPS-only. pmt connect 일반/dry-run 모두 loopback HTTP 인계도 거부한다. X02 validator의 explicit loopback 진단 옵션은 schema 시험용 API에만 남긴다; 저장 프로필/API 규약을 확대하지 않는다.
+- D2 connect는 관리 연결 setup-lock과 프로젝트→ConfigRoot rollback lock 순서를 사용한다. configure의 반환 hash와 같은 bytes만 자기 게시로 취급하며 다른 writer가 profile을 게시하면 그 profile과 의존 credential/CA/marker를 보존하고 충돌을 보고한다.

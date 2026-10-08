@@ -269,7 +269,7 @@ def test_c08_hosted_check_uses_protected_credential_and_replays_one_fact(monkeyp
     store_credential(config, "hosted-check-credential")
     monkeypatch.setenv("PMT_CONFIG_ROOT", str(config))
     monkeypatch.setenv("PMT_DATA_ROOT", str(data))
-    monkeypatch.delenv("PMT_HOST_CREDENTIAL", raising=False)
+    monkeypatch.setenv("PMT_HOST_CREDENTIAL", "")
     monkeypatch.setenv("PMT_SCOPE_ID", "4c3d4d19-28fa-4727-9895-e0fee0f43d6a")
     monkeypatch.setattr(easy_setup, "git_checkout", lambda _cwd: (None, None))
     monkeypatch.setattr(easy_cli, "probe_storage", lambda *_args: {"host_preflight": {

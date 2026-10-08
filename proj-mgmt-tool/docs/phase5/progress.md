@@ -3,7 +3,7 @@
 - 기준: `origin/master` `8054c83a85b73356f0e2e52322855b9e03b419ce`.
 - 작업 checkout: `C:\PMT\src\j-ai-plugin`, 브랜치 `feat/phase5-plugin-split`.
 - 메인: Codex. 구현 작업자는 A1 완료와 사용자 결정 확정 뒤 `gpt-6-luna`로 소유 영역을 분리한다.
-- 현재 단계: A0/A1/B1/B2/B3/C1 완료. C2 완료. D1/E1 완료, D2 리뷰 보강. E2는 D2 확정 후 착수.
+- 현재 단계: A0/A1/B1/B2/B3/C1 완료. C2 완료. D1/D2/E1 완료. E2 서버·클라이언트 착수 준비.
 - 운영 금지 영역: `D:\PMTHostState\host-data`, `D:\PMTHostState\host-config`, `D:\PMTHostState\secrets`, 기존 release/venv, 작업 `PMT-Host`, TCP 8765.
 - 개발 시험: checkout의 `.pmt-test`, loopback 18765. 운영 경로는 시험에 사용하지 않는다.
 
@@ -17,7 +17,7 @@
 | C1 | 완료 | 기준 938cc4e; 기록 commit은 git log | worker25 pass/1 POSIX skip; parent BC1 169 pass/3 skip; independent review approve | evidence/2026-10-08/C1/, BC1-integration/ | init/CAS/key lifecycle/ACL 검증. 실제 서비스계정 F1·Linux F2 미실행 |
 | C2 | 완료 | 기준 c88ab73 | worker35pass/1POSIXskip; parent194pass/3skip; closure approve | evidence/2026-10-08/C2/, BC2-integration/ | 실제 TLS/doctor/status/logs/중복 실행 검증. F1 운영 서비스 계정은 미실행 |
 | D1 | 완료 | 기준 a2fd13d; 기록 commit은 git log | worker41pass/2skip + explicit sample1pass; parent16pass/1skip; review approve | evidence/2026-10-08/D1/, D1-preflight/ | 실제 TLS scope/device/권한/secret-free handoff 검증. D2 sample은 외부 격리 경로 |
-| D2 | 진행 | D1 실제 인계 | 구현 시작 | evidence/2026-10-08/D2/ | 클라이언트 connect/link/check, badCA/token/CAS 보존 |
+| D2 | 완료 | 기준 e4bb21a; 기록 commit은 git log | worker80pass/2skip; broad129pass/2skip; review20pass approve; actualD1TLS 연결 | evidence/2026-10-08/D2/ | defaultHTTPS·secret-free CA/권한/compat 요약·CAS/동시writer 보존 검증. 최초broad10fail은 신규B2/D2fixture env격리 문제, 수정후0fail |
 | E1 | 완료 | 기준 81d410a; 기록 commit은 git log | worker21pass; parent85pass/2skip; closure approve | evidence/2026-10-08/E1/ | plan/apply/service/firewall/timer 명령 모형, 실제 등록·도달성·재부팅은 F1/F2 미실행. 운영8765진단 guard 승인 의존 |
 | E2 | 미착수 | — | 미실행 | — | D1·D2 선행, backup/switch |
 | E3 | 미착수 | — | 미실행 | — | E1·E2 선행, 전체 회귀·번들·문서; 종료 후 push/PR 승인 관문 |
@@ -37,6 +37,6 @@
 
 
 ## 현재 재개 지점
-2026-10-08 B2/C2 source 최신 통합194pass/3POSIXskip. B2/C2 기록 완료. D1 완료·D2 진행, E1 final21pass 및 parent85pass/2skip 확정. D2 HTTP-default와 동시 writer 보존 리뷰 수정 중. E3 자산은 준비 중이며 전체 완료는 E2 뒤 판정. A0 nonpassing baseline은 보존하며 E3 whole-suite에서 test ID 단위로 비교한다.
+2026-10-08 B2/C2 source 최신 통합194pass/3POSIXskip. B2/C2 기록 완료. D1 완료·D2 진행, E1 final21pass 및 parent85pass/2skip 확정. D2 HTTP-default·동시 writer 보존 리뷰 완료, pytest-process env fixture격리 후 broad129pass/2skip. E3 자산은 준비 중이며 전체 완료는 E2 뒤 판정. A0 nonpassing baseline은 보존하며 E3 whole-suite에서 test ID 단위로 비교한다.
 Graphify 출력은 로컬 분석 자료이며 커밋하지 않는다. source 안정 지점에서 메인만 AST-only 갱신한다. E3 push/PR 승인과 F1 운영 단계별 승인은 아직 받지 않았다.
-D1 scope 관계 가정은 actual TLS2tests로 검증하고 API 변경 없이 정정했다. D1 실제 인계 파일 이후 D2 시작; E1은 별도 파일에서 명령 생성/모형 시험만 수행한다.
+D1 scope 관계 가정은 actual TLS2tests로 검증하고 API 변경 없이 정정했다. D1/D2 실제 격리TLS 인계 검증 완료; E2는 backup/upgrade/switch 분리 배정. E1은 명령 생성/모형 시험이며 실제 운영 변경 없음.

@@ -83,6 +83,12 @@ def _local(config_root, data_root, profile, profile_hash, configure, product):
     return changed
 
 
+def _assert_profile_unchanged(config_root, expected_profile, expected_hash):
+    current, digest = _read_profile(config_root)
+    if current != expected_profile or digest != expected_hash:
+        raise PmtError("storage_config_conflict", "Storage settings changed while PMT setup was preparing")
+
+
 def prepare(environ, cwd, *, product="claude", configure=configure_storage, probe=probe_storage, python=None):
     """Prepare selected storage; hook callers receive a credential-free environment."""
     profile = None
@@ -115,37 +121,59 @@ def prepare(environ, cwd, *, product="claude", configure=configure_storage, prob
         config_root.mkdir(parents=True, exist_ok=True, mode=0o700)
         data_root.mkdir(parents=True, exist_ok=True, mode=0o700)
         if profile and profile.get("mode") == "local":
-            changed = _local(config_root, data_root, profile, current_hash, configure, product) if not (data_root / "pmt.sqlite3").exists() else False
+            if not (data_root / "pmt.sqlite3").exists():
+                from .connect import setup_lock
+                with setup_lock(config_root):
+                    _assert_profile_unchanged(config_root, profile, current_hash)
+                    changed = _local(config_root, data_root, profile, current_hash, configure, product)
+            else:
+                changed = False
             warning = "Host settings are present. Use pmt storage switch --to hosted to change modes." if host_settings_present else None
             mode = "local"
         elif codex_profile:
             load_credential(config_root, environ)
             changed, warning, mode = False, None, "hosted"
+        elif options.get("handoff_file"):
+            # The plugin SessionStart path shares the exact handoff transaction
+            # used by `pmt connect`; only the input source differs.
+            from .connect import connect as connect_handoff
+            connect_handoff(config_root, options["handoff_file"],
+                            credential=options.get("device_credential"),
+                            environ=environ, configure=configure)
+            profile, current_hash = _read_profile(config_root)
+            changed, warning, mode = True, None, "hosted"
+            environ[ENV_NAME] = options["device_credential"]
         elif not hosted_requested:
-            changed = _local(config_root, data_root, profile, current_hash, configure, product)
+            from .connect import setup_lock
+            with setup_lock(config_root):
+                _assert_profile_unchanged(config_root, profile, current_hash)
+                changed = _local(config_root, data_root, profile, current_hash, configure, product)
             warning, mode = None, "local"
         else:
             if missing:
                 raise PmtError("hosted_settings_missing", "Host settings are incomplete")
-            credential = environ.get(ENV_NAME) or options["device_credential"]
-            credential_before, staged_credential, credential_changed = stage_credential(config_root, credential)
-            options["device_credential"] = credential
-            previous = os.environ.get(ENV_NAME)
-            os.environ[ENV_NAME] = credential
-            try:
-                from ..easy_setup import ensure_profile
-                changed, profile = ensure_profile(config_root, options, configure=configure)
-                if credential_changed and not changed:
-                    probe(str(config_root))
-            except Exception:
-                if credential_changed:
-                    restore_credential(config_root, credential_before, expected_current=staged_credential)
-                raise
-            finally:
-                if previous is None:
-                    os.environ.pop(ENV_NAME, None)
-                else:
-                    os.environ[ENV_NAME] = previous
+            from .connect import setup_lock
+            with setup_lock(config_root):
+                _assert_profile_unchanged(config_root, profile, current_hash)
+                credential = environ.get(ENV_NAME) or options["device_credential"]
+                credential_before, staged_credential, credential_changed = stage_credential(config_root, credential)
+                options["device_credential"] = credential
+                previous = os.environ.get(ENV_NAME)
+                os.environ[ENV_NAME] = credential
+                try:
+                    from ..easy_setup import ensure_profile
+                    changed, profile = ensure_profile(config_root, options, configure=configure)
+                    if credential_changed and not changed:
+                        probe(str(config_root))
+                except Exception:
+                    if credential_changed:
+                        restore_credential(config_root, credential_before, expected_current=staged_credential)
+                    raise
+                finally:
+                    if previous is None:
+                        os.environ.pop(ENV_NAME, None)
+                    else:
+                        os.environ[ENV_NAME] = previous
             # Existing hosted profile without current settings is rejected above; matched/reconfigured profiles are usable.
             environ[ENV_NAME] = credential
             warning, mode = None, "hosted"
