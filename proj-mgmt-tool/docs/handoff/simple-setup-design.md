@@ -74,8 +74,34 @@ ConfigRoot/DataRoot는 사용자에게 묻지 않는다. 기본값 `${XDG_CONFIG
 - hosted 실패를 local DB로 대체하지 않는다.
 - credential을 출력·로그·shared metadata에 넣지 않는다.
 
-## 미확정
+## `pmt done`의 hosted 내부 절차 (실측 확정)
 
-- `pmt done`의 hosted 내부 절차(Step·execution run·verification). 실제 코드 경로 조사 후 확정한다.
-- `CLAUDE_ENV_FILE` 값이 서브에이전트 Bash에도 적용되는지. 실측 필요.
-- Codex는 같은 `pmt` 명령을 쓰되 설정 화면·Hook 주입 방식이 다르다. Claude 완료 후 별도 설계.
+Hosted `finish_task`는 같은 세션의 활성 execution run과 그 run의 source·verification snapshot을 요구한다. 대상 Item 밑에 Step을 두면 미완료 자식 때문에 완료할 수 없고, Step을 끝내면 run이 비활성이 된다. 그래서 project마다 보조 Item(`pmt helper: verification run`)과 그 밑의 `investigate` Step 하나를 만들어 재사용한다. Hosted actor는 `main`이 될 수 없어 `cancel_step`을 쓸 수 없으므로 보조 Step은 Planned로 남고, 실행마다 run만 취소한다.
+
+1. 대상 Item `claim_task` (`pmt start`)
+2. 보조 Step `enqueue_execution` → `prepare_execution` (run `starting`, workspace lock)
+3. `capture_work_basis` (client Git 관찰, Host source snapshot 게시) → `read_source_snapshot`으로 source pin
+4. 테스트 실행, 출력을 `evidence`로 업로드 (`HttpStore.publish_resource`; Host는 `register_resource`를 받지 않음)
+5. tracked 파일 hash·criteria·command·runtime을 담은 `verification_snapshot` 매니페스트 업로드
+6. `publish_verification_snapshot` → `lookup_verification` → `record_verification` (state `valid`)
+7. `finish_task` (claim_ref, verification_ids, run_id, snapshot ref, expected_source) → Done
+8. 성공·실패와 관계없이 보조 run `request_execution_cancel` → `reconcile_execution`(not_started, canceled)로 lock 해제
+
+## 실측 결과 (2026-10-08, 실제 Windows Host, canary)
+
+| 시험 | 결과 |
+|---|---|
+| `/plugin` sensitive 값 저장·Hook 전달 | `~/.claude/.credentials.json` `pluginSecrets`, `settings.json`에는 없음, Hook 값 hash 일치 |
+| 수동 설정 없는 새 세션 SessionStart | 기존 profile 일치(재게시 없음), canary mapping으로 scope 선택, Host overview 수신, 대기 이벤트 0 |
+| 같은 세션 Bash의 `pmt check` | `CLAUDE_ENV_FILE`로 주입된 값으로 인증·조회·기록·재전송 통과 |
+| `pmt add/start/done` | Item Done(rev 3), verification valid |
+| 미커밋 변경 | `uncommitted_changes`로 거부 |
+| 테스트 실패 | `test_failed`, Item 유지, run 정리 |
+| 실패 후 재점유·완료 | Done(rev 5): lock이 해제됐음을 확인 |
+
+## 알려진 제한
+
+- 보조 Item/Step이 project마다 Planned로 하나씩 남는다(제품 제약).
+- 같은 세션에서 inventory hash가 같고 task만 다르면 client private inventory 파일이 `basis_detail_conflict`로 충돌한다(`hosted_continuity._write_private_inventory_detail`). 보조 Item을 고정해 재사용하므로 `pmt done`에서는 발생하지 않는다.
+- `CLAUDE_ENV_FILE` 값이 서브에이전트 Bash에도 적용되는지는 미확인.
+- Codex는 같은 `pmt` 명령을 쓰되 설정 입력·Hook 주입 방식이 다르다. 별도 작업.
