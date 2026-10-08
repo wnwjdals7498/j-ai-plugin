@@ -120,6 +120,8 @@ def _runtime_path_safe(path):
 def serve_host(config_root, *, listen=None, allow_loopback_http=False):
     from .config import config_path
     config, _ = load_config_snapshot(config_path(config_root))
+    from .runtime_paths import resolve_runtime_config
+    config = resolve_runtime_config(config, config_root)
     data_root = Path(config["paths"]["data_root"])
     configured_account = config["service"]["account"]
     expected_account = validate_service_account(configured_account)
@@ -128,8 +130,10 @@ def serve_host(config_root, *, listen=None, allow_loopback_http=False):
         raise PmtError("service_account_mismatch", "Run the Host as the configured service account")
     if not (data_root / "pmt.sqlite3").is_file() or not (Path(config_root) / "profile.json").is_file():
         raise PmtError("host_schema_unsupported", "Initialized Host database and profile are required before serve")
-    for directory in (Path(config_root), *map(Path, config["paths"].values())):
-        if not directory.is_dir() or not _runtime_path_safe(directory) or not os.access(directory, os.R_OK | os.W_OK):
+    directories = [(Path(config_root), os.R_OK | os.X_OK),
+                   *[(Path(value), os.R_OK | os.W_OK) for value in config["paths"].values()]]
+    for directory, access in directories:
+        if not directory.is_dir() or not _runtime_path_safe(directory) or not os.access(directory, access):
             raise PmtError("path_unsafe", "Configured Host path is unavailable or unsafe")
     keys = {}
     primary_id = config["claim_key"]["key_id"]

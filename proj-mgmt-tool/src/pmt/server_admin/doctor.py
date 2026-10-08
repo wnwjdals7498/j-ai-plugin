@@ -88,6 +88,8 @@ def run_doctor(config_root):
     try:
         config, _ = load_config_snapshot(Path(config_root) / "host-config.json")
         validate_config(config)
+        from .runtime_paths import resolve_runtime_config
+        config = resolve_runtime_config(config, config_root)
         checks.append(_result("config", "ok", message="Host configuration schema and revision are valid"))
     except PmtError as exc:
         checks.append(_result("config", "fail", exc.code, "Host configuration could not be validated", "Run pmt-server config validate and repair the reported fields"))
