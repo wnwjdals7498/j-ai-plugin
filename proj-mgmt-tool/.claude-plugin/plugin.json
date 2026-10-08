@@ -1,7 +1,7 @@
 {
   "name": "pmt-lifecycle",
-  "version": "0.4.0",
-  "description": "Project memory and lifecycle events for Claude Code.",
+  "version": "0.5.0",
+  "description": "PMT: project memory and lifecycle events with local or hosted storage.",
   "author": {
     "name": "PMT"
   },
@@ -10,8 +10,45 @@
     "python_path": {
       "type": "file",
       "title": "Python 3.13+ executable",
-      "description": "Absolute path of the Python 3.13 or later interpreter that runs PMT hooks.",
+      "description": "Absolute path of the Python 3.13 or later interpreter that runs PMT hooks, for example /opt/python3.13/bin/python3.13 or C:\\Python313\\python.exe.",
       "required": true
+    },
+    "host_url": {
+      "type": "string",
+      "title": "PMT Host URL",
+      "description": "HTTPS address of the Windows PMT Host, for example https://222.234.220.199:8765."
+    },
+    "host_ca_file": {
+      "type": "file",
+      "title": "Host CA certificate",
+      "description": "Absolute path of the Host's public root CA PEM. Leave empty when the Host certificate is publicly trusted."
+    },
+    "device_id": {
+      "type": "string",
+      "title": "Device ID",
+      "description": "Device UUID issued by the PMT Host for this computer."
+    },
+    "namespace_id": {
+      "type": "string",
+      "title": "Namespace ID",
+      "description": "PMT Host namespace UUID."
+    },
+    "actor": {
+      "type": "string",
+      "title": "Actor",
+      "description": "Actor name issued by the PMT Host for this device."
+    },
+    "device_credential": {
+      "type": "string",
+      "title": "Device credential",
+      "description": "Credential issued by the PMT Host for this device. Stored in Claude Code secure storage.",
+      "sensitive": true
+    },
+    "handoff_file": {
+      "type": "file",
+      "title": "PMT handoff file",
+      "description": "Optional pmt-handoff/v1 file. With a credential, connects this device to its PMT Host."
     }
-  }
+  },
+  "displayName": "PMT"
 }

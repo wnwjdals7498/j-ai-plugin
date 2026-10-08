@@ -27,3 +27,7 @@
 - 확정 의미: D2는 신규 프로필의 초기 모드 판정이다. 기존 local→hosted 전환과 hosted→local 전환은 명시 명령으로만 수행하며 실패 fallback은 없다. D3는 세 보관 방식의 지원 범위 결정이며 운영 키 이전 자체의 승인은 아니다.
 - 버전 계약 선택: 플러그인 release 0.5.0, Python Core 0.4.1, SQLite 5, graph 1, protocol 1, Host API v1. communication §5.1의 동시 버전 갱신은 동일 숫자로 강제한다는 뜻으로 해석하지 않는다. Core major.minor 불변 규칙을 우선하며 server version은 release와 Core를 별도로 출력한다.
 - A1 공개 내부 인터페이스: handoff.validate_handoff/load_handoff/build_handoff (검증된 JSON dict), host.cli.serve_host(db,args,claim_keys=None,log_config=None), AuthRegistry.list_devices() (credential/hash 제외). 상세 인계 계약을 A1 종료에 기록한다.
+
+- D1 구현: Claude root manifest의 displayName=PMT, Codex 호환 manifest의 interface.displayName=PMT. 설치 ID는 pmt-lifecycle. 공식 문서와 현재 설치된 OpenAI 번들의 호환 manifest를 확인했다.
+
+- A1: pmt-server script 연결만 추가하면 없는 모듈로 설치되는 문제가 있어 server_admin의 실행 가능한 version 진입점을 함께 마련한다. 해당 초기 세 파일의 소유권은 A1 완료 후 C1 작업자에게 인계한다. 나머지 서버 명령은 C1 이후 구현하며 미완료 기능을 성공으로 출력하지 않는다.
