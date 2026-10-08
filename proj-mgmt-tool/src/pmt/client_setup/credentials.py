@@ -5,7 +5,7 @@ import ctypes
 import os
 import stat
 import tempfile
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from ctypes import wintypes
 from pathlib import Path
 
@@ -209,10 +209,10 @@ def stage_credential(config_root, credential):
         raise PmtError("credential_store_unreadable", "Host credential could not be staged") from exc
 
 
-def restore_credential(config_root, snapshot, *, expected_current=None):
+def restore_credential(config_root, snapshot, *, expected_current=None, _lock_held=False):
     directory, path = _paths(config_root)
     try:
-        with _credential_lock(config_root):
+        with (nullcontext() if _lock_held else _credential_lock(config_root)):
             _validate_paths(directory, path, creating=True)
             try:
                 current = path.read_bytes()

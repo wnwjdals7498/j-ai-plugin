@@ -557,6 +557,18 @@ def _print_rows(rows):
 def build_parser():
     parser = argparse.ArgumentParser(prog="pmt", description="PMT 간편 명령")
     sub = parser.add_subparsers(dest="command", required=True)
+    connect = sub.add_parser("connect", help="서버 인계 파일로 Host 연결")
+    connect.add_argument("--handoff", required=True)
+    credential = connect.add_mutually_exclusive_group()
+    credential.add_argument("--credential-file")
+    credential.add_argument("--credential-stdin", action="store_true")
+    connect.add_argument("--dry-run", action="store_true")
+    connect.set_defaults(func=cmd_connect)
+    sub.add_parser("disconnect", help="저장된 Host credential만 제거").set_defaults(func=cmd_disconnect)
+    storage = sub.add_parser("storage", help="저장 연결 설정 확인")
+    storage_sub = storage.add_subparsers(dest="storage_command", required=True)
+    storage_sub.add_parser("status", help="저장된 연결 설정을 읽기 전용으로 표시").set_defaults(func=cmd_storage_status)
+    storage_sub.add_parser("probe", help="Host 연결과 호환성을 실제 확인").set_defaults(func=cmd_storage_probe)
     sub.add_parser("check", help="연결·인증·기록·재전송 확인").set_defaults(func=cmd_check)
     link = sub.add_parser("link", help="현재 checkout을 PMT project에 연결")
     link.add_argument("project", nargs="?")
@@ -606,6 +618,102 @@ def cmd_projects(args):
 def cmd_mode(args):
     from .client_setup.local_commands import mode
     return mode(sys.modules[__name__])
+
+
+def _read_credential_input(args):
+    if args.credential_file:
+        try:
+            with Path(args.credential_file).open("rb") as stream:
+                raw = stream.read(65537)
+        except OSError as error:
+            raise PmtError("credential_input_unavailable", "Credential input file could not be read") from error
+        if len(raw) > 65536:
+            raise PmtError("credential_input_invalid", "Credential input exceeds its size limit")
+    elif args.credential_stdin:
+        stream = getattr(sys.stdin, "buffer", None)
+        raw = stream.read(65537) if stream is not None else sys.stdin.read(65537).encode("utf-8")
+        if len(raw) > 65536:
+            raise PmtError("credential_input_invalid", "Credential input exceeds its size limit")
+    else:
+        return None
+    try:
+        value = raw.decode("utf-8").rstrip("\r\n")
+    except UnicodeError as error:
+        raise PmtError("credential_input_invalid", "Credential input must be UTF-8 text") from error
+    if not value or "\x00" in value or "\n" in value or "\r" in value:
+        raise PmtError("credential_input_invalid", "Credential input must contain one nonempty line")
+    return value
+
+
+def cmd_connect(args):
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    from .client_setup.connect import connect
+    result = connect(config_root, args.handoff, credential=_read_credential_input(args), dry_run=args.dry_run)
+    summary = result["connect_summary"]
+    print("Handoff validated only; no files written and no Host contact." if args.dry_run
+          else "Connected to PMT Host; protected credential and profile saved.")
+    print(f"Endpoint: {summary['endpoint']}")
+    print(f"Namespace: {summary['namespace_id']}")
+    print(f"Actor: {summary['actor']}")
+    print(f"Scopes: {', '.join(summary['scopes'])}")
+    print(f"Permissions: {', '.join(summary['permissions'])}")
+    compatibility = summary["compatibility"]
+    versions = (f"Core {compatibility.get('core_version', compatibility.get('core'))}; "
+                f"DB schema {compatibility.get('db_schema')}; "
+                f"graph schema {compatibility.get('graph_schema')}; "
+                f"protocol {compatibility.get('protocol_versions', compatibility.get('protocol'))}")
+    print(f"Compatibility ({summary['compatibility_source']}): {versions}")
+    ca_sha256 = summary.get("ca_sha256")
+    print(f"Public CA SHA-256: {ca_sha256}" if ca_sha256 else "CA trust: system trust store")
+    return 0
+
+
+def cmd_disconnect(args):
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    from .client_setup.connect import disconnect
+    removed = disconnect(config_root)
+    print("Saved Host credential removed." if removed else "No saved Host credential.")
+    return 0
+
+
+def cmd_storage_status(args):
+    from .storage_config import storage_status
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    status = storage_status(config_root)
+    print(f"mode: {status['mode'] if status['configured'] else 'unconfigured'}")
+    print(f"ConfigRoot: {config_root}")
+    if status["configured"] and status["mode"] == "hosted":
+        for field in ("endpoint", "actor", "namespace_id"):
+            print(f"{field}: {status[field]}")
+        print(f"CA: {'configured' if status.get('ca_configured') else 'system trust store'}")
+        from .client_setup.credentials import has_credential_store
+        print(f"saved credential: {'present' if has_credential_store(config_root) else 'absent'}")
+    return 0
+
+
+def cmd_storage_probe(args):
+    from .storage_config import probe_storage
+    from .client_setup.credentials import ENV_NAME, load_credential
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    profile, _digest = _read_profile(config_root)
+    original = os.environ.get(ENV_NAME)
+    if profile and profile["mode"] == "hosted":
+        try:
+            load_credential(config_root, os.environ)
+        except PmtError as error:
+            raise EasyError(error.code, "PMT credential is unavailable; check the protected credential store.") from error
+    try:
+        result = probe_storage(str(config_root))
+    finally:
+        if original is None:
+            os.environ.pop(ENV_NAME, None)
+        elif profile and profile["mode"] == "hosted":
+            os.environ[ENV_NAME] = original
+    print(f"mode: {result['mode']} | configured: {str(result['configured']).lower()}")
+    if result.get("host_preflight"):
+        preflight = result["host_preflight"]
+        print(f"Host compatible | core {preflight.get('core_version')} | db {preflight.get('db_schema')} | graph {preflight.get('graph_schema')}")
+    return 0
 
 
 def main(argv=None):

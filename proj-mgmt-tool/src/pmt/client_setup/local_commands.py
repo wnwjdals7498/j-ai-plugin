@@ -139,7 +139,8 @@ def _read_projects(config_root):
                 flattened.append({"name": name, "project_id": project_id,
                                   "repository_id": repository["repository_id"],
                                   "repository_name": repository["name"], "remote": repository.get("remote"),
-                                  "local_root": project.get("local_root")})
+                                  "local_root": project.get("local_root"),
+                                  **({"graph_path": repository["graph_path"]} if "graph_path" in repository else {})})
         elif repositories is not None:
             raise PmtError("client_state_invalid", "Project repositories must be a list")
         elif _is_uuid(project.get("repository_id")):
@@ -160,6 +161,29 @@ def _save_projects(config_root, entries):
                 merged.append(item)
                 keys.add(key)
         _write_json(Path(config_root) / _PROJECTS_FILE, {"schema_version": 1, "projects": merged})
+
+
+def merge_handoff_projects(config_root, entries):
+    """Merge validated server project names while retaining local annotations."""
+    with _state_lock(config_root, "projects"):
+        latest = _read_projects(config_root)
+        path = Path(config_root) / _PROJECTS_FILE
+        try:
+            before = path.read_bytes()
+        except FileNotFoundError:
+            before = None
+        merged = {(item["project_id"], item["repository_id"]): item for item in latest}
+        for incoming in entries:
+            key = (incoming["project_id"], incoming["repository_id"])
+            if key in merged:
+                current = merged[key]
+                for field in ("name", "repository_name", "remote", "graph_path"):
+                    if incoming.get(field) is not None:
+                        current[field] = incoming[field]
+            else:
+                merged[key] = dict(incoming)
+        _write_json(path, {"schema_version": 1, "projects": list(merged.values())})
+        return before, path.read_bytes()
 
 
 def _scope(cli, kind, slug, *, parent_id=None, body=None):

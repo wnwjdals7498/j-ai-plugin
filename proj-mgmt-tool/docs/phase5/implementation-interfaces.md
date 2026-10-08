@@ -44,3 +44,9 @@ pmt-server console script는 실행 가능한 version 진입점에 연결됐다.
 S-11의 repository 논리 UUID 가정은 현재 Core와 다르므로 상세 명세를 정정했다.
 create_scope의 payload는 kind/slug와 parent_id/body, 부모 관계는 environment→repository→project다. 실제 HTTPS write-only bootstrap으로 세 종류 생성이 통과했다. 임의 repository UUID만 mapping에 넣는 workspace 요청은 repository_scope_mismatch로 거부됐다.
 project add는 정식 operation으로 environment/repository/project 관계를 마련하고 registry project를 게시한다. 첫 repo add는 그 실제 parent repository ID에 remote/name/graph_path metadata를 연결한다. 현재 한 project는 한 repository에만 bound된다; 두 번째 다른 repository를 같은 project에 붙이는 것은 거부하고 별도 project를 안내한다. API/schema/claim/auth 변경 없음.
+
+## D2 인계와 E2 전환 준비
+
+connect(config_root, handoff_path, *, credential=None, dry_run=False, environ=None, configure=configure_storage)는 HTTPS-only 검증·probe·CAS·projects/client metadata를 연결하고 비밀 없는 connection_summary를 반환한다. disconnect는 저장credential만 삭제한다. setup_lock(config_root)는 관리 CLI/Hook 연결을 직렬화하며 Core config-lock과 별도다.
+merge_handoff_projects는 프로젝트 lock 안에서 실제 before/after bytes를 반환한다. write_client_metadata_snapshot은 Root lock 안에서 실제 before/after bytes를 반환한다. rollback은 projects→ConfigRoot 순서, credential restore의 _lock_held는 같은 Root config-lock을 보유할 때만 사용한다.
+E2 source: MigrationCoordinator export는 maintenance meta를 쓰므로 원본 DB에 그대로 호출하면 file hash 보존을 보장하지 않는다. 격리 probe에서 writable BEGIN IMMEDIATE(no SQLwrites)로 다른 writer를 막고 별도 RO connection의 SQLitebackup이 성공했으며 rollback 후 원본mainfileSHA가 불변이었다. E2는 검증된 snapshot에 기존 migration을 적용하는 방식을 사용한다. Core/API/schema 변경 없음.

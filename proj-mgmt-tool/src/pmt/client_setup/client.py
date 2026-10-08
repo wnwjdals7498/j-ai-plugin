@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from ..errors import PmtError
-from ..storage_config import _read_profile
+from ..storage_config import _config_lock, _read_profile
 from .credentials import has_credential_store
 
 _SOURCES = {"plugin", "connect", "legacy"}
@@ -51,6 +51,26 @@ def is_legacy_root(config_root):
 
 
 def write_client_metadata(config_root, *, source, python_path, mode):
+    path, _before, _after = write_client_metadata_snapshot(
+        config_root, source=source, python_path=python_path, mode=mode)
+    return path
+
+
+def write_client_metadata_snapshot(config_root, *, source, python_path, mode):
+    """Update metadata under the root lock and return the exact before/after bytes."""
+    root = Path(config_root)
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with _config_lock(root):
+        path = root / "client.json"
+        try:
+            before = path.read_bytes()
+        except FileNotFoundError:
+            before = None
+        written = _write_client_metadata_locked(root, source=source, python_path=python_path, mode=mode)
+        return written, before, written.read_bytes()
+
+
+def _write_client_metadata_locked(config_root, *, source, python_path, mode):
     if source not in _SOURCES or mode not in {"local", "hosted"}:
         raise PmtError("client_metadata_invalid", "Client metadata values are invalid")
     if not isinstance(python_path, str) or not python_path:
