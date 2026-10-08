@@ -1,0 +1,11 @@
+{
+  "Task": "D1-preflight",
+  "Purpose": "Verify existing scope relationships before D1 implementation",
+  "Command": "python -m pytest -q tests/test_phase5_registry_contract.py --basetemp=C:/PMT/work/phase5-test/registry-contract-final",
+  "ExitCode": 0,
+  "Passed": 2,
+  "Environment": "isolated real TLS Host fixture; Python3.14.5rc1",
+  "Contract": "environment->repository->project via existing create_scope; logical-only repo rejected",
+  "HostApiChanged": false,
+  "OperatingHostChanged": false
+}

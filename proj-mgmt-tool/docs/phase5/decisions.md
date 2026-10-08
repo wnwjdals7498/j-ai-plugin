@@ -31,3 +31,11 @@
 - D1 구현: Claude root manifest의 displayName=PMT, Codex 호환 manifest의 interface.displayName=PMT. 설치 ID는 pmt-lifecycle. 공식 문서와 현재 설치된 OpenAI 번들의 호환 manifest를 확인했다.
 
 - A1: pmt-server script 연결만 추가하면 없는 모듈로 설치되는 문제가 있어 server_admin의 실행 가능한 version 진입점을 함께 마련한다. 해당 초기 세 파일의 소유권은 A1 완료 후 C1 작업자에게 인계한다. 나머지 서버 명령은 C1 이후 구현하며 미완료 기능을 성공으로 출력하지 않는다.
+- B1 구현 선택: legacy ConfigRoot와 기존 XDG DataRoot가 함께 존재하고 PMT_DATA_ROOT가 없으면 둘 다 유지한다. 새 설치만 Windows APPDATA/LOCALAPPDATA 기본값을 적용한다. 기존 DB/pending이 새 빈 경로 뒤로 사라지는 것을 막으며 이동/병합하지 않는다.
+- 동일 ConfigRoot는 하나의 Host device/actor/environment 신원을 가진다. Claude/Codex가 같은 root를 쓰면 같은 신원을 공유한다. 서로 다른 기기 신원을 발급하면 기존 PMT_CONFIG_ROOT override로 root를 분리해야 한다. setup-windows의 같은 root+별도 device 권고는 후속 문서에서 수정한다. 프로필/인증 schema 변경 없음.
+- B1 검증은 실제 Core hooks.main까지 제품 인자를 전달하는 시험을 포함한다. 상위 bridge를 통째로 mock한 결과만으로 Hook 연결 완료를 판정하지 않는다.
+- C1 실제 서비스 계정 ACL/키 읽기는 F1에서 확인한다. 현재 운영 supervisor는 보호 파일에서 읽은 claim key를 자식 프로세스 환경에 주입한다. 관리자 프로세스에서 같은 env 이름의 값이 있다고 추정하지 않는다. 기존 키 파일·구동 계정 변경은 F1 승인 관문에서 별도 계획한다.
+
+- D1 등록 모델 정정: S-11의 “repository는 논리 UUID뿐” 가정이 현재 Core와 다르다. 기존 workspace 경계는 실제 repository scope와 project parent/binding을 검사한다. actual HTTPS로 write-only bootstrap의 environment→repository→project 생성과 논리-only repository UUID 거부를 검증했다(2 tests pass). 계약을 바꾸지 않고 정식 create_scope로 필요한 부모들을 만든다. 한 project scope는 하나의 실제 repository에 속하므로 다른 repository는 별도 project로 등록한다. 임의의 business SQL/Host allowlist 변경은 하지 않는다.
+
+- C10 fixture 수정: 관리된 캐시 없는 non-SessionStart 이벤트는 이제 not_configured 경고로 Core 전에 중단한다. 기존 DB/pending 동시 장애 시험의 Native 메시지 기대값만 이에 맞추고, 직접 Core 장애·원본 보존 검증은 유지한다. 실제 구버전 profile.json+DB direct-root 경로는 별도로 호환해야 하며 새 storage.json으로 억지 초기화하지 않는다.
