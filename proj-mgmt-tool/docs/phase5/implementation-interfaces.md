@@ -38,3 +38,9 @@ pmt-server console script는 실행 가능한 version 진입점에 연결됐다.
 
 최신52 tests pass, 실제격리 HTTPS health 본문과 인증 compatibility 포함. 설치 pmt-server.exe version--json exit0. Claude plugin validate exit0. 독립 리뷰49개 focused tests pass, 추가 blocker 없음.
 운영 Host/사용자 DB/설정/기기/비밀 변경 없음. A0의 기존 실패는 별도 baseline으로 보존.
+
+## D1 등록에서 지킬 기존 scope 계약
+
+S-11의 repository 논리 UUID 가정은 현재 Core와 다르므로 상세 명세를 정정했다.
+create_scope의 payload는 kind/slug와 parent_id/body, 부모 관계는 environment→repository→project다. 실제 HTTPS write-only bootstrap으로 세 종류 생성이 통과했다. 임의 repository UUID만 mapping에 넣는 workspace 요청은 repository_scope_mismatch로 거부됐다.
+project add는 정식 operation으로 environment/repository/project 관계를 마련하고 registry project를 게시한다. 첫 repo add는 그 실제 parent repository ID에 remote/name/graph_path metadata를 연결한다. 현재 한 project는 한 repository에만 bound된다; 두 번째 다른 repository를 같은 project에 붙이는 것은 거부하고 별도 project를 안내한다. API/schema/claim/auth 변경 없음.

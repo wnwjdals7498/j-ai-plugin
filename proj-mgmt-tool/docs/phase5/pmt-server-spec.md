@@ -272,7 +272,7 @@ pmt-server service install --apply | remove --apply | status | start | stop | re
 
 **목적**: Host에 project scope를 만들고 저장소 식별자를 관리해 인계에 넣는다.
 
-**현재**: `issue_device`는 존재하는 scope만 허용한다. project 생성은 `"*"` scope 기기의 `create_scope` operation으로만 가능하고, 이를 위한 bootstrap 절차가 문서로만 있다. repository_id는 Host에 저장되는 개체가 아니라 mapping의 논리 UUID다.
+**현재**: `issue_device`는 존재하는 scope만 허용한다. project 생성은 `"*"` scope 기기의 `create_scope` operation으로만 가능하고, 이를 위한 bootstrap 절차가 문서로만 있다. 현재 Host workspace 계약은 실제 repository scope와 project→repository 관계를 검사한다. 논리 UUID만 만들어 registry에 넣으면 repository_scope_mismatch로 거부된다. 이 차이는 격리된 실제 HTTPS 시험으로 확인했다.
 
 **명령**
 ```
@@ -283,11 +283,11 @@ pmt-server project list
 
 **동작 (`project add`)**: 실행 중인 Host에 대해
 1. 임시 관리 기기 발급(`issue_device(actor="pmt-server-bootstrap", scopes=["*"], permissions=["write"])`, 로컬 DB 관리 경로).
-2. 루프백 또는 `public_url`로 HTTPS 세션 등록 → `create_scope(kind=project, title)` (정식 operation, 직접 SQL 아님).
+2. 루프백 또는 `public_url`로 HTTPS 세션 등록 → 기존 kind/parent 계약에 맞게 environment → repository → project를 `create_scope(kind, slug, parent_id)`로 생성한다. project는 실제 repository scope를 부모로 가진다. title이 있으면 기존 body metadata에 담는다(정식 operation, 직접 SQL 아님).
 3. 성공·실패와 관계없이 임시 기기 `revoke_device`.
 4. `registry.projects`에 `{name, project_id}` CAS 추가.
 
-`repo add`는 `repository_id`(uuid4)를 생성해 registry에만 기록한다(Host DB 변경 없음).
+`repo add`는 project 생성 시 마련된 실제 repository scope ID를 확인해 registry의 이름·remote·graph_path와 연결한다(이 단계의 업무 DB 쓰기는 없음). 현재 Core에서 한 project scope는 한 repository에 속한다. 다른 repository를 같은 project에 임의로 연결하지 않고 별도 PMT project를 만들도록 안내한다. Host API/schema/parent 규칙은 변경하지 않는다.
 
 **오류**: `host_unreachable`, `project_exists`(같은 name), `bootstrap_revoke_failed`(이 경우 기기 ID를 출력하고 수동 revoke 안내).
 
