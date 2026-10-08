@@ -13,7 +13,7 @@
 | A1 | 완료 | 기준 6161335; 기록 commit은 git log | 최신52 tests pass, exit0; 실제 HTTPS health/compat; console script smoke; Claude validate; independent review approve | evidence/2026-10-08/A1/ | 공통 API 인계: implementation-interfaces.md. B1/C1 독립 착수 가능 |
 | B1 | 완료 | 기준 938cc4e; 기록 commit은 git log | worker31 pass/2 POSIX skip; parent68 pass/2 skip; compile0; independent review approve | evidence/2026-10-08/B1/ | 구현/Windows 범위 검증 완료. 실제 Linux/다른 Windows 계정/제품 세션은 F2/F3, 실제 hosted 인계 D2 |
 | B2 | 진행 | B1 인계 | 준비 | evidence/2026-10-08/B2/ | gpt-6-luna: local commands/link/check/mode |
-| B3 | 진행 | B1 06e18ec | 별도 작업자 준비 | evidence/2026-10-08/B3/ | gpt-6-luna: integrations/bin/pmt_easy 진입점; B2와 disjoint |
+| B3 | 완료 | 기준 06e18ec; 기록 commit은 git log | worker8entry +23focusedhook; parent42pass/0fail; actualbuiltWindowsPS/GitBash exit0+missingPythonexit3 | evidence/2026-10-08/B3/ | CLI frontdoors/공용 CodexHook 검증; 실제 제품 trust/새세션·Linux는 F2/F3 미실행 |
 | C1 | 완료 | 기준 938cc4e; 기록 commit은 git log | worker25 pass/1 POSIX skip; parent BC1 169 pass/3 skip; independent review approve | evidence/2026-10-08/C1/, BC1-integration/ | init/CAS/key lifecycle/ACL 검증. 실제 서비스계정 F1·Linux F2 미실행 |
 | C2 | 진행 | C1 인계 | 준비 | evidence/2026-10-08/C2/ | gpt-6-luna: tls/doctor/serve/logs/status |
 | D1 | 미착수 | — | 미실행 | — | C2 선행, 서버 |
