@@ -20,7 +20,7 @@
 | D2 | 완료 | 기준 e4bb21a; 기록 commit은 git log | worker80pass/2skip; broad129pass/2skip; review20pass approve; actualD1TLS 연결 | evidence/2026-10-08/D2/ | defaultHTTPS·secret-free CA/권한/compat 요약·CAS/동시writer 보존 검증. 최초broad10fail은 신규B2/D2fixture env격리 문제, 수정후0fail |
 | E1 | 완료 | 기준 81d410a; 기록 commit은 git log | worker21pass; parent85pass/2skip; closure approve | evidence/2026-10-08/E1/ | plan/apply/service/firewall/timer 명령 모형, 실제 등록·도달성·재부팅은 F1/F2 미실행. 운영8765진단 guard 승인 의존 |
 | E2 | 완료 | 서버9130945; 클라이언트 기록commit은git log | 서버12focused/85adjacent2skip; client19focused/148broad2skip; final3.13client39pass; independent closures approve | evidence/2026-10-08/E2-server/, E2-client/, E2-integration/ | 실제격리TLS 양방향switch/export/DBhash불변/offline거부. 실제pip/service/운영upgrade 미실행 |
-| E3 | 진행 | 기준E2완료 | 자산15fixture/실제Codexdiscovery/manifest0, whole회귀준비 | evidence/2026-10-08/E3-assets/, E3-codex/ | 최종fullpytest/A0 test-ID 비교·releasebuild·문서검증, 종료후push/PR승인관문 |
+| E3 | 진행 | 기준E2완료 | 자산15fixture/실제Codexdiscovery/manifest0, whole회귀준비 | evidence/2026-10-08/E3-assets/, E3-codex/ | wholefirst921pass26fail8skip0error; 신규6원인수정후7pass, ZIPUnix보강package25pass/기존Windows1fail, independentdeltaapprove. 최종sourcecommit뒤whole/freshrelease 재확인 후push/PR관문 |
 | F1 | 미착수 | — | 미실행 | — | E3·push된 commit 선행. 운영 변경은 인계 문서 §6 각 승인 관문 필요 |
 | F2 | 미착수 | — | 이 컴퓨터에서 실행 금지 | — | F1의 비밀 없는 실값으로 Linux 개발 서버 인계 작성 |
 | F3 | 미착수 | — | 이 컴퓨터에서 실행 금지 | — | F1의 비밀 없는 실값으로 Windows 개발 PC 인계 작성 |

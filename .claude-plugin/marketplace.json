@@ -9,9 +9,18 @@
       "name": "pmt-lifecycle",
       "source": "./proj-mgmt-tool",
       "description": "Project memory and lifecycle events with local or hosted storage.",
-      "version": "0.4.0",
+      "version": "0.5.0",
+      "category": "Productivity",
+      "strict": true
+    },
+    {
+      "name": "pmt-server",
+      "source": "./pmt-server",
+      "description": "Configure and operate the PMT storage Host.",
+      "version": "0.5.0",
       "category": "Productivity",
       "strict": true
     }
-  ]
+  ],
+  "version": "0.5.0"
 }

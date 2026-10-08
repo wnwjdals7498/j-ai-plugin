@@ -1,0 +1,14 @@
+#!/bin/sh
+if [ -z "${PMT_SERVER_PYTHON:-}" ] || [ -z "${PMT_HOST_CONFIG_ROOT:-}" ]; then
+    echo "Set PMT_SERVER_PYTHON and PMT_HOST_CONFIG_ROOT to the installed Host paths." >&2
+    exit 3
+fi
+python=$PMT_SERVER_PYTHON
+case "$python" in
+    ?:\\*) python=$(printf '%s' "$python" | tr '\\' '/') ;;
+esac
+if [ ! -x "$python" ]; then
+    echo "PMT_SERVER_PYTHON does not point to an executable Host venv Python." >&2
+    exit 3
+fi
+exec "$python" -m pmt.server_admin --config-root "$PMT_HOST_CONFIG_ROOT" "$@"

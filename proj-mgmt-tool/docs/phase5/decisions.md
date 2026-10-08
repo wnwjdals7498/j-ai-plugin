@@ -40,9 +40,14 @@
 
 - C10 fixture 수정: 관리된 캐시 없는 non-SessionStart 이벤트는 이제 not_configured 경고로 Core 전에 중단한다. 기존 DB/pending 동시 장애 시험의 Native 메시지 기대값만 이에 맞추고, 직접 Core 장애·원본 보존 검증은 유지한다. 실제 구버전 profile.json+DB direct-root 경로는 별도로 호환해야 하며 새 storage.json으로 억지 초기화하지 않는다.
 
-- S-18 Codex server manifest는 hooks=[]를 명시한다. Codex는 hooks 누락 시 hooks/hooks.json을 기본 발견하므로 Claude 전용 SessionStart를 잘못 가져오지 않도록 한다. 근거: https://developers.openai.com/plugins/build/plugins 의 Bundled MCP servers and lifecycle hooks, lines1355-1374 (2026-10-08 확인).
+- S-18 서버 Claude Hook은 hooks/claude.json으로 분리하며 generic hooks/hooks.json을 생성하지 않는다. Codex manifest hooks=[]는 유지하되 이것만으로 차단된다고 주장하지 않는다. 공식 설명은 explicit override를 안내하지만 실제 Codex0.160.1 hooks/list가 빈 배열에도 generic Hook을 발견했다. 실제 RPC 결과가 현재 버전 근거다. 공식 참고: https://developers.openai.com/plugins/build/plugins Bundled MCP servers and lifecycle hooks lines1355-1374; 실측 evidence/2026-10-08/E3-codex/.
 - E1 systemd LoadCredential alias는 claim-<key_id>/tls-key. runtime CREDENTIALS_DIRECTORY는 in-memory 경로만 변경하며 persisted config는 불변. placeholder offline source는 HostConfigRoot/secrets/claim-<key_id>.key와 HostConfigRoot/tls/tls-key. 근거: https://raw.githubusercontent.com/systemd/systemd/main/man/systemd.exec.xml Credentials LoadCredential lines3450-3460,3522-3532; Environment Variables CREDENTIALS_DIRECTORY lines3808-3814. 실제 Linux 실행은 F2 미실행.
 - 초기화된 Host의 ConfigRoot는 기존 environment profile을 읽기만 하므로 serve preflight는 read/traverse를 요구한다. data/log/backup은 read/write를 요구한다. E1의 관리자 소유·서비스 read-only config ACL과 일치하며 missing profile은 여전히 거부한다.
 - 운영 포트8765 doctor/status health 제한 제거는 자동 승인 검토가 운영 안전 경계 약화로 거부했다. 제한을 보존했다. F1 승인 후 별도 재검토할 항목이며 개발 시험에서는 운영 경로·포트를 사용하지 않는다.
 - C03 클라이언트 프로필은 기존 Core 규약대로 HTTPS-only. pmt connect 일반/dry-run 모두 loopback HTTP 인계도 거부한다. X02 validator의 explicit loopback 진단 옵션은 schema 시험용 API에만 남긴다; 저장 프로필/API 규약을 확대하지 않는다.
 - D2 connect는 관리 연결 setup-lock과 프로젝트→ConfigRoot rollback lock 순서를 사용한다. configure의 반환 hash와 같은 bytes만 자기 게시로 취급하며 다른 writer가 profile을 게시하면 그 profile과 의존 credential/CA/marker를 보존하고 충돌을 보고한다.
+- 서버 관리 CLI의 파일 생성/서비스 변경은 --apply로 명시 적용한다. handoff create와 service start/stop/restart의 문서 예제를 실제 dry-run 기본값에 맞췄다. 조회/serve는 각 기존 의미를 유지한다.
+- S17 새 release venv 설치는 --source-ref full immutable SHA를 요구한다. 플러그인0.5.x와 Core package0.4.x가 달라 pip version selector를 꾸며내지 않는다. 준비된 후보는 실제 release/version/schema/deps/Python 확인 후 사용한다. 후보 doctor는 service-agnostic scratch에서 실행하며 실제 서비스 조건은 service plan이 담당한다.
+- Native upgrade installer 직접 호출을 모의 검증하려던 동작은 자동 검토가 pip/subprocess 실행 가능성으로 거부했다. 실제 호출 없이 Native가 재사용하는 명령 생성/정적 binding 검증으로 대체한다. 실제 설치 검증은 F1 승인 뒤이며 현재 통과로 기록하지 않는다.
+- E3 전체회귀의 신규6실패는새C1spawn시험2개의package import격리와기존Phase2verifier Core patch기대값불일치였다. C1fixture만src우선순위로격리하고verifier exactCore기대값을0.4.1로갱신했다. 기존rootguard/versionequality/schema5/assertions와과거20실패는완화하지 않는다.
+- ZIP creator는Unix(3)로명시하고sh bin은100755,cmd와다른파일은100644로보관한다. Windows DOS creator(0)의Unixmodebits는배포권한근거로쓰지 않는다. 실제Linux해제/실행은F2미실행.

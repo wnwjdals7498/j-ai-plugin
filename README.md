@@ -1,42 +1,24 @@
 # J AI Plugins
 
-Codex와 Claude Code에서 같은 GitHub 저장소로 PMT를 설치합니다. PMT Core 0.4.0, SQLite schema 5이며 Python 3.13 이상이 필요합니다.
+PMT 0.5.0은 두 플러그인으로 나뉜다. **pmt-lifecycle (PMT)**는 개발 기기의 프로젝트·세션·작업 기록, **pmt-server (PMT Server)**는 Host 관리용. Core0.4.1 / SQLite5 / graph1 / protocol1 / Host APIv1 유지. Python3.13 이상 필요.
 
-## Codex
+변경이 GitHub에 반영된 뒤 필요한 플러그인을 설치한다.
 
-이 변경이 GitHub에 반영된 뒤 터미널에서 실행합니다.
-
-```powershell
+```text
 codex plugin marketplace add wnwjdals7498/j-ai-plugin
 codex plugin add pmt-lifecycle@j-ai-plugins
-```
-
-앱을 재시작하고 새 세션의 `/hooks`에서 PMT 실행 명령을 검토해 신뢰합니다.
-
-## Claude Code
-
-이 변경이 GitHub에 반영된 뒤 터미널에서 실행합니다.
-
-```powershell
 claude plugin marketplace add wnwjdals7498/j-ai-plugin
 claude plugin install pmt-lifecycle@j-ai-plugins
 ```
 
-설치 후 `/plugin`에서 PMT의 `python_path`를 Python 3.13 이상 실행 파일의 절대 경로로 설정합니다. 값이 없으면 훅은 실행되지 않습니다. 새 세션에서 사용합니다.
+Claude /plugin에서 PMT python_path만 지정하면 새 세션에서 local 준비. Codex는 PMT_PYTHON을 지정하고 새 세션 /hooks에서 실행 명령을 검토·신뢰한다. Git checkout에서 pmt link --new "프로젝트 이름", pmt check로 시작한다. PowerShell은 pmt.cmd를 사용한다.
 
-## PMT 데이터와 서버 연결
+Host 연결은 비밀 없는 인계 JSON과 별도 credential로 pmt connect를 사용한다. local 프로필은 입력 옵션만으로 hosted로 바뀌지 않으며 pmt storage switch로 명시 전환한다. 같은 ConfigRoot를 쓰는 Claude/Codex는 한 기기 identity를 공유한다. 별도 기기를 쓰면 별도 ConfigRoot를 지정한다. 설치·업데이트·제거는 사용자 DB·설정을 삭제하거나 이관하지 않는다.
 
-두 제품은 같은 PMT 본체와 스킬을 사용하며 제품별 Hook은 각각의 manifest에서 선택합니다. 설치·업데이트는 PMT 서버 연결이나 기존 데이터 이관을 자동으로 수행하지 않습니다.
+[PMT 사용 안내](proj-mgmt-tool/docs/usage.md), [Windows 설정](proj-mgmt-tool/docs/phase5/setup-windows.md), [Linux 설정](proj-mgmt-tool/docs/phase5/setup-linux.md), [확인 결과](proj-mgmt-tool/docs/phase5/progress.md)를 따른다.
 
-데이터 경로와 HTTPS 서버 연결은 기기별로 설정합니다. [PMT 사용 안내](proj-mgmt-tool/docs/usage.md)와 [개발 환경 연결 절차](proj-mgmt-tool/docs/handoff/development-plugin.md)를 따릅니다.
+Host 관리자 컴퓨터에서는 pmt-server@j-ai-plugins를 설치하고 별도 Host venv에 같은 release의 proj-mgmt-tool[host]를 설치한다. 서버 플러그인은 Core를 복사하지 않고 그 venv를 사용한다. [pmt-server 스킬](pmt-server/skills/pmt-server/SKILL.md)과 [운영 Host 인수 관문](proj-mgmt-tool/docs/handoff/codex-phase5-host.md)을 따른다.
 
-## 마켓플레이스 구조
+마켓플레이스는 Claude .claude-plugin/marketplace.json, Codex .agents/plugins/marketplace.json. 두 목록은 각각 ./proj-mgmt-tool 및 ./pmt-server를 참조한다. 직접 설치에는 dist가 필요 없다. ZIP 배포는 proj-mgmt-tool/scripts/build_plugins.py로 codex/claude/opencode 클라이언트와 server를 만든다. 논리 플러그인은 두 개이고 제품 배포 대상은 네 개다.
 
-| 제품 | 목록 | 플러그인 경로 |
-|---|---|---|
-| Codex | `.agents/plugins/marketplace.json` | `./proj-mgmt-tool` |
-| Claude Code | `.claude-plugin/marketplace.json` | `./proj-mgmt-tool` |
-
-저장소 원천을 직접 설치하므로 별도 `dist` 생성이 필요하지 않습니다. ZIP 배포가 필요하면 기존 `proj-mgmt-tool/scripts/build_plugins.py`를 사용합니다. 새 배포에서는 본체·플러그인 manifest·Claude 마켓플레이스 항목의 버전을 함께 갱신합니다.
-
-공식 규격: [Codex 플러그인·마켓플레이스](https://developers.openai.com/plugins/build/plugins), [Claude Code 마켓플레이스](https://code.claude.com/docs/en/plugin-marketplaces), [Claude Code manifest](https://code.claude.com/docs/en/plugins-reference).
+공식 규격: [Codex plugin package](https://developers.openai.com/plugins/build/plugins), [Claude marketplace](https://code.claude.com/docs/en/plugin-marketplaces), [Claude manifest](https://code.claude.com/docs/en/plugins-reference).

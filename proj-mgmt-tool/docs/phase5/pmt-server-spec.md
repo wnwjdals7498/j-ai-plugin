@@ -250,7 +250,12 @@ pmt-server apply [--only ...] --apply
 
 **명령**
 ```
-pmt-server service install --apply | remove --apply | status | start | stop | restart
+pmt-server service status
+pmt-server service install [--with-backup-timer] --apply
+pmt-server service remove --apply
+pmt-server service start --apply
+pmt-server service stop --apply
+pmt-server service restart --apply
 ```
 
 **완료 기준**: T-S09-1 재부팅 후 같은 namespace·claim key로 health/compat, T-S09-2 프로세스 강제 종료 후 자동 재시작, T-S09-3 수동 두 번째 시작 시 하나만 실행.
@@ -318,7 +323,7 @@ pmt-server device revoke --device <id> --apply
 ## S-13 인계 파일 생성
 
 ```
-pmt-server handoff create --device <id> --out <file> [--include-ca]
+pmt-server handoff create --device <id> --out <file> [--include-ca] --apply
 ```
 - 형식: [X-02 `pmt-handoff/v1`](communication.md#3-인계-형식-pmt-handoffv1-x-02).
 - 포함: public_url, 호환 버전, namespace_id, device_id, actor, scopes/permissions, 대상 project·repository registry, (선택) 공개 CA PEM과 sha256.
@@ -362,9 +367,11 @@ pmt-server backup prune --keep 14 --apply
 ## S-17 업그레이드
 
 ```
-pmt-server upgrade --version 0.5.1 [--app-root C:\PMT\app\0.5.1] --apply
+pmt-server upgrade --version 0.5.1 [--app-root C:\PMT\app\0.5.1] [--source-ref <full-commit-SHA>] --apply
 ```
 절차: 새 venv 설치(S-01) → 새 venv로 `doctor`(DB schema 호환 확인) → `backup` → 서비스 중지 → `service.app_root` 변경(CAS) → 서비스 등록 갱신 → 시작 → health/compat 확인. compat 실패면 이전 app_root로 되돌리고 시작한다. DB schema 변경이 있는 release는 별도 migration 문서가 있을 때만 진행한다.
+
+새 venv 설치가 필요하면 같은 저장소의 불변 full commit SHA를 --source-ref로 지정한다. Plugin 0.5.x와 pip Core package 0.4.x를 혼동해 버전 문자열로 설치하지 않는다. 이미 준비된 venv는 실제 pmt-server version이 --version과 같아야 한다. 후보 doctor는 별도 service.kind=none scratch config와 진단 metadata만 사용하고 실제 service plan은 따로 검증한다. 실제 설치/중지/재시작/운영 probe는 승인된 F1 범위에서만 실행한다.
 
 **완료 기준**: T-S17-1 0.5.0→0.5.1 업그레이드 후 같은 namespace·기기 인증, T-S17-2 compat 실패 주입 시 롤백.
 
@@ -378,7 +385,7 @@ pmt-server upgrade --version 0.5.1 [--app-root C:\PMT\app\0.5.1] --apply
   "name": "pmt-server",
   "version": "0.5.0",
   "description": "Install, configure and operate the PMT storage Host.",
-  "hooks": "./hooks/hooks.json",
+  "hooks": "./hooks/claude.json",
   "userConfig": {
     "server_python": {"type": "file", "title": "Host venv Python", "description": "Absolute path of the Python inside the PMT Host venv.", "required": true},
     "host_config_root": {"type": "directory", "title": "Host ConfigRoot", "description": "Folder that holds host-config.json.", "required": true}
@@ -387,7 +394,7 @@ pmt-server upgrade --version 0.5.1 [--app-root C:\PMT\app\0.5.1] --apply
 ```
 - Hook: SessionStart 하나. `CLAUDE_ENV_FILE`에 `PMT_SERVER_PYTHON`, `PMT_HOST_CONFIG_ROOT`만 쓴다. lifecycle 이벤트 기록 없음, Host 호출 없음.
 - `bin/pmt-server`(sh), `bin/pmt-server.cmd`: `"$PMT_SERVER_PYTHON" -m pmt.server_admin --config-root "$PMT_HOST_CONFIG_ROOT" "$@"`.
-- Codex: 같은 skill, Hook 없음. `PMT_SERVER_PYTHON`은 사용자가 설정하거나 skill이 venv 경로를 묻는다.
+- Codex: 같은 skill, Hook 없음. Claude Hook은 hooks/claude.json으로 분리하고 generic hooks/hooks.json을 만들지 않는다. hooks=[]도 명시하지만 Codex0.160.1 실측에서는 이것만으로 기본 발견을 막지 못했다. `PMT_SERVER_PYTHON`은 사용자가 설정하거나 skill이 venv 경로를 묻는다.
 - 스킬 `pmt-server`: 구축 순서(설치 → init → tls → doctor → serve 수동 확인 → project/device → handoff → plan/apply(firewall, service) → 재시작 검증 → backup/restore-check), 비밀 취급 규칙, 실패 시 확인 순서. references: Windows/Linux 절차(본 문서의 setup 문서 요약), 기존 `windows-host.md`의 운영 원칙.
 
 **완료 기준**: T-S18-1 `claude plugin validate`, T-S18-2 Host 서버의 새 세션에서 `pmt-server doctor` 실행, T-S18-3 Codex skill 발견.

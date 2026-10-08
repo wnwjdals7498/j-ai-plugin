@@ -47,3 +47,5 @@
 
 `evidence/2026-10-08/A0/host-survey.json`, `firewall-survey.json`, `tls-leaf.json`.
 관찰 명령은 baseline 요약에 기록한다. 공개 인증서 외 운영 파일의 본문·전체 환경변수·전체 argv를 증거에 복제하지 않는다.
+
+F1 키 원천 확인 항목: 기존 supervisor가 보호 파일에서 claim key를 읽어 Host child의 PMT_HOST_CLAIM_KEY에만 주입한다. 일반 관리자 세션에 그 환경변수 값이 있다고 가정하지 않는다. 실제 인수 계획은 기존 보호 파일 형식/계정/ACL과 승인된 전달 경로를 확인해야 한다. 비밀 파일의 값은 조사·출력하지 않았다. 키 보관 이전은 F1 별도 승인 관문이며 현재 미실행.
