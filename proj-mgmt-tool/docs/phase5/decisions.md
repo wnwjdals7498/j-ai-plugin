@@ -39,3 +39,8 @@
 - D1 등록 모델 정정: S-11의 “repository는 논리 UUID뿐” 가정이 현재 Core와 다르다. 기존 workspace 경계는 실제 repository scope와 project parent/binding을 검사한다. actual HTTPS로 write-only bootstrap의 environment→repository→project 생성과 논리-only repository UUID 거부를 검증했다(2 tests pass). 계약을 바꾸지 않고 정식 create_scope로 필요한 부모들을 만든다. 한 project scope는 하나의 실제 repository에 속하므로 다른 repository는 별도 project로 등록한다. 임의의 business SQL/Host allowlist 변경은 하지 않는다.
 
 - C10 fixture 수정: 관리된 캐시 없는 non-SessionStart 이벤트는 이제 not_configured 경고로 Core 전에 중단한다. 기존 DB/pending 동시 장애 시험의 Native 메시지 기대값만 이에 맞추고, 직접 Core 장애·원본 보존 검증은 유지한다. 실제 구버전 profile.json+DB direct-root 경로는 별도로 호환해야 하며 새 storage.json으로 억지 초기화하지 않는다.
+
+- S-18 Codex server manifest는 hooks=[]를 명시한다. Codex는 hooks 누락 시 hooks/hooks.json을 기본 발견하므로 Claude 전용 SessionStart를 잘못 가져오지 않도록 한다. 근거: https://developers.openai.com/plugins/build/plugins 의 Bundled MCP servers and lifecycle hooks, lines1355-1374 (2026-10-08 확인).
+- E1 systemd LoadCredential alias는 claim-<key_id>/tls-key. runtime CREDENTIALS_DIRECTORY는 in-memory 경로만 변경하며 persisted config는 불변. placeholder offline source는 HostConfigRoot/secrets/claim-<key_id>.key와 HostConfigRoot/tls/tls-key. 근거: https://raw.githubusercontent.com/systemd/systemd/main/man/systemd.exec.xml Credentials LoadCredential lines3450-3460,3522-3532; Environment Variables CREDENTIALS_DIRECTORY lines3808-3814. 실제 Linux 실행은 F2 미실행.
+- 초기화된 Host의 ConfigRoot는 기존 environment profile을 읽기만 하므로 serve preflight는 read/traverse를 요구한다. data/log/backup은 read/write를 요구한다. E1의 관리자 소유·서비스 read-only config ACL과 일치하며 missing profile은 여전히 거부한다.
+- 운영 포트8765 doctor/status health 제한 제거는 자동 승인 검토가 운영 안전 경계 약화로 거부했다. 제한을 보존했다. F1 승인 후 별도 재검토할 항목이며 개발 시험에서는 운영 경로·포트를 사용하지 않는다.

@@ -27,6 +27,8 @@ from .logging import read_logs
 from .serve import serve_host
 from .status import read_status
 from .tls import check_tls, register_tls
+from .operations import add_operations_commands, run_operations_command, NativeOperationsAdapter
+from .service import add_service_commands, run_service_command
 from .registry import list_projects, project_add, project_repo_add
 from .devices import (device_grants, device_issue, device_list, device_revoke,
                       device_rotate, handoff_create)
@@ -94,7 +96,7 @@ def main(argv=None):
     doctor = command("doctor")
     serve = command("serve"); serve.add_argument("--listen"); serve.add_argument("--allow-loopback-http", action="store_true")
     command("status")
-    logs = command("logs"); logs.add_argument("--tail", type=int, default=200)
+    logs = command("logs"); logs.add_argument("--tail", type=int, default=200); logs.add_argument("--since")
 
     project = command("project").add_subparsers(dest="project_command", required=True)
     project_add_cmd = project.add_parser("add")
@@ -130,6 +132,9 @@ def main(argv=None):
         child.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
         child.add_argument("--config-root", default=argparse.SUPPRESS)
 
+    add_operations_commands(command)
+    add_service_commands(command)
+
     args = parser.parse_args(argv)
     root = Path(getattr(args, "config_root", None) or os.environ.get("PMT_HOST_CONFIG_ROOT") or (r"C:\ProgramData\PMT\host-config" if os.name == "nt" else "/etc/pmt-host"))
     try:
@@ -140,6 +145,10 @@ def main(argv=None):
                 value = {"ok": False, "result": result, "error": {"code": "host_dependency_missing", "message": "Install proj-mgmt-tool[host]", "retryable": False}}
                 print(canonical_json(value) if args.json else "Install proj-mgmt-tool[host]")
                 return 5
+        elif args.command in {"plan", "apply"}:
+            result = run_operations_command(args, root)
+        elif args.command == "service":
+            result = run_service_command(args, root, adapter=NativeOperationsAdapter())
         elif args.command == "init":
             result = init_host(args, root)
         elif args.command == "doctor":
@@ -147,12 +156,14 @@ def main(argv=None):
         elif args.command == "status":
             result = read_status(root)
         elif args.command == "logs":
-            result = {"ok": True, "lines": read_logs(load_config(root / "host-config.json")["paths"]["log_dir"], args.tail)}
+            result = {"ok": True, "lines": read_logs(load_config(root / "host-config.json")["paths"]["log_dir"], args.tail, since=args.since)}
         elif args.command == "serve":
             return serve_host(root, listen=args.listen, allow_loopback_http=args.allow_loopback_http)
         elif args.command == "tls":
             config_value = load_config(root / "host-config.json")
-            if args.tls_command == "check": result = check_tls(config_value)
+            if args.tls_command == "check":
+                from .runtime_paths import resolve_runtime_config
+                result = check_tls(resolve_runtime_config(config_value, root, environ={}))
             else: result = register_tls(root, args.cert, args.key, args.ca, apply=args.apply)
         elif args.command == "project":
             if args.project_command == "add": result = project_add(root, args.name, title=args.title, apply=args.apply)
@@ -208,7 +219,7 @@ def main(argv=None):
                     if check.get("guidance"): print(f"     {check['guidance']}")
             elif args.command == "logs": print("\n".join(result["lines"]))
             else: print(_human_result(args, result))
-        return 1 if args.command == "doctor" and not result["ok"] else 0
+        return 1 if result.get("ok") is False else 0
     except PmtError as exc:
         value = {"ok": False, "error": {"code": exc.code, "message": str(exc)}}
         print(canonical_json(value) if args.json else f"Error {exc.code}: {exc}")
@@ -234,8 +245,10 @@ def _secret_command_locked(args, root):
     current = config["claim_key"]
     account = config["service"]["account"]
     if args.secret_command == "check":
-        return {"ok": True, "primary": check_source(current["source"], account=account),
-                "retained": [{"key_id": item["key_id"], **check_source(item["source"], account=account)} for item in current.get("retained", [])]}
+        from .runtime_paths import resolve_runtime_config
+        resolved = resolve_runtime_config(config, root)["claim_key"]
+        return {"ok": True, "primary": check_source(resolved["source"], account=account),
+                "retained": [{"key_id": item["key_id"], **check_source(item["source"], account=account)} for item in resolved.get("retained", [])]}
     if not args.apply:
         target_id = getattr(args, "new_key_id", None) or getattr(args, "key_id", None)
         return {"ok": True, "applied": False, "key_id": target_id, "operation": args.secret_command}
@@ -268,7 +281,10 @@ def _secret_command_locked(args, root):
         if item["source"]["kind"] == args.to:
             check_source(item["source"], account=account)
             return {"ok": True, "applied": True, "key_id": args.key_id, "unchanged": True}
-        value = base64.b64encode(read_key(item["source"], account=account))
+        from .runtime_paths import resolve_runtime_config
+        resolved = resolve_runtime_config(config, root)["claim_key"]
+        resolved_item = resolved if resolved["key_id"] == args.key_id else next(entry for entry in resolved.get("retained", []) if entry["key_id"] == args.key_id)
+        value = base64.b64encode(read_key(resolved_item["source"], account=account))
         suffix = ".dpapi" if args.to == "dpapi" else ".key"
         created_target = root / "secrets" / f"claim-{args.key_id}{suffix}"
         item["source"] = store_key(value, created_target, args.to, account=account)
