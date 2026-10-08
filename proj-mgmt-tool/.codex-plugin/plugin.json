@@ -1,0 +1,10 @@
+{
+  "name": "pmt-lifecycle",
+  "version": "0.4.0",
+  "description": "Project memory and lifecycle events for Codex.",
+  "author": {
+    "name": "PMT"
+  },
+  "skills": "./skills/",
+  "hooks": "./integrations/codex/hooks/hooks.json"
+}

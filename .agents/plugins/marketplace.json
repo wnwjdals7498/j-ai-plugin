@@ -1,0 +1,20 @@
+{
+  "name": "j-ai-plugins",
+  "interface": {
+    "displayName": "J AI Plugins"
+  },
+  "plugins": [
+    {
+      "name": "pmt-lifecycle",
+      "source": {
+        "source": "local",
+        "path": "./proj-mgmt-tool"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

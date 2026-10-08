@@ -1,23 +1,25 @@
 # PMT 사용
 
-이 패키지는 PMT Core 0.3.0, 작업 스킬과 Codex·Claude Code·OpenCode 연결부를 제공합니다. SQLite schema는 4이며 local/hosted 저장을 선택합니다. 실측 범위와 미실행은 [3단계 구현·검증 결과](https://github.com/wnwjdals7498/j-ai-plugin/blob/master/proj-mgmt-tool/docs/phase3/implementation-status.md)를 확인합니다.
+이 패키지는 PMT Core 0.4.0, 작업 스킬과 Codex·Claude Code·OpenCode 연결부를 제공합니다. SQLite schema는 5이며 local/hosted 저장을 선택합니다. 실측 범위와 미실행은 [4단계 구현·검증 결과](https://github.com/wnwjdals7498/j-ai-plugin/blob/master/proj-mgmt-tool/docs/phase4/implementation-status.md)를 확인합니다.
+
+Codex와 Claude Code의 GitHub 마켓플레이스 설치는 [저장소 설치 안내](https://github.com/wnwjdals7498/j-ai-plugin/blob/master/README.md)를 따릅니다. 두 제품의 목록은 같은 PMT 원천을 참조하며 별도 ZIP 생성 없이 설치합니다. 아래는 독립 ZIP·로컬 번들 배포 방법입니다.
 
 ## 패키지 만들기와 등록
 
 이 폴더에서 Python 3.13 이상으로 실행합니다. 클라이언트 런타임은 표준 라이브러리뿐이며 Host는 별도 `host` extra를 설치합니다.
 
 ```powershell
-py -3.13 scripts/build_plugins.py --output-dir dist/plugins --version 0.3.0
+py -3.13 scripts/build_plugins.py --output-dir dist/plugins --version 0.4.0
 ```
 
 각 제품 디렉터리에 독립 실행 본체·스킬·훅과 파일 hash manifest가 생깁니다. 같은 출력 버전은 덮어쓰지 않습니다. 사용자 DB·리소스·설정은 패키지에 넣지 않습니다.
 
-- Codex: `codex plugin marketplace add <절대경로>/dist/plugins/0.3.0/codex` → `codex plugin add pmt-lifecycle@pmt-local`. 새 세션의 `/hooks`에서 설치된 실행 명령을 검토해 활성화합니다. 검증한 제품 버전의 legacy manifest와 기본 hooks 경로를 함께 제공합니다.
-- Claude Code: `claude plugin marketplace add <절대경로>/dist/plugins/0.3.0/claude` → `claude plugin install pmt-lifecycle@pmt-local`. 범위는 제품의 user/project/local 선택을 따릅니다. 훅 실행기는 PATH의 `python`을 찾지 않고 필수 플러그인 옵션 `python_path`(Python 3.13 이상 절대 경로)를 exec form으로 실행합니다. 설치 후 `claude plugin configure pmt-lifecycle@pmt-local --values-stdin`에 `{"python_path":"<절대경로>"}`를 전달하거나 `/plugin`에서 설정합니다. 옵션이 비어 있으면 Claude Code가 훅을 실행하지 않습니다.
+- Codex: `codex plugin marketplace add <절대경로>/dist/plugins/0.4.0/codex` → `codex plugin add pmt-lifecycle@pmt-local`. 새 세션의 `/hooks`에서 설치된 실행 명령을 검토해 활성화합니다. 검증한 제품 버전의 legacy manifest와 기본 hooks 경로를 함께 제공합니다.
+- Claude Code: `claude plugin marketplace add <절대경로>/dist/plugins/0.4.0/claude` → `claude plugin install pmt-lifecycle@pmt-local`. 범위는 제품의 user/project/local 선택을 따릅니다. 훅 실행기는 PATH의 `python`을 찾지 않고 필수 플러그인 옵션 `python_path`(Python 3.13 이상 절대 경로)를 exec form으로 실행합니다. 설치 후 `claude plugin configure pmt-lifecycle@pmt-local --values-stdin`에 `{"python_path":"<절대경로>"}`를 전달하거나 `/plugin`에서 설정합니다. 옵션이 비어 있으면 Claude Code가 훅을 실행하지 않습니다.
 - OpenCode: 프로젝트 `.opencode/plugins/pmt-loader.js`에서 설치한 번들을 참조합니다. 아래 경로는 복사해 보존한 OpenCode 번들 안의 실제 파일 URI로 바꿉니다. 번들의 `skills/proj-mgmt-tool`도 공식 스킬 검색 경로 `.opencode/skills/proj-mgmt-tool`에 등록합니다.
 
 ```javascript
-export { PmtPlugin as default } from "file:///D:/pmt-plugins/0.3.0/opencode/integrations/opencode/pmt.js"
+export { PmtPlugin as default } from "file:///D:/pmt-plugins/0.4.0/opencode/integrations/opencode/pmt.js"
 ```
 
 플러그인 제거는 등록·코드 캐시를 제거하는 제품 명령으로 수행합니다. 별도 PMT data/config root는 유지하며, 재설치할 때 같은 경로를 연결합니다.
