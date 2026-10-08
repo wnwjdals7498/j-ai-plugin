@@ -32,6 +32,8 @@ from .service import add_service_commands, run_service_command
 from .registry import list_projects, project_add, project_repo_add
 from .devices import (device_grants, device_issue, device_list, device_revoke,
                       device_rotate, handoff_create)
+from .backup import create_backup, import_bundle, prune_backups, restore_check
+from .upgrade import upgrade_host
 
 
 def version_info():
@@ -135,6 +137,18 @@ def main(argv=None):
     add_operations_commands(command)
     add_service_commands(command)
 
+    backup = command("backup")
+    backup.add_argument("--apply", action="store_true")
+    backup_actions = backup.add_subparsers(dest="backup_command")
+    backup_prune = backup_actions.add_parser("prune")
+    backup_prune.add_argument("--keep", type=int, default=14); backup_prune.add_argument("--apply", action="store_true")
+    backup_prune.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+    backup_prune.add_argument("--config-root", default=argparse.SUPPRESS)
+    restore = command("restore-check"); restore.add_argument("--bundle", required=True)
+    import_cmd = command("import"); import_cmd.add_argument("--bundle", required=True); import_cmd.add_argument("--apply", action="store_true")
+    upgrade = command("upgrade"); upgrade.add_argument("--version", required=True); upgrade.add_argument("--app-root")
+    upgrade.add_argument("--source-ref"); upgrade.add_argument("--apply", action="store_true")
+
     args = parser.parse_args(argv)
     root = Path(getattr(args, "config_root", None) or os.environ.get("PMT_HOST_CONFIG_ROOT") or (r"C:\ProgramData\PMT\host-config" if os.name == "nt" else "/etc/pmt-host"))
     try:
@@ -149,6 +163,15 @@ def main(argv=None):
             result = run_operations_command(args, root)
         elif args.command == "service":
             result = run_service_command(args, root, adapter=NativeOperationsAdapter())
+        elif args.command == "backup":
+            if args.backup_command == "prune": result = prune_backups(root, keep=args.keep, apply=args.apply)
+            else: result = create_backup(root, apply=args.apply)
+        elif args.command == "restore-check":
+            result = restore_check(root, args.bundle)
+        elif args.command == "import":
+            result = import_bundle(root, args.bundle, apply=args.apply)
+        elif args.command == "upgrade":
+            result = upgrade_host(root, args.version, app_root=args.app_root, source_ref=args.source_ref, apply=args.apply)
         elif args.command == "init":
             result = init_host(args, root)
         elif args.command == "doctor":
@@ -349,6 +372,12 @@ def _human_result(args, result):
         if "credential" in result: return canonical_json(result)
         return "Device plan complete" if not result.get("applied") else "Device operation complete"
     if args.command == "handoff": return "Handoff plan complete" if not result.get("applied") else "Handoff file created"
+    if args.command == "backup":
+        if getattr(args, "backup_command", None) == "prune": return f"Removed {len(result.get('removed', result.get('would_remove', [])))} verified backup bundle(s)"
+        return "Backup plan complete" if not result.get("applied") else f"Backup created at {result['bundle_path']}"
+    if args.command == "restore-check": return f"Backup {result['bundle_id']} passed restore-check"
+    if args.command == "import": return "Import plan complete" if not result.get("applied") else "Import completed" if result.get("ok") else "Import committed with a registry follow-up"
+    if args.command == "upgrade": return "Upgrade plan complete" if not result.get("applied") else "Upgrade completed" if result.get("ok") else "Upgrade rolled back or needs recovery"
     return canonical_json(result)
 
 
