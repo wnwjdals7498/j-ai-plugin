@@ -1,0 +1,17 @@
+{
+  "name": "pmt-lifecycle",
+  "version": "0.4.0",
+  "description": "Project memory and lifecycle events for Claude Code.",
+  "author": {
+    "name": "PMT"
+  },
+  "hooks": "./integrations/claude/hooks/hooks.json",
+  "userConfig": {
+    "python_path": {
+      "type": "file",
+      "title": "Python 3.13+ executable",
+      "description": "Absolute path of the Python 3.13 or later interpreter that runs PMT hooks.",
+      "required": true
+    }
+  }
+}

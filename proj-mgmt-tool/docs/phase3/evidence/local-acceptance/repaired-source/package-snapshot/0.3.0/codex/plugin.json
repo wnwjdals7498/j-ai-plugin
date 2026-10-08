@@ -1,5 +1,0 @@
-{
-  "name": "pmt-lifecycle",
-  "version": "0.3.0",
-  "description": "Record minimal lifecycle events and use the local PMT workflow."
-}
