@@ -1,0 +1,19 @@
+B3 built-package launcher smoke tests
+Base commit: 06e18ec437742405d5e383b356cee76404665a9f
+Package: isolated build output 0.5.0; root contains spaces.
+Runtime: Windows PowerShell + Git for Windows Bash D:\Application\Git\bin\bash.exe.
+PMT_PYTHON explicit path contains spaces: C:\PMT\work\phase5-test\B3\pytest-entrypoints\test_c11_windows_cmd_frontdoor0\python runtime with spaces\Scripts\python.exe
+PYTHONPATH was empty; PMT_CONFIG_ROOT/PMT_DATA_ROOT point under C:\PMT\work\phase5-test\B3.
+Claude pmt.cmd explicit PMT_PYTHON exit=0
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\B3\built-claude-config
+DataRoot: C:\PMT\work\phase5-test\B3\built-claude-data
+project: not linked
+Codex pmt Bash explicit PMT_PYTHON exit=0
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\B3\built-codex-config
+DataRoot: C:\PMT\work\phase5-test\B3\built-codex-data
+project: not linked
+Claude pmt.cmd client.json fallback exit=0
+C:\PMT\work\phase5-test\B3\pytest-entrypoints\test_c11_windows_cmd_frontdoor0\python: can't open file 'C:\\PMT\\src\\j-ai-plugin\\proj-mgmt-tool\\runtime': [Errno 2] No such file or directory
+Codex pmt Bash client.json fallback exit=2816

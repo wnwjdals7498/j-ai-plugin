@@ -84,8 +84,9 @@ def _source_map(root: Path, product: str) -> dict[Path, PurePosixPath]:
     add_tree("docs/usage.md", "USAGE.md")
     if product in {"codex", "claude"}:
         add_tree(f"integrations/{product}/hooks/hooks.json", "hooks/hooks.json")
-        if product == "claude":
-            add_tree("integrations/claude/bin/pmt", "bin/pmt")
+        add_tree("bin/pmt", "bin/pmt")
+        add_tree("bin/pmt.cmd", "bin/pmt.cmd")
+        add_tree("scripts/pmt_easy.py", "scripts/pmt_easy.py")
         add_tree(f"{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json",
                  f"{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json")
     elif product == "opencode":
