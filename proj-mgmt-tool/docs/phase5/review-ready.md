@@ -29,4 +29,4 @@ Python3.13.13과3.14.5rc1의 통합306pass/4skip 근거에 더해 마지막 클�
 
 기존 supervisor는 보호 파일의 claim key를 Host child 환경에만 주입한다. F1은 일반 관리자 세션에 키가 있다고 가정하지 말고 승인된 원천·계정·ACL 이전 계획을 보여 줘야 한다. 운영8765 doctor/status guard 제거는 자동 승인 검토가 거부해 유지했으며 F1 별도 승인 항목이다. 실제 Native installer 호출 검증도 거부되어 실행 없는 명령 검증으로 대체했고 설치 성공으로 기록하지 않았다.
 
-다음 승인 대상은 feat/phase5-plugin-split 브랜치 push와 master 대상 PR 생성이다. [인계 §5 E3 종료 관문](../handoff/codex-phase5-host.md)에서 “branch push와 PR 생성 승인”을 요구한다. [PR 본문 초안](pull-request-draft.md)을 함께 검토한다. 이 승인은 F1 정지·서비스 교체·재부팅·키 이전·운영 기기 발급 승인을 대신하지 않는다.
+2026-10-08 사용자 승인 후 feat/phase5-plugin-split push와 master 대상 [PR #1](https://github.com/wnwjdals7498/j-ai-plugin/pull/1) 생성·첨부 완료. GitHub head 06235fd25fcf28208a633f0fb5412d51939a9c15와 master 8054c83a85b73356f0e2e52322855b9e03b419ce 확인. PR open/병합 충돌 없음, 병합 미실행. 기록 전용 후속 커밋은 구현·시험 소스를 바꾸지 않는다. F1 설치 고정 SHA는 06235fd다. 다음 승인 대상은 [F1-1 새 venv 설치 계획](f1-install-plan.md)이다. [인계 §6](../handoff/codex-phase5-host.md)은 “각 단계는 실행 전 무엇을 바꾸는지 보여 주고 사용자 승인을 받는다”고 요구한다. E3 승인은 F1 설치·정지·서비스 교체·재부팅·키 이전·운영 기기 발급 승인을 대신하지 않는다.
