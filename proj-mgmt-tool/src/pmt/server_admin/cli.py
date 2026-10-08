@@ -22,6 +22,11 @@ from ..util import canonical_json
 from .config import _process_lock, _publish_config_locked, config_path, config_sha256, load_config, load_config_snapshot, publish_config, validate_config
 from .init import init_host
 from .secrets import check_source, create_key_reference, read_key, store_key
+from .doctor import run_doctor
+from .logging import read_logs
+from .serve import serve_host
+from .status import read_status
+from .tls import check_tls, register_tls
 
 
 def version_info():
@@ -75,6 +80,19 @@ def main(argv=None):
         child.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
         child.add_argument("--config-root", default=argparse.SUPPRESS)
 
+    tls = command("tls").add_subparsers(dest="tls_command", required=True)
+    tls_check = tls.add_parser("check")
+    tls_register = tls.add_parser("register")
+    tls_register.add_argument("--cert", required=True); tls_register.add_argument("--key", required=True); tls_register.add_argument("--ca")
+    tls_register.add_argument("--apply", action="store_true")
+    for child in tls.choices.values():
+        child.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+        child.add_argument("--config-root", default=argparse.SUPPRESS)
+    doctor = command("doctor")
+    serve = command("serve"); serve.add_argument("--listen"); serve.add_argument("--allow-loopback-http", action="store_true")
+    command("status")
+    logs = command("logs"); logs.add_argument("--tail", type=int, default=200)
+
     args = parser.parse_args(argv)
     root = Path(getattr(args, "config_root", None) or os.environ.get("PMT_HOST_CONFIG_ROOT") or (r"C:\ProgramData\PMT\host-config" if os.name == "nt" else "/etc/pmt-host"))
     try:
@@ -87,6 +105,18 @@ def main(argv=None):
                 return 5
         elif args.command == "init":
             result = init_host(args, root)
+        elif args.command == "doctor":
+            result = run_doctor(root)
+        elif args.command == "status":
+            result = read_status(root)
+        elif args.command == "logs":
+            result = {"ok": True, "lines": read_logs(load_config(root / "host-config.json")["paths"]["log_dir"], args.tail)}
+        elif args.command == "serve":
+            return serve_host(root, listen=args.listen, allow_loopback_http=args.allow_loopback_http)
+        elif args.command == "tls":
+            config_value = load_config(root / "host-config.json")
+            if args.tls_command == "check": result = check_tls(config_value)
+            else: result = register_tls(root, args.cert, args.key, args.ca, apply=args.apply)
         elif args.command == "config":
             path = config_path(root)
             if args.config_command == "show":
@@ -118,8 +148,13 @@ def main(argv=None):
         elif args.json:
             print(canonical_json(result))
         else:
-            print(_human_result(args, result))
-        return 0
+            if args.command == "doctor":
+                for check in result["checks"]:
+                    print(f"{check['status'].upper():4} {check['name']}: {check['message']}")
+                    if check.get("guidance"): print(f"     {check['guidance']}")
+            elif args.command == "logs": print("\n".join(result["lines"]))
+            else: print(_human_result(args, result))
+        return 1 if args.command == "doctor" and not result["ok"] else 0
     except PmtError as exc:
         value = {"ok": False, "error": {"code": exc.code, "message": str(exc)}}
         print(canonical_json(value) if args.json else f"Error {exc.code}: {exc}")
@@ -127,6 +162,10 @@ def main(argv=None):
     except (OSError, sqlite3.Error) as exc:
         value = {"ok": False, "error": {"code": "host_io_error", "message": "The operation failed without changing existing state"}}
         print(canonical_json(value) if args.json else "Error host_io_error: The operation failed without changing existing state")
+        return 2
+    except ValueError:
+        value = {"ok": False, "error": {"code": "host_input_invalid", "message": "The requested value is invalid"}}
+        print(canonical_json(value) if args.json else "Error host_input_invalid: The requested value is invalid")
         return 2
 
 
@@ -229,6 +268,9 @@ def _human_result(args, result):
     if args.command == "config":
         return "Configuration valid" if result.get("valid") else f"Configuration revision {result.get('revision', result.get('config', {}).get('revision', '?'))}"
     if args.command == "secret": return "Claim key check complete" if args.secret_command == "check" else "Claim key plan complete" if not result.get("applied") else "Claim key configuration updated"
+    if args.command == "doctor": return "Host diagnostics passed" if result.get("ok") else "Host diagnostics found failures"
+    if args.command == "status": return f"Host {'running' if result['service']['running'] else 'not running'}; namespace {result.get('namespace_id') or 'unavailable'}"
+    if args.command == "tls": return "TLS check complete" if args.tls_command == "check" else "TLS registration plan complete" if not result.get("applied") else "TLS files registered"
     return canonical_json(result)
 
 

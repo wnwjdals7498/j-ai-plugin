@@ -3,7 +3,7 @@
 - 기준: `origin/master` `8054c83a85b73356f0e2e52322855b9e03b419ce`.
 - 작업 checkout: `C:\PMT\src\j-ai-plugin`, 브랜치 `feat/phase5-plugin-split`.
 - 메인: Codex. 구현 작업자는 A1 완료와 사용자 결정 확정 뒤 `gpt-6-luna`로 소유 영역을 분리한다.
-- 현재 단계: A0/A1/B1/B2/B3/C1 완료. C2 검증·독립 리뷰 완료, 기록 커밋 준비. D1/E1 준비.
+- 현재 단계: A0/A1/B1/B2/B3/C1 완료. C2 완료. D1/E1 진행 준비.
 - 운영 금지 영역: `D:\PMTHostState\host-data`, `D:\PMTHostState\host-config`, `D:\PMTHostState\secrets`, 기존 release/venv, 작업 `PMT-Host`, TCP 8765.
 - 개발 시험: checkout의 `.pmt-test`, loopback 18765. 운영 경로는 시험에 사용하지 않는다.
 
@@ -15,7 +15,7 @@
 | B2 | 완료 | 기준 c88ab73; 기록 commit은 git log | worker60pass/2POSIXskip; parent194pass/3skip; independent closure approve | evidence/2026-10-08/B2/, BC2-integration/ | 실제 local Git/SQLite/test-command/Done, cached Hook, read-only mode 검증. 실제 hosted connect는 D2 |
 | B3 | 완료 | 기준 06e18ec; 기록 commit은 git log | worker8entry +23focusedhook; parent42pass/0fail; actualbuiltWindowsPS/GitBash exit0+missingPythonexit3 | evidence/2026-10-08/B3/ | CLI frontdoors/공용 CodexHook 검증; 실제 제품 trust/새세션·Linux는 F2/F3 미실행 |
 | C1 | 완료 | 기준 938cc4e; 기록 commit은 git log | worker25 pass/1 POSIX skip; parent BC1 169 pass/3 skip; independent review approve | evidence/2026-10-08/C1/, BC1-integration/ | init/CAS/key lifecycle/ACL 검증. 실제 서비스계정 F1·Linux F2 미실행 |
-| C2 | 검증 완료 | 기준 c88ab73 | worker35pass/1POSIXskip; parent194pass/3skip; closure approve | evidence/2026-10-08/C2/, BC2-integration/ | 기록 커밋 뒤 D1/E1 |
+| C2 | 완료 | 기준 c88ab73 | worker35pass/1POSIXskip; parent194pass/3skip; closure approve | evidence/2026-10-08/C2/, BC2-integration/ | 실제 TLS/doctor/status/logs/중복 실행 검증. F1 운영 서비스 계정은 미실행 |
 | D1 | 미착수 | — | 미실행 | — | C2 선행, 서버 |
 | D2 | 미착수 | — | 미실행 | — | B2·D1 인계 샘플 선행, 클라이언트 |
 | E1 | 미착수 | — | 미실행 | — | C2 선행, 서버 명령 생성만 시험 |
@@ -37,6 +37,6 @@
 
 
 ## 현재 재개 지점
-2026-10-08 B2/C2 source 최신 통합194pass/3POSIXskip. B2 기록 완료, C2 커밋 준비. A0 nonpassing baseline은 보존하며 E3 whole-suite에서 test ID 단위로 비교한다.
+2026-10-08 B2/C2 source 최신 통합194pass/3POSIXskip. B2/C2 기록 완료. D1/E1 선행 충족. A0 nonpassing baseline은 보존하며 E3 whole-suite에서 test ID 단위로 비교한다.
 Graphify 출력은 로컬 분석 자료이며 커밋하지 않는다. source 안정 지점에서 메인만 AST-only 갱신한다. E3 push/PR 승인과 F1 운영 단계별 승인은 아직 받지 않았다.
 D1 scope 관계 가정은 actual TLS2tests로 검증하고 API 변경 없이 정정했다. D1 실제 인계 파일 이후 D2 시작; E1은 별도 파일에서 명령 생성/모형 시험만 수행한다.
