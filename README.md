@@ -30,12 +30,27 @@ claude plugin install pmt-lifecycle@j-ai-plugins
 
 데이터 경로와 HTTPS 서버 연결은 기기별로 설정합니다. [PMT 사용 안내](proj-mgmt-tool/docs/usage.md)와 [개발 환경 연결 절차](proj-mgmt-tool/docs/handoff/development-plugin.md)를 따릅니다.
 
+## model-handoff (Claude Code)
+
+계획한 태스크를 Codex·Antigravity·개인 Claude 계정에 우선순위대로 병렬로 넘깁니다. 실행자가 사용량 한도에 걸리면 해제 시각까지 대기로 표시하고 다음 순위로 전환합니다. Python 3.9 이상, 표준 라이브러리만 사용합니다.
+
+```bash
+claude plugin install model-handoff@j-ai-plugins
+```
+
+- 사용: 세션에서 "하위 모델로 병렬 작업하자" → 태스크 분할·실행자 제안 → 승인 후 실행
+- 설정: `/model-handoff:setting` 또는 `handoff config order codex,agy,claude`, `handoff status`
+- 설정·대기 상태: `~/.config/model-handoff/` (`MODEL_HANDOFF_HOME`으로 변경)
+- 승인 방식: 기본은 각 CLI의 자동 승인 모드입니다(Codex `--approve-for-me` + 샌드박스 네트워크 허용, Antigravity `--sandbox` + `toolPermission: proceed-in-sandbox`(`handoff setup agy`로 설정), Claude `--permission-mode auto`). 모든 검사를 끄는 `bypass`는 `handoff config set <실행자>.permission bypass`로 직접 지정해야 하며 격리된 환경에서만 사용합니다.
+- 개인 계정 분리: `handoff config set claude.config_dir <경로>`, `handoff config set codex.codex_home <경로>`
+- 주의: Antigravity 공식 FAQ는 소비자 요금제에서 agy를 다른 코딩 에이전트 안에서 감싸 쓰는 것을 지원하지 않으며 계정 정지 사유가 될 수 있다고 안내합니다. `handoff config disable agy`로 끌 수 있습니다.
+
 ## 마켓플레이스 구조
 
 | 제품 | 목록 | 플러그인 경로 |
 |---|---|---|
 | Codex | `.agents/plugins/marketplace.json` | `./proj-mgmt-tool` |
-| Claude Code | `.claude-plugin/marketplace.json` | `./proj-mgmt-tool` |
+| Claude Code | `.claude-plugin/marketplace.json` | `./proj-mgmt-tool`, `./model-handoff` |
 
 저장소 원천을 직접 설치하므로 별도 `dist` 생성이 필요하지 않습니다. ZIP 배포가 필요하면 기존 `proj-mgmt-tool/scripts/build_plugins.py`를 사용합니다. 새 배포에서는 본체·플러그인 manifest·Claude 마켓플레이스 항목의 버전을 함께 갱신합니다.
 

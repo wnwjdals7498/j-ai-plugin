@@ -1,0 +1,554 @@
+#!/usr/bin/env python3
+"""model-handoff: run a task on the first available executor in priority order.
+
+When an executor reports a usage limit, it is put on cooldown until its reset
+time and the next executor in the order is tried. Configuration and cooldown
+state live in $MODEL_HANDOFF_HOME (default ~/.config/model-handoff).
+"""
+import argparse
+import copy
+import fcntl
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+
+EXECUTORS = ("codex", "agy", "claude")
+
+DEFAULT_CONFIG = {
+    "order": ["codex", "agy", "claude"],
+    "default_cooldown_minutes": 300,
+    "capacity_cooldown_minutes": 10,
+    "timeout_minutes": 12,
+    "executors": {
+        "codex": {"enabled": True, "command": "codex", "model": None, "permission": "auto", "network": True, "codex_home": None},
+        "agy": {"enabled": True, "command": "agy", "model": None, "permission": "auto"},
+        "claude": {"enabled": False, "command": "claude", "model": None, "permission": "auto", "config_dir": None},
+    },
+}
+
+# Strings taken from the installed CLI binaries (codex 0.155.1, agy 1.3.3,
+# claude 2.1.296). Matched case-insensitively against the run output.
+QUOTA_PATTERNS = {
+    "codex": [r"you'?ve hit your usage limit"],
+    "agy": [r"individual quota reached", r"resource_exhausted"],
+    "claude": [r"you'?ve hit your (usage |session |weekly )?limit", r"you'?re out of (extra usage|usage credits)"],
+}
+# Login prompts that end a headless run without doing any work.
+LOGIN_PATTERNS = {
+    "codex": [r"not logged in", r"please sign in again"],
+    "agy": [r"authentication required", r"authentication failed or timed out"],
+    "claude": [r"not logged in", r"invalid api key", r"please run /login"],
+}
+LOGIN_HOLD_SECONDS = 30 * 86400
+CAPACITY_PATTERNS = {
+    "agy": [r"model_capacity_exhausted"],
+}
+
+# "auto" is each CLI's broadest approval mode that keeps its safety layer:
+#   codex  --approve-for-me          reviewer subagent approves requests; workspace-write sandbox,
+#                                    outbound network allowed when codex.network is true
+#   agy    --mode accept-edits --sandbox, plus toolPermission "proceed-in-sandbox" written by
+#          `handoff setup agy`: commands inside the terminal sandbox run without approval,
+#          commands that try to leave it are denied in print mode
+#   claude --permission-mode auto    classifier reviews each action; blocked actions are denied
+# "bypass" skips all checks and must only be used in an externally isolated environment.
+PERMISSIONS = ("auto", "bypass")
+
+EXIT_OK, EXIT_FAILED, EXIT_USAGE, EXIT_UNAVAILABLE = 0, 1, 2, 3
+
+
+def home() -> Path:
+    base = os.environ.get("MODEL_HANDOFF_HOME")
+    if base:
+        return Path(base)
+    xdg = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
+    return Path(xdg) / "model-handoff"
+
+
+def now() -> float:
+    return time.time()
+
+
+def fmt_ts(ts):
+    if ts is None:
+        return None
+    return datetime.fromtimestamp(ts, timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+@contextmanager
+def locked():
+    root = home()
+    root.mkdir(parents=True, exist_ok=True)
+    with open(root / ".lock", "w") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+def _read_json(path: Path, default):
+    try:
+        return json.loads(path.read_text())
+    except FileNotFoundError:
+        return copy.deepcopy(default)
+
+
+def _write_json(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+
+def load_config():
+    cfg = _read_json(home() / "config.json", DEFAULT_CONFIG)
+    # Fill keys added in later versions without overwriting user values.
+    merged = copy.deepcopy(DEFAULT_CONFIG)
+    for key, value in cfg.items():
+        if key == "executors":
+            for name, opts in value.items():
+                merged["executors"].setdefault(name, {}).update(opts)
+        else:
+            merged[key] = value
+    return merged
+
+
+def save_config(cfg) -> None:
+    _write_json(home() / "config.json", cfg)
+
+
+def load_state():
+    return _read_json(home() / "state.json", {"cooldowns": {}})
+
+
+def save_state(state) -> None:
+    _write_json(home() / "state.json", state)
+
+
+# ---------------------------------------------------------------- availability
+
+def executor_status(name, cfg, state):
+    opts = cfg["executors"].get(name)
+    if opts is None:
+        return {"name": name, "state": "unknown", "reason": "not a supported executor"}
+    if not opts.get("enabled"):
+        return {"name": name, "state": "disabled"}
+    if shutil.which(opts["command"]) is None:
+        return {"name": name, "state": "missing", "reason": f"command not found: {opts['command']}"}
+    if name == "claude" and not opts.get("config_dir"):
+        return {"name": name, "state": "unconfigured", "reason": "set claude.config_dir to the personal account directory"}
+    cd = state["cooldowns"].get(name)
+    if cd and cd["until"] > now() and cd.get("kind") == "login":
+        return {"name": name, "state": "login_required", "reason": cd.get("reason")}
+    if cd and cd["until"] > now():
+        return {"name": name, "state": "cooldown", "until": fmt_ts(cd["until"]), "reason": cd.get("reason")}
+    if name == "agy" and opts.get("permission") != "bypass" and agy_settings().get("toolPermission") != AGY_TOOL_PERMISSION:
+        return {"name": name, "state": "ready", "reason": "shell commands will be denied; run `handoff setup agy`"}
+    return {"name": name, "state": "ready"}
+
+
+# ---------------------------------------------------------------- agy settings
+
+AGY_TOOL_PERMISSION = "proceed-in-sandbox"
+
+
+def agy_settings_path() -> Path:
+    return Path.home() / ".gemini" / "antigravity-cli" / "settings.json"
+
+
+def agy_settings():
+    try:
+        return json.loads(agy_settings_path().read_text())
+    except (FileNotFoundError, ValueError):
+        return {}
+
+
+def cmd_setup(args):
+    """Write the agy settings that let sandboxed commands run without approval."""
+    path = agy_settings_path()
+    try:
+        current = json.loads(path.read_text())
+    except FileNotFoundError:
+        current = {}
+    except ValueError:
+        return fail(f"{path} is not valid JSON; fix it before running setup", EXIT_FAILED)
+    wanted = {"toolPermission": AGY_TOOL_PERMISSION, "enableTerminalSandbox": True}
+    changed = {k: v for k, v in wanted.items() if current.get(k) != v}
+    backup = None
+    if changed:
+        if path.exists():
+            backup = path.with_name(f"settings.json.bak-{int(now())}")
+            shutil.copy2(path, backup)
+        current.update(changed)
+        _write_json(path, current)
+    emit({"settings": str(path), "changed": changed, "backup": str(backup) if backup else None})
+    return EXIT_OK
+
+
+def statuses(cfg, state):
+    return [executor_status(n, cfg, state) for n in cfg["order"]]
+
+
+# ---------------------------------------------------------------- reset detection
+
+_DURATION = re.compile(r"(\d+)\s*(d|h|m|s)(?![a-z])", re.I)
+_UNIT = {"d": 86400, "h": 3600, "m": 60, "s": 1}
+
+
+def parse_reset_seconds(text):
+    """Return seconds until reset from text like 'resets in 4h 23m' or 'reset in 143h57m55s'."""
+    m = re.search(r"reset[s]?\s+(?:in\s+)?((?:\d+\s*[dhms]\s*){1,4})", text, re.I)
+    if not m:
+        return None
+    total = sum(int(n) * _UNIT[u.lower()] for n, u in _DURATION.findall(m.group(1)))
+    return total or None
+
+
+def codex_reset_ts(codex_home, since):
+    """Latest rate-limit reset time recorded in Codex session logs written after `since`."""
+    root = Path(codex_home or Path.home() / ".codex") / "sessions"
+    if not root.is_dir():
+        return None
+    logs = [p for p in root.rglob("*.jsonl") if p.stat().st_mtime >= since - 5]
+    best = None
+    for log in sorted(logs, key=lambda p: p.stat().st_mtime, reverse=True)[:3]:
+        try:
+            lines = log.read_text(errors="replace").splitlines()
+        except OSError:
+            continue
+        for line in reversed(lines):
+            if '"rate_limits"' not in line:
+                continue
+            limits = _find_rate_limits(line)
+            if not limits:
+                continue
+            windows = [w for w in (limits.get("primary"), limits.get("secondary")) if w]
+            full = [w for w in windows if (w.get("used_percent") or 0) >= 99]
+            pick = full or windows
+            ts = max((w.get("resets_at") or 0) for w in pick) if pick else 0
+            if ts:
+                best = max(best or 0, ts)
+            break
+    return best
+
+
+def _find_rate_limits(line):
+    try:
+        obj = json.loads(line)
+    except ValueError:
+        return None
+    stack = [obj]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            if isinstance(cur.get("rate_limits"), dict):
+                return cur["rate_limits"]
+            stack.extend(cur.values())
+        elif isinstance(cur, list):
+            stack.extend(cur)
+    return None
+
+
+def detect_limit(name, output, exit_code, cfg, started):
+    """Return (kind, until_ts, reason) when the run hit a usage limit, else None."""
+    if exit_code == 0 and re.search(r"^TASK_DONE\b", output, re.M):
+        return None
+    lowered = output.lower()
+    for pat in LOGIN_PATTERNS.get(name, []):
+        if re.search(pat, lowered):
+            return ("login", now() + LOGIN_HOLD_SECONDS,
+                    f"login required: run `{name}` interactively to sign in, then `handoff clear {name}`")
+    for pat in CAPACITY_PATTERNS.get(name, []):
+        if re.search(pat, lowered):
+            return ("capacity", now() + cfg["capacity_cooldown_minutes"] * 60, "model capacity exhausted")
+    for pat in QUOTA_PATTERNS.get(name, []):
+        if re.search(pat, lowered):
+            until = None
+            secs = parse_reset_seconds(output)
+            if secs:
+                until = now() + secs
+            elif name == "codex":
+                until = codex_reset_ts(cfg["executors"]["codex"].get("codex_home"), started)
+            if not until or until <= now():
+                until = now() + cfg["default_cooldown_minutes"] * 60
+            return ("quota", until, f"usage limit: {pat}")
+    return None
+
+
+# ---------------------------------------------------------------- execution
+
+def build_command(name, opts, prompt, cwd, timeout_min):
+    cmd = [opts["command"]]
+    env = dict(os.environ)
+    model = opts.get("model")
+    bypass = opts.get("permission") == "bypass"
+    if name == "codex":
+        cmd += ["exec", "--dangerously-bypass-approvals-and-sandbox" if bypass else "--approve-for-me", "-C", cwd]
+        if not bypass and opts.get("network"):
+            cmd += ["-c", "sandbox_workspace_write.network_access=true"]
+        if model:
+            cmd += ["-m", model]
+        cmd.append(prompt)
+        if opts.get("codex_home"):
+            env["CODEX_HOME"] = os.path.expanduser(opts["codex_home"])
+    elif name == "agy":
+        cmd += ["--dangerously-skip-permissions"] if bypass else ["--mode", "accept-edits", "--sandbox"]
+        cmd += ["--new-project", "--print-timeout", f"{timeout_min}m"]
+        if model:
+            cmd += ["--model", model]
+        cmd += ["-p", prompt]
+    elif name == "claude":
+        cmd += ["-p"]
+        cmd += ["--dangerously-skip-permissions"] if bypass else ["--permission-mode", "auto"]
+        if model:
+            cmd += ["--model", model]
+        cmd.append(prompt)
+        env["CLAUDE_CONFIG_DIR"] = os.path.expanduser(opts["config_dir"])
+    else:
+        raise ValueError(name)
+    return cmd, env
+
+
+def run_one(name, cfg, prompt, cwd, log_path):
+    opts = cfg["executors"][name]
+    timeout_min = cfg["timeout_minutes"]
+    cmd, env = build_command(name, opts, prompt, cwd, timeout_min)
+    started = now()
+    with open(log_path, "ab") as log:
+        log.write(f"\n=== {fmt_ts(started)} executor={name} cwd={cwd}\n".encode())
+        log.flush()
+        proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                start_new_session=True)
+        chunks = []
+        timed_out = False
+        deadline = started + timeout_min * 60 + 60
+        try:
+            out, _ = proc.communicate(timeout=max(1, deadline - now()))
+            chunks.append(out)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                out, _ = proc.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL)
+                out, _ = proc.communicate()
+            chunks.append(out)
+        data = b"".join(c for c in chunks if c)
+        log.write(data)
+    text = data.decode(errors="replace")
+    sentinel = None
+    for line in reversed(text.strip().splitlines()):
+        if re.match(r"^(TASK_DONE|TASK_FAIL)\b", line.strip()):
+            sentinel = line.strip()
+            break
+    return {
+        "executor": name,
+        "exit_code": None if timed_out else proc.returncode,
+        "timed_out": timed_out,
+        "seconds": round(now() - started, 1),
+        "sentinel": sentinel,
+        "tail": text.strip().splitlines()[-5:],
+        "_output": text,
+        "_started": started,
+    }
+
+
+def cmd_run(args):
+    prompt = Path(args.prompt_file).read_text() if args.prompt_file else args.prompt
+    if not prompt:
+        return fail("prompt is empty: pass --prompt or --prompt-file", EXIT_USAGE)
+    cwd = os.path.abspath(args.cwd)
+    if not os.path.isdir(cwd):
+        return fail(f"cwd does not exist: {cwd}", EXIT_USAGE)
+    log_path = Path(args.log or home() / "logs" / f"{int(now())}-{os.getpid()}.log")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    attempts = []
+    cfg = load_config()
+    order = [args.only] if args.only else cfg["order"]
+    for name in order:
+        with locked():
+            cfg = load_config()
+            st = executor_status(name, cfg, load_state())
+        if st["state"] != "ready":
+            attempts.append({"executor": name, "skipped": st["state"], "reason": st.get("reason"), "until": st.get("until")})
+            continue
+        result = run_one(name, cfg, prompt, cwd, log_path)
+        limit = detect_limit(name, result.pop("_output"), result["exit_code"], cfg, result.pop("_started"))
+        if limit:
+            kind, until, reason = limit
+            with locked():
+                state = load_state()
+                state["cooldowns"][name] = {"until": until, "reason": reason, "kind": kind, "set_at": now()}
+                save_state(state)
+            result.update({"limit": kind, "cooldown_until": fmt_ts(until)})
+            attempts.append(result)
+            continue
+        attempts.append(result)
+        status = "done" if (result["exit_code"] == 0 and (result["sentinel"] or "").startswith("TASK_DONE")) else "failed"
+        emit({"status": status, "executor": name, "cwd": cwd, "log": str(log_path), "attempts": attempts})
+        return EXIT_OK if status == "done" else EXIT_FAILED
+
+    with locked():
+        cfg, state = load_config(), load_state()
+    waits = [state["cooldowns"][n]["until"] for n in order if n in state["cooldowns"] and state["cooldowns"][n]["until"] > now()]
+    emit({"status": "unavailable", "cwd": cwd, "log": str(log_path), "attempts": attempts,
+          "next_available": fmt_ts(min(waits)) if waits else None})
+    return EXIT_UNAVAILABLE
+
+
+# ---------------------------------------------------------------- config / status
+
+def emit(obj):
+    print(json.dumps(obj, indent=2, ensure_ascii=False))
+
+
+def fail(msg, code):
+    print(json.dumps({"status": "error", "error": msg}, ensure_ascii=False))
+    return code
+
+
+def parse_value(raw):
+    low = raw.lower()
+    if low in ("true", "on", "yes"):
+        return True
+    if low in ("false", "off", "no"):
+        return False
+    if low in ("null", "none", ""):
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return raw
+
+
+def cmd_config(args):
+    with locked():
+        cfg = load_config()
+        if args.action == "show":
+            emit(cfg)
+            return EXIT_OK
+        if args.action == "reset":
+            cfg = copy.deepcopy(DEFAULT_CONFIG)
+        elif args.action == "order":
+            names = [n.strip() for n in ",".join(args.values).split(",") if n.strip()]
+            bad = [n for n in names if n not in EXECUTORS]
+            if bad or not names or len(set(names)) != len(names):
+                return fail(f"order must list distinct executors from {', '.join(EXECUTORS)}; got {names}", EXIT_USAGE)
+            cfg["order"] = names
+        elif args.action in ("enable", "disable"):
+            if not args.values or args.values[0] not in EXECUTORS:
+                return fail(f"{args.action} needs one of {', '.join(EXECUTORS)}", EXIT_USAGE)
+            cfg["executors"][args.values[0]]["enabled"] = args.action == "enable"
+        elif args.action == "set":
+            if len(args.values) != 2:
+                return fail("usage: handoff config set <key> <value>", EXIT_USAGE)
+            key, value = args.values[0], parse_value(args.values[1])
+            head, _, tail = key.partition(".")
+            if head in EXECUTORS and tail:
+                if tail not in DEFAULT_CONFIG["executors"][head]:
+                    return fail(f"unknown key {key}; allowed: {', '.join(head + '.' + k for k in DEFAULT_CONFIG['executors'][head])}", EXIT_USAGE)
+                if tail == "permission" and value not in PERMISSIONS:
+                    return fail(f"{key} must be one of {', '.join(PERMISSIONS)}", EXIT_USAGE)
+                cfg["executors"][head][tail] = value
+            elif key in DEFAULT_CONFIG and key not in ("order", "executors"):
+                if not isinstance(value, int) or value <= 0:
+                    return fail(f"{key} must be a positive integer (minutes)", EXIT_USAGE)
+                cfg[key] = value
+            else:
+                return fail(f"unknown key {key}", EXIT_USAGE)
+        save_config(cfg)
+    emit(cfg)
+    return EXIT_OK
+
+
+def cmd_status(args):
+    with locked():
+        cfg, state = load_config(), load_state()
+    rows = statuses(cfg, state)
+    if args.json:
+        emit({"order": cfg["order"], "executors": rows})
+        return EXIT_OK
+    for i, r in enumerate(rows, 1):
+        extra = r.get("until") or r.get("reason") or ""
+        print(f"{i}. {r['name']:<7} {r['state']:<12} {extra}")
+    return EXIT_OK
+
+
+def cmd_cooldown(args):
+    if args.name not in EXECUTORS:
+        return fail(f"unknown executor {args.name}", EXIT_USAGE)
+    with locked():
+        state = load_state()
+        cfg = load_config()
+        minutes = args.minutes or cfg["default_cooldown_minutes"]
+        until = now() + minutes * 60
+        state["cooldowns"][args.name] = {"until": until, "reason": "set manually", "kind": "manual", "set_at": now()}
+        save_state(state)
+    emit({"executor": args.name, "cooldown_until": fmt_ts(until)})
+    return EXIT_OK
+
+
+def cmd_clear(args):
+    with locked():
+        state = load_state()
+        names = list(state["cooldowns"]) if args.name == "all" else [args.name]
+        for n in names:
+            state["cooldowns"].pop(n, None)
+        save_state(state)
+    emit({"cleared": names})
+    return EXIT_OK
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="handoff", description=__doc__.splitlines()[0])
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    c = sub.add_parser("config", help="show or change settings")
+    c.add_argument("action", choices=["show", "order", "enable", "disable", "set", "reset"])
+    c.add_argument("values", nargs="*")
+    c.set_defaults(func=cmd_config)
+
+    s = sub.add_parser("status", help="list executors in priority order with availability")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_status)
+
+    r = sub.add_parser("run", help="run a prompt on the first available executor")
+    r.add_argument("--cwd", required=True, help="working directory for the executor (use a worktree)")
+    g = r.add_mutually_exclusive_group(required=True)
+    g.add_argument("--prompt")
+    g.add_argument("--prompt-file")
+    r.add_argument("--only", choices=EXECUTORS, help="use only this executor")
+    r.add_argument("--log", help="log file path (appended)")
+    r.set_defaults(func=cmd_run)
+
+    cd = sub.add_parser("cooldown", help="mark an executor unavailable for N minutes")
+    cd.add_argument("name")
+    cd.add_argument("--minutes", type=int)
+    cd.set_defaults(func=cmd_cooldown)
+
+    su = sub.add_parser("setup", help="write executor settings needed for auto permission (agy)")
+    su.add_argument("name", choices=["agy"])
+    su.set_defaults(func=cmd_setup)
+
+    cl = sub.add_parser("clear", help="clear the cooldown of an executor or all")
+    cl.add_argument("name")
+    cl.set_defaults(func=cmd_clear)
+
+    args = p.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
