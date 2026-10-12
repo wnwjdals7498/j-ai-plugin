@@ -17,6 +17,7 @@ argument-hint: "[status | order codex,agy,claude | enable|disable <실행자> | 
 | 순위 바꾸기 | `handoff config order agy,codex,claude` |
 | 실행자 켜기·끄기 | `handoff config enable claude`, `handoff config disable agy` |
 | 실행자 모델 고정 | `handoff config set codex.model <모델>` (해제는 값 `null`). 목록: `agy models` |
+| codex 추론 강도 | `handoff config set codex.effort xhigh` (`low`·`medium`·`high`·`xhigh`·`max`·`ultra`, 해제는 `null`). 모델별 지원 단계는 `~/.codex/models_cache.json` |
 | 실행자 승인 방식 | `handoff config set codex.permission auto` (기본) 또는 `bypass` |
 | agy 샌드박스 자동 실행 설정 | `handoff setup agy` |
 | Codex 샌드박스 네트워크 | `handoff config set codex.network false` (기본 `true`) |

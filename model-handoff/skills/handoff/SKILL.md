@@ -12,7 +12,8 @@ description: 작업을 하위 모델(Codex, Antigravity, 개인 Claude)에 우�
 ## 1. 제안 (실행 전 반드시 승인받는다)
 
 1. `handoff status`로 순위와 상태를 읽는다. 모두 `cooldown`·`login_required`·`disabled`면
-   가장 빠른 해제 시각을 알리고 멈춘다.
+   가장 빠른 해제 시각을 알리고, 마지막 순위인 메인 세션 Claude 서브에이전트로
+   진행할지 묻는다(아래 "서브에이전트 대체").
 2. 요청을 태스크로 나눈다. 형식은 `references/plan-format.md`:
    - 태스크마다 `대상:`(파일 단위 전부)과 `검증:`(실행 가능한 커맨드 → 기대 결과)
    - `검증:`을 쓸 수 없는 일은 넘기지 않고 메인에 남긴다
@@ -80,8 +81,16 @@ description: 작업을 하위 모델(Codex, Antigravity, 개인 Claude)에 우�
 - 검증 실패 → diff에서 본 문제를 짚는 재지시 프롬프트로
   `handoff run --only <같은 실행자> ...`를 **1회만** 재시도한다. 재실패면 그 태스크를
   멈추고 worktree를 남긴 채 경로·diff 요약·사유를 보고한다.
-- `unavailable` → `next_available` 시각을 보고하고 태스크를 미완료로 둔다.
-  남은 묶음도 시작하지 않는다.
+- `unavailable` → `next_available` 시각을 보고하고 같은 태스크를 서브에이전트 대체로
+  넘긴다. 남은 묶음도 사용 가능한 실행자가 생길 때까지 서브에이전트로 처리한다.
+
+### 서브에이전트 대체 (마지막 순위)
+
+모든 CLI 실행자가 사용 불가일 때만 쓴다. 메인 세션의 Agent 도구로 general-purpose
+서브에이전트를 띄워 같은 worktree에서 같은 프롬프트 파일 내용을 수행시킨다.
+첫 줄에 "작업 디렉토리는 /tmp/model-handoff/<프로젝트명>/t<N> 이다"를 덧붙인다.
+판정과 반입은 위와 같다. 검증 실패 재시도도 서브에이전트로 1회만 한다.
+보고의 실행자 칸에는 `claude-subagent`로 적는다.
 
 `attempts`에 `limit`이 있으면 어느 실행자가 언제까지 대기로 바뀌었는지 보고에 넣는다.
 
