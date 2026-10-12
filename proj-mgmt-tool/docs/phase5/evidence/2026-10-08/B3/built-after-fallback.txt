@@ -1,0 +1,25 @@
+B3 actual builder package smoke (explicit and client.json fallback)
+Build command: python scripts/build_plugins.py --output-dir C:\PMT\work\phase5-test\B3\package-output-after --version 0.5.1
+Package root copied beneath a path containing spaces.
+Saved interpreter path contains spaces: C:\PMT\work\phase5-test\B3\pytest-entrypoints-afterexecfix\test_c11_git_bash_metadata_fal0\python runtime with spaces\Scripts\python.exe
+ConfigRoot/DataRoot isolated under C:\PMT\work\phase5-test\B3; PYTHONPATH unset.
+Claude pmt.cmd explicit PMT_PYTHON exit=0
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\B3\built-after-claude-config
+DataRoot: C:\PMT\work\phase5-test\B3\built-after-claude-data
+project: not linked
+Codex Git Bash pmt explicit PMT_PYTHON exit=0
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\B3\built-after-codex-config
+DataRoot: C:\PMT\work\phase5-test\B3\built-after-codex-data
+project: not linked
+Claude pmt.cmd client.json fallback exit=0
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\B3\built-after-codex-config
+DataRoot: C:\PMT\work\phase5-test\B3\built-after-codex-data
+project: not linked
+Codex Git Bash pmt client.json fallback exit=0
+mode: local
+ConfigRoot: C:\PMT\work\phase5-test\B3\built-after-codex-config
+DataRoot: C:\PMT\work\phase5-test\B3\built-after-codex-data
+project: not linked

@@ -1,5 +1,9 @@
 # Authenticated storage with local execution
 
+Connect with `pmt connect --handoff <file> --credential-file <file>` or Claude /plugin handoff_file plus sensitive device_credential. Then select the handed-off project with `pmt link <name>` and run `pmt check`. Stored credentials are OS-protected and never written to the Hook environment file. Keep TLS verification; compare the public CA fingerprint separately. Host setup and device issuance use the separate pmt-server administrator skill.
+
+An existing local profile needs explicit `pmt storage switch`; entering Host settings alone preserves local. Switch rejects unresolved pending or active claims and keeps the local DB. `pmt disconnect` removes only the stored token. Same-root products share one identity; use separate ConfigRoots for separate devices.
+
 Use the installed `pmt` and its selected ConfigRoot/DataRoot. `pmt storage status` reads the local profile; `probe` verifies the actual connection. `configure` accepts one JSON object with `mode`, `expected_config_sha256`, and for hosted mode endpoint, credential environment-variable name, registered device/namespace, optional CA and explicit workspace mappings. It probes before publishing the config. Secret values are never part of that JSON. Do not run ordinary local `setup` against a hosted profile or change user settings for a test.
 
 Host owns the selected namespace's SQLite execution state, Queue, scopes, resource references and replay records. A connection failure is an error; do not open a local business database as a fallback. Model selection, native tools, local CLI processes, Git, document files and process configuration remain client operations. Execution identity/selection metadata may cross the wire; commands, environment variables, PID, credentials and spool paths may not.

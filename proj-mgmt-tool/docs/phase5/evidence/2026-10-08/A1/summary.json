@@ -1,0 +1,20 @@
+{
+  "task": "A1",
+  "status": "pass",
+  "source_base": "6161335",
+  "python": "3.14.5rc1",
+  "command": "python -m pytest -q tests/test_phase5_handoff.py tests/test_phase5_host_common.py tests/test_phase3_host_auth.py --basetemp=C:/PMT/work/phase5-test/A1/pytest-verified --junitxml=C:/PMT/work/phase5-test/A1/pytest-verified.xml",
+  "exit_code": 0,
+  "passed": 52,
+  "failed": 0,
+  "errors": 0,
+  "plugin_version": "0.5.0",
+  "core_version": "0.4.1",
+  "db_schema": 5,
+  "graph_schema": 1,
+  "protocol": 1,
+  "host_api": 1,
+  "review": "two original findings fixed; independent review APPROVE; focused49 tests pass using same dev venv",
+  "operating_host_changed": false,
+  "recorded_utc": "2026-10-08T03:03:20.481561+00:00"
+}

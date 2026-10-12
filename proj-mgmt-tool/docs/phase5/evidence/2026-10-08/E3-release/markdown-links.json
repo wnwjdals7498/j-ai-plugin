@@ -1,0 +1,18 @@
+{
+  "claude": {
+    "local_relative_links_checked": 11,
+    "broken_local_links": []
+  },
+  "codex": {
+    "local_relative_links_checked": 11,
+    "broken_local_links": []
+  },
+  "opencode": {
+    "local_relative_links_checked": 11,
+    "broken_local_links": []
+  },
+  "server": {
+    "local_relative_links_checked": 5,
+    "broken_local_links": []
+  }
+}

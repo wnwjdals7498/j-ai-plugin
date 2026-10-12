@@ -1,0 +1,114 @@
+[
+  {
+    "label": "client-cmd-explicit",
+    "argv": [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\invoke-cmd.ps1",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\bin\\pmt.cmd",
+      "mode"
+    ],
+    "exit": 0,
+    "stdout": "mode: unconfigured\nConfigRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-cmd-explicit config space 한글\nDataRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-cmd-explicit data space 한글\nproject: not linked\n",
+    "stderr": "",
+    "config_root_created": false,
+    "only_metadata_remains": true,
+    "data_root_created": false
+  },
+  {
+    "label": "client-bash-explicit",
+    "argv": [
+      "D:\\Application\\Git\\bin\\bash.exe",
+      "-c",
+      "\"$1\" mode",
+      "_",
+      "/c/PMT/work/phase5-test/E3-release-aa39931/0.5.0/codex/bin/pmt"
+    ],
+    "exit": 0,
+    "stdout": "mode: unconfigured\nConfigRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-bash-explicit config space 한글\nDataRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-bash-explicit data space 한글\nproject: not linked\n",
+    "stderr": "",
+    "config_root_created": false,
+    "only_metadata_remains": true,
+    "data_root_created": false
+  },
+  {
+    "label": "client-cmd-metadata",
+    "argv": [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\invoke-cmd.ps1",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\bin\\pmt.cmd",
+      "mode"
+    ],
+    "exit": 0,
+    "stdout": "mode: unconfigured\nConfigRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-cmd-metadata config space 한글\nDataRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-cmd-metadata data space 한글\nproject: not linked\n",
+    "stderr": "",
+    "config_root_created": false,
+    "only_metadata_remains": true,
+    "data_root_created": false
+  },
+  {
+    "label": "client-bash-metadata",
+    "argv": [
+      "D:\\Application\\Git\\bin\\bash.exe",
+      "-c",
+      "\"$1\" mode",
+      "_",
+      "/c/PMT/work/phase5-test/E3-release-aa39931/0.5.0/codex/bin/pmt"
+    ],
+    "exit": 0,
+    "stdout": "mode: unconfigured\nConfigRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-bash-metadata config space 한글\nDataRoot: C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\smoke\\client-bash-metadata data space 한글\nproject: not linked\n",
+    "stderr": "",
+    "config_root_created": false,
+    "only_metadata_remains": true,
+    "data_root_created": false
+  },
+  {
+    "label": "server-powershell",
+    "exit": 0,
+    "stdout": "{\"core_version\":\"0.4.1\",\"db_schema\":5,\"dependencies\":{\"fastapi\":\"0.142.4\",\"pydantic\":\"2.13.5\",\"uvicorn\":\"0.54.0\"},\"graph_schema\":1,\"host_schema\":1,\"protocol\":1,\"python\":\"C:\\\\PMT\\\\src\\\\venv-dev\\\\Scripts\\\\python.exe\",\"python_version\":\"3.14.5rc1\",\"version\":\"0.5.0\"}\n",
+    "stderr": "",
+    "json": {
+      "core_version": "0.4.1",
+      "db_schema": 5,
+      "dependencies": {
+        "fastapi": "0.142.4",
+        "pydantic": "2.13.5",
+        "uvicorn": "0.54.0"
+      },
+      "graph_schema": 1,
+      "host_schema": 1,
+      "protocol": 1,
+      "python": "C:\\PMT\\src\\venv-dev\\Scripts\\python.exe",
+      "python_version": "3.14.5rc1",
+      "version": "0.5.0"
+    },
+    "config_root_created": false
+  },
+  {
+    "label": "server-bash",
+    "exit": 0,
+    "stdout": "{\"core_version\":\"0.4.1\",\"db_schema\":5,\"dependencies\":{\"fastapi\":\"0.142.4\",\"pydantic\":\"2.13.5\",\"uvicorn\":\"0.54.0\"},\"graph_schema\":1,\"host_schema\":1,\"protocol\":1,\"python\":\"C:\\\\PMT\\\\src\\\\venv-dev\\\\Scripts\\\\python.exe\",\"python_version\":\"3.14.5rc1\",\"version\":\"0.5.0\"}\n",
+    "stderr": "",
+    "json": {
+      "core_version": "0.4.1",
+      "db_schema": 5,
+      "dependencies": {
+        "fastapi": "0.142.4",
+        "pydantic": "2.13.5",
+        "uvicorn": "0.54.0"
+      },
+      "graph_schema": 1,
+      "host_schema": 1,
+      "protocol": 1,
+      "python": "C:\\PMT\\src\\venv-dev\\Scripts\\python.exe",
+      "python_version": "3.14.5rc1",
+      "version": "0.5.0"
+    },
+    "config_root_created": false
+  }
+]

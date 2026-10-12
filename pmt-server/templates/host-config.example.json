@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "paths": {
+    "data_root": "C:/ProgramData/PMT/host-data",
+    "log_dir": "C:/ProgramData/PMT/logs",
+    "backup_dir": "C:/ProgramData/PMT/backups"
+  },
+  "listen": {
+    "host": "0.0.0.0",
+    "port": 8765
+  },
+  "public_url": "https://host.example.invalid:8765",
+  "tls": {
+    "cert_file": "C:/ProgramData/PMT/host-config/tls/host.crt",
+    "key_file": "C:/ProgramData/PMT/host-config/tls/host.key",
+    "ca_file": "C:/ProgramData/PMT/host-config/tls/public-ca.crt"
+  },
+  "claim_key": {
+    "key_id": "primary",
+    "source": {
+      "kind": "dpapi",
+      "path": "C:/ProgramData/PMT/host-config/secrets/claim-primary.dpapi"
+    },
+    "retained": []
+  },
+  "proxy": {
+    "enabled": false,
+    "trusted": []
+  },
+  "access": {
+    "allowed_sources": [
+      "10.8.0.0/24"
+    ]
+  },
+  "service": {
+    "kind": "windows-task",
+    "name": "PMT Host",
+    "account": "current",
+    "app_root": "C:/PMT/app/0.5.0"
+  },
+  "logging": {
+    "level": "info",
+    "retain_days": 30
+  },
+  "registry": {
+    "projects": []
+  }
+}

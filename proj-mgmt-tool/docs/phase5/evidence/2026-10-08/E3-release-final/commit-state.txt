@@ -1,0 +1,4 @@
+HEAD: aa39931835204ee4508e53df01a4cc53ef01434c
+Commit: feat(pmt-server): E3 split plugins and packaging
+Build source: git archive of committed tree at aa39931835204ee4508e53df01a4cc53ef01434c; metadata: E3-validation/committed-release-build.json
+Status before E3 final evidence: ?? graphify-out/

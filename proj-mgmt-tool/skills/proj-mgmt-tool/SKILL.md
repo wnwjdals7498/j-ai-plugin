@@ -5,14 +5,16 @@ description: Use the configured PMT CLI for durable project context, two require
 
 # PMT project workflow
 
-## Short commands (hosted Claude Code setup)
+## Short commands (local and hosted)
 
-When the SessionStart message says PMT is ready, use the `pmt` command in Bash instead of writing JSON requests. It fills actor, scope, session, request IDs, revisions and claim references itself.
+When SessionStart says PMT is ready, use `pmt` in Bash or `pmt.cmd` in Windows PowerShell. Both local and hosted commands fill actor, scope, session, request IDs, revisions and claims. A hosted connection uses a handoff JSON plus separately delivered credential through `pmt connect` or Claude /plugin settings; Host administration belongs to the pmt-server skill.
 
 | Need | Command |
 |---|---|
-| Check connection, auth, write/read and replay | `pmt check` |
-| Link this checkout/branch to a PMT project (first time per repository needs `--project` and `--repository` from the Host handoff) | `pmt link` |
+| Read selected mode; check auth, write/read and replay | `pmt mode`; `pmt check` |
+| Known projects | `pmt projects` |
+| Connect a hosted device | `pmt connect --handoff <file> --credential-file <file>` |
+| Link this checkout/branch | local: `pmt link --new "<title>"`; existing/local/hosted: `pmt link <name>` |
 | List records, states and this machine's claims | `pmt status` |
 | Add work / item | `pmt add work "<title>"`, `pmt add item "<title>" --parent <work> --criteria "<criterion>"` |
 | Claim an item before working on it | `pmt start <item>` |

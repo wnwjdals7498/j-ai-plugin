@@ -1,0 +1,8 @@
+Connected to PMT Host; protected credential and profile saved.
+Endpoint: https://127.0.0.1:18765
+Namespace: e8ae81bb-fcb5-4c38-8174-039c14880e92
+Actor: e2-switch-test
+Scopes: 5198d1c4-c5bb-408d-bb72-2aefaf8ef0ea
+Permissions: read, review, runtime, write
+Compatibility (Host probe): Core 0.4.1; DB schema 5; graph schema 1; protocol [1]
+Public CA SHA-256: 9735458a52d4b36b69741fa4b6026e4bb2a52614122d5a89b44ef904a97a4627

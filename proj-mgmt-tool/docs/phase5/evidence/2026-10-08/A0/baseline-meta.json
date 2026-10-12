@@ -1,0 +1,34 @@
+{
+  "Task": "A0",
+  "Command": "C:\\PMT\\src\\venv-dev\\Scripts\\python.exe -m pytest -q --junitxml=docs/phase5/evidence/2026-10-08/A0/pytest.xml",
+  "StartedUtc": "2026-10-08T02:03:10.3113735Z",
+  "Commit": "8054c83a85b73356f0e2e52322855b9e03b419ce",
+  "Branch": "feat/phase5-plugin-split",
+  "Python": "Python 3.14.5rc1",
+  "OS": "Microsoft Windows NT 10.0.26100.0",
+  "ConfigRoot": "C:\\PMT\\src\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\baseline-config",
+  "DataRoot": "C:\\PMT\\src\\j-ai-plugin\\proj-mgmt-tool\\.pmt-test\\baseline-data",
+  "RequiredFiles": [
+    ".claude-plugin\\marketplace.json",
+    ".agents\\plugins\\marketplace.json",
+    "proj-mgmt-tool\\.claude-plugin\\plugin.json",
+    "proj-mgmt-tool\\.codex-plugin\\plugin.json",
+    "proj-mgmt-tool\\scripts\\pmt.py",
+    "proj-mgmt-tool\\docs\\05-plugin-split.md",
+    "proj-mgmt-tool\\docs\\phase5\\README.md"
+  ],
+  "Dirty": [
+    "?? .codex/",
+    "?? AGENTS.md",
+    "?? graphify-out/"
+  ],
+  "ExitCode": 1,
+  "FinishedUtc": "2026-10-08T02:21:43.6021648Z",
+  "Recovery": "Create missing .pmt-test parent directory; no source code changed.",
+  "CoreAndTestsUnchanged": true,
+  "ObservationLimits": [
+    "Documentation/evidence and Graphify artifacts were generated while the baseline was running; core, tests and pyproject were unchanged.",
+    "Full suite used Python 3.14.5rc1. Python3.13 was used only for isolated redirect diagnosis.",
+    "A1+ not started: D1-D8 user confirmation pending."
+  ]
+}

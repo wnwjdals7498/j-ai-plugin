@@ -122,6 +122,16 @@ class AuthRegistry:
         return {"device_id": device_id, "actor": actor, "namespace_id": self.namespace_id,
                 "scopes": scopes, "permissions": permissions, "credential": credential, "revision": 1}
 
+    def list_devices(self):
+        """Read-only administrator view; credentials and their hashes are excluded."""
+        with closing(self.db.connect()) as conn:
+            rows = conn.execute("SELECT id,actor,scopes_json,permissions_json,revision,state,created_at,updated_at "
+                                "FROM host_devices ORDER BY created_at,id").fetchall()
+        return [{"device_id": row["id"], "actor": row["actor"],
+                 "scopes": json.loads(row["scopes_json"]), "permissions": json.loads(row["permissions_json"]),
+                 "revision": row["revision"], "state": row["state"],
+                 "created_at": row["created_at"], "updated_at": row["updated_at"]} for row in rows]
+
     def rotate_device(self, device_id, expected_revision):
         identifier(device_id, "device_id")
         credential = secrets.token_urlsafe(48)

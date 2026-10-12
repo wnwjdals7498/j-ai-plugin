@@ -1,0 +1,36 @@
+D2 negative checks, all on isolated C:\PMT\work\phase5-test roots:
+
+1. Invalid CA handoff, existing successful D2 ConfigRoot:
+   `python -m pmt.easy_cli connect --handoff C:\PMT\work\phase5-test\D2\bad-ca-handoff.json --credential-file C:\PMT\work\phase5-test\D1\credentials\d2-sample.credential`
+   Exit 2; `handoff_invalid`. SHA-256 of existing storage.json, profile.json, projects.json, client.json, and DPAPI credential was unchanged.
+
+2. Bad credential, fresh test ConfigRoot:
+   Set `PMT_CONFIG_ROOT=C:\PMT\work\phase5-test\D2\bad-token-config`, `PMT_DATA_ROOT=C:\PMT\work\phase5-test\D2\bad-token-data`, then run
+   `python -m pmt.easy_cli connect --handoff C:\PMT\work\phase5-test\D1-handoff-sample\handoff.json --credential-file C:\PMT\work\phase5-test\D2\invalid.credential`
+   Exit 2; `unauthenticated`. No storage.json, profile.json, projects.json, client.json, protected credential, or CA file remained.
+
+3. Dry-run, fresh test ConfigRoot:
+   Set `PMT_CONFIG_ROOT=C:\PMT\work\phase5-test\D2\dryrun-config`, `PMT_DATA_ROOT=C:\PMT\work\phase5-test\D2\dryrun-data`, then run
+   `python -m pmt.easy_cli connect --handoff C:\PMT\work\phase5-test\D1-handoff-sample\handoff.json --credential-file C:\PMT\work\phase5-test\D1\credentials\d2-sample.credential --dry-run`
+   Exit 0; printed validation/no Host contact/no writes; ConfigRoot remained absent; input-file SHA-256 unchanged across the command.
+
+The invalid credential was a synthetic fixture. Secret bytes, credential contents, and TLS private keys were never printed or copied into Git evidence.
+
+4. Default HTTPS-only client profile policy:
+   `connect` receives a well-formed handoff for `http://127.0.0.1:18766` and rejects it as `handoff_invalid` before writes, both normal and `--dry-run`. The separate X-02 handoff validation API still accepts literal loopback HTTP only when its explicit `allow_loopback_http=True` diagnostic argument is passed; client connect has no such option because the storage profile/transport contract remains TLS-only.
+
+5. Injected concurrency regressions:
+   - A later storage writer between configure return and connect's publication read is preserved; connect returns `storage_config_conflict` and leaves staged credential/CA/Core marker intact for that profile.
+   - Writers injected between rollback's ownership snapshot and CAS restore, and after storage restore but before dependent cleanup, cause immediate conflict and preserve the writer's profile plus credential/CA/Core marker.
+   - A concurrent project registry writer after import survives rollback; project bytes are captured under the projects lock, and restore uses the same lock order.
+   - A CA writer between snapshot and staging is not overwritten; guarded staging rejects it and rolls back connect-owned credential/Core marker.
+
+Final same-root D1 rerun after the review fixes: **all positive commands exited 0**; bad credential returned `unauthenticated`/exit 2 and preserved SHA-256 for storage profile, protected credential, and CA. Host was stopped after verification; port 18765 had zero listeners/processes.
+
+Final CLI result output: endpoint, namespace, actor, scope IDs, permission names, Host-probed Core/DB/graph/protocol versions, and the public CA certificate SHA-256 were printed. Credential fixture text was absent. Unit tests verify the same CA digest/secret omission in normal and dry-run output; dry-run labels compatibility as handoff validation and makes no Host contact.
+
+Cross-suite credential environment isolation:
+- Parent's initial broader run was **119 passed, 2 skipped, 10 failed**. Its raw output remains untouched outside Git at `C:\PMT\work\phase5-test\D2-parent-final\stdout.txt` and `junit.xml`.
+- Triage found `test_c08_hosted_check_uses_protected_credential_and_replays_one_fact` used `monkeypatch.delenv(..., raising=False)` when the variable was absent. That registered no teardown restore; the test intentionally asserted the runtime-loaded protected credential stayed in the pytest process, so later suites inherited it.
+- Minimal fix changes only that new Phase 5 fixture to `monkeypatch.setenv("PMT_HOST_CREDENTIAL", "")`. The assertion that the protected credential is loaded remains intact. New D2 tests use an autouse paired set-empty/delete fixture so each test starts without an explicit credential and pytest restores original absence.
+- Fresh broader run passed: **129 passed, 2 skipped**. Exact output and JUnit are `broad-client-output.txt` and `broad-client-junit.xml`.

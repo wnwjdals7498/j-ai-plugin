@@ -254,7 +254,10 @@ def test_hook_03_database_and_pending_root_failure_is_visible_without_false_save
     native = subprocess.run([sys.executable, str(ROOT / "integrations/codex/hook.py"), "--event", "UserPromptSubmit"],
                             input=json.dumps(fixture("codex-user-prompt.json")), text=True,
                             capture_output=True, env=env, timeout=5)
-    assert native.returncode == 0 and "could not confirm" in json.loads(native.stdout)["systemMessage"]
+    # Without a cached profile the shared wrapper now stops before Core storage.
+    # The direct Core assertions below still exercise the obstructed DB/pending path.
+    assert native.returncode == 0
+    assert "not_configured" in json.loads(native.stdout)["systemMessage"]
     core_request = {"protocol_version": 1, "operation": "setup", "request_id": new_id(),
                     "actor": "main", "session_id": "io-observation", "payload": {}}
     core = subprocess.run([sys.executable, "-m", "pmt"], input=json.dumps(core_request),

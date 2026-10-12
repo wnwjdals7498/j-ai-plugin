@@ -4,7 +4,7 @@
 
 4단계 [AI 세션 연속성·변경 기반 재개](docs/04-session-continuity.md)의 코드를 구현하고 로컬 기능을 검증했다. [작업 안내](docs/phase4/README.md), [실제 연결 계약](docs/phase4/runtime-contract.md), [구현 상태·미수용](docs/phase4/implementation-status.md)를 선택해 읽는다. 간헐적 파일 접근 실패의 원인과 실제 제품/모델/외부 운영은 미확정이다. 계획의 논리 이름과 실제 operation을 구별하고, 시험되지 않은 경로를 완료로 표현하지 않는다.
 
-현재 코드 버전은 0.4.0, SQLite schema는 5, graph schema는 1이다. 4단계에서 현재 사실·체크포인트·변경·재개 문맥을 연결하며 schema4 원본은 backup 후 additive migration한다. 기존 기능의 확인 범위는 [3단계 구현 상태](docs/phase3/implementation-status.md), 현재 기능은 [4단계 상태](docs/phase4/implementation-status.md)를 따른다. 로컬 CLI registry는 Host API allowlist가 아니다. Host 시험은 사용자 결정에 따라 격리된 로컬 환경으로 한정한다.
+현재 Core 코드 버전은 0.4.1, 플러그인 release는 0.5.0, SQLite schema는 5, graph schema는 1이다. 4단계에서 현재 사실·체크포인트·변경·재개 문맥을 연결하며 schema4 원본은 backup 후 additive migration한다. 기존 기능의 확인 범위는 [3단계 구현 상태](docs/phase3/implementation-status.md), 현재 기능은 [4단계 상태](docs/phase4/implementation-status.md)를 따른다. 로컬 CLI registry는 Host API allowlist가 아니다. Host 시험은 사용자 결정에 따라 격리된 로컬 환경으로 한정한다.
 
 ## 착수 전에 읽을 것
 

@@ -1,0 +1,17 @@
+{
+  "scope": "B3 + original hook acceptance/hooks",
+  "passed": 42,
+  "failed": 0,
+  "errors": 0,
+  "exit_code": 0,
+  "duration_seconds": 16.33,
+  "review": "B3 scoped code no P1/P2; B2 findings separate pending",
+  "previous_two_hook_failures": "resolved by read-only legacy cache recognition and intentional native unconfigured warning assertion update",
+  "actual_shells": "Windows PowerShell and Git for Windows Bash, explicit Python and client metadata fallback",
+  "not_run": [
+    "native Linux Bash",
+    "actual Claude Bash tool/new sessions",
+    "Codex trust/new session"
+  ],
+  "production_host_changed": false
+}

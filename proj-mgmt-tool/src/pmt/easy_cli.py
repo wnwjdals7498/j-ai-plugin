@@ -1,4 +1,4 @@
-"""Short ``pmt`` commands for people and agents on a hosted PMT profile.
+"""Short ``pmt`` commands over local or hosted PMT storage.
 
 Every command builds the normal protocol-v1 request and runs it through the
 same ``select_store`` path as the JSON CLI.  Callers never write request IDs,
@@ -31,10 +31,26 @@ class EasyError(Exception):
 def _roots():
     config_root, data_root = easy_setup.default_roots(os.environ)
     profile, config_hash = _read_profile(config_root)
-    if profile is None or profile.get("mode") != "hosted":
-        raise EasyError("not_configured", "PMT is not configured. Fill in /plugin settings and start a new session.")
-    if not os.environ.get(easy_setup.CREDENTIAL_ENV):
-        raise EasyError("credential_missing", "PMT credential is not in this session. Start a new Claude session.")
+    if profile is None:
+        from .client_setup.mode import prepare
+        state = prepare(os.environ, os.getcwd())
+        if state["status"] != "ready":
+            raise EasyError(state.get("error_code", "not_configured"), state.get("message", "PMT setup failed."))
+        profile, config_hash = _read_profile(config_root)
+    if profile and profile.get("mode") == "local" and not (Path(data_root) / "pmt.sqlite3").is_file():
+        from .client_setup.mode import prepare
+        state = prepare(os.environ, os.getcwd())
+        if state["status"] != "ready":
+            raise EasyError(state.get("error_code", "local_setup_failed"), state.get("message", "Local PMT setup failed."))
+        profile, config_hash = _read_profile(config_root)
+    if profile and profile.get("mode") == "hosted":
+        from .client_setup.credentials import load_credential
+        try:
+            load_credential(config_root, os.environ)
+        except PmtError as error:
+            raise EasyError(error.code, "PMT credential is unavailable; check the protected credential store.") from error
+    if profile is None:
+        raise EasyError("not_configured", "PMT storage profile could not be prepared.")
     return config_root, data_root, profile, config_hash
 
 
@@ -64,17 +80,20 @@ def _save_claims(data_root, claims):
 
 
 def execute(operation, payload=None, *, record_id=None, expected_revision=None, scope_id=None,
-            request_id=None, session_id=None):
+            request_id=None, session_id=None, allow_unscoped=False):
     """Send one request through the selected hosted store; raise on failure."""
     from .service import normalize_request
     from .storage_config import select_store
 
     config_root, data_root, profile, _ = _roots()
+    selected_scope = None if allow_unscoped and operation == "create_scope" and profile["mode"] == "local" else (
+        scope_id or os.environ.get("PMT_SCOPE_ID") or _current_scope(profile))
     request = {"protocol_version": 1, "operation": operation,
-               "request_id": request_id or str(uuid.uuid4()), "actor": profile["actor"],
-               "session_id": session_id or _session_id(),
-               "scope_id": scope_id or os.environ.get("PMT_SCOPE_ID"), "payload": payload or {}}
-    if request["scope_id"] is None:
+               "request_id": request_id or str(uuid.uuid4()), "actor": profile.get("actor", "local"),
+               "session_id": session_id or _session_id(), "payload": payload or {}}
+    if selected_scope is not None:
+        request["scope_id"] = selected_scope
+    if selected_scope is None and not (allow_unscoped and operation == "create_scope" and profile["mode"] == "local"):
         raise EasyError("project_not_linked", "This checkout is not linked to a PMT project. Run `pmt link`.")
     if record_id is not None:
         request["record_id"] = record_id
@@ -82,7 +101,17 @@ def execute(operation, payload=None, *, record_id=None, expected_revision=None, 
         request["expected_revision"] = expected_revision
     request = normalize_request(request)
     store = select_store(str(data_root), str(config_root), request, environ=os.environ)
-    result, exit_code = store.execute(request)
+    try:
+        result, exit_code = store.execute(request)
+    except PmtError as error:
+        if not error.retryable or not callable(getattr(store, "get_request_result", None)):
+            raise
+        previous = store.get_request_result(request["request_id"], request["actor"], request["session_id"],
+                                            expected_request=request)
+        if previous is not None:
+            result, exit_code = previous
+        else:
+            result, exit_code = store.execute(request)
     if exit_code != 0 or not result.get("ok"):
         error = result.get("error") or {}
         raise EasyError(error.get("code", "request_failed"), error.get("message", "PMT request failed"),
@@ -93,6 +122,14 @@ def execute(operation, payload=None, *, record_id=None, expected_revision=None, 
 def _records(scope_id=None):
     result = execute("read_context", {"limit": 200}, scope_id=scope_id)
     return result.get("records", [])
+
+
+def _current_scope(profile):
+    root, branch = easy_setup.git_checkout(os.getcwd())
+    if root is not None:
+        mapping, _reason = easy_setup.select_mapping(profile, root, branch)
+        return mapping["project_id"] if mapping else None
+    return os.environ.get("PMT_SCOPE_ID")
 
 
 def _find(record_ref):
@@ -108,34 +145,85 @@ def _rid(record):
     return record.get("record_id") or record.get("id")
 
 
+def _is_uuid(value):
+    try:
+        return str(uuid.UUID(value)) == value
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
 def cmd_check(args):
-    config_root, data_root, profile, _ = _roots()
+    try:
+        config_root, data_root, profile, _ = _roots()
+    except (EasyError, PmtError) as error:
+        _print_rows([("PMT setup", "FAIL", getattr(error, "code", "not_configured"))])
+        return 1
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import check
+        try:
+            return check(sys.modules[__name__])
+        except (EasyError, PmtError) as error:
+            _print_rows([("local check", "FAIL", getattr(error, "code", "check_failed"))])
+            return 1
     rows = []
-    probe = probe_storage(str(config_root))
+    try:
+        ca_note = _check_ca(profile)
+        probe = probe_storage(str(config_root))
+    except (EasyError, PmtError) as error:
+        _print_rows([("Host authentication/compatibility", "FAIL", getattr(error, "code", "remote_unavailable"))])
+        return 1
+    rows.append(("Host CA", "ok", ca_note))
     pre = probe.get("host_preflight") or {}
     rows.append(("Host 인증·호환", "ok", f"core {pre.get('core_version')} / db {pre.get('db_schema')} / "
                  f"graph {pre.get('graph_schema')} / protocol {pre.get('protocol_versions')}"))
-    scope = os.environ.get("PMT_SCOPE_ID")
+    scope = _current_scope(profile)
     if not scope:
         rows.append(("프로젝트 연결", "미연결", "pmt link 필요"))
         _print_rows(rows)
         return 1
-    records = _records()
-    rows.append(("조회", "ok", f"레코드 {len(records)}건"))
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    request_id = str(uuid.uuid5(CHECK_NAMESPACE, f"{profile['environment_id']}:{scope}:{day}"))
-    payload = {"kind": "fact", "title": f"pmt check {day} ({profile['actor']})",
-               "reason": "pmt check 연결 확인", "body": {}}
-    first = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
-    again = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
-    same = _rid(first) == _rid(again)
-    rows.append(("기록·재전송", "ok" if same else "FAIL", f"같은 요청 재전송 시 같은 레코드 {_rid(first)[:8]}"))
+    try:
+        records = _records()
+        rows.append(("조회", "ok", f"레코드 {len(records)}건"))
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        request_id = str(uuid.uuid5(CHECK_NAMESPACE, f"{profile['environment_id']}:{scope}:{day}"))
+        payload = {"kind": "fact", "title": f"pmt check {day} ({profile['actor']})",
+                   "reason": "pmt check 연결 확인", "body": {}}
+        first = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
+        again = execute("save_change", payload, request_id=request_id, session_id="pmt-check")
+        same = _rid(first) == _rid(again)
+        rows.append(("기록·재전송", "ok" if same else "FAIL", f"같은 요청 재전송 시 같은 레코드 {_rid(first)[:8]}"))
+    except (EasyError, PmtError) as error:
+        rows.append(("Host check", "FAIL", getattr(error, "code", "check_failed")))
+        _print_rows(rows)
+        return 1
     _print_rows(rows)
     return 0 if same else 1
 
 
+def _check_ca(profile):
+    ca_file = profile.get("ca_file")
+    if not ca_file:
+        return "system trust store"
+    path = Path(ca_file)
+    if not path.is_file():
+        raise EasyError("host_ca_unavailable", "Configured Host CA file is missing.")
+    try:
+        import ssl
+        ssl.create_default_context(cafile=str(path))
+        certificate = ssl._ssl._test_decode_cert(str(path))
+        expires = datetime.fromtimestamp(ssl.cert_time_to_seconds(certificate["notAfter"]), timezone.utc)
+    except (OSError, ValueError, KeyError, ssl.SSLError) as error:
+        raise EasyError("host_ca_invalid", "Configured Host CA file is invalid.") from error
+    if expires <= datetime.now(timezone.utc):
+        raise EasyError("host_ca_expired", "Configured Host CA certificate has expired.")
+    return f"expires {expires.date().isoformat()}"
+
+
 def cmd_link(args):
     config_root, data_root, profile, config_hash = _roots()
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import link
+        return link(sys.modules[__name__], args)
     root, branch = easy_setup.git_checkout(os.getcwd())
     if root is None or branch is None:
         raise EasyError("not_a_branch_checkout", "Run pmt link inside a Git checkout on a branch.")
@@ -146,6 +234,9 @@ def cmd_link(args):
         return 0
     project = args.project or (same_root[0]["project_id"] if same_root else None)
     repository = args.repository or (same_root[0]["repository_id"] if same_root else None)
+    if project is not None and (not _is_uuid(project) or repository is None or not _is_uuid(repository)):
+        from .client_setup.local_commands import resolve_project
+        project, repository = resolve_project(sys.modules[__name__], config_root, profile, project, repository)
     if project is None or repository is None:
         known = {(m["project_id"], m["repository_id"]) for m in mappings}
         if len(known) == 1 and args.project is None and args.repository is None:
@@ -167,8 +258,13 @@ def cmd_link(args):
 
 
 def cmd_status(args):
+    _config_root, data_root, profile, _ = _roots()
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import load_claims
+        claims = load_claims(data_root)
+    else:
+        claims = _load_claims(data_root)
     records = _records()
-    claims = _load_claims(easy_setup.default_roots(os.environ)[1])
     rows = [(r.get("kind"), _rid(r)[:8], r.get("state") or r.get("status"), f"rev {r.get('revision')}",
              r.get("title"), "내 점유" if _rid(r) in claims else "") for r in records]
     _print_rows(rows) if rows else print("기록 없음")
@@ -182,6 +278,11 @@ def cmd_add(args):
             raise EasyError("item_fields_required", "Items need a parent work and at least one --criteria.")
         payload["parent_id"] = _rid(_find(args.parent))
         payload["body"] = {"criteria": [{"id": f"c{i}", "text": text} for i, text in enumerate(args.criteria, 1)]}
+        profile = _roots()[2]
+        if profile["mode"] == "local":
+            mapping, _reason = easy_setup.select_mapping(profile, *easy_setup.git_checkout(os.getcwd()))
+            if mapping:
+                payload["body"]["workspace"] = mapping["local_root"]
     elif args.parent:
         payload["parent_id"] = _rid(_find(args.parent))
     result = execute("save_change", payload)
@@ -191,12 +292,27 @@ def cmd_add(args):
 
 def cmd_start(args):
     record = _find(args.item)
-    result = execute("claim_task", {}, record_id=_rid(record), expected_revision=record["revision"])
-    data_root = easy_setup.default_roots(os.environ)[1]
-    claims = _load_claims(data_root)
-    claims[_rid(record)] = {"claim_ref": result["claim_ref"], "session_id": _session_id(),
-                            "revision": result["revision"]}
-    _save_claims(data_root, claims)
+    config_root, data_root, profile, _config_hash = _roots()
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import start
+        from .client_setup.connect import setup_lock
+        with setup_lock(config_root):
+            current_profile, _digest = _read_profile(config_root)
+            if not current_profile or current_profile["mode"] != "local":
+                raise EasyError("storage_config_conflict", "Storage mode changed while this claim was preparing; retry the command.")
+            return start(sys.modules[__name__], record)
+    # C09 switch shares this lock so a new Host claim cannot race a verified
+    # hosted-to-local transition on this ConfigRoot.
+    from .client_setup.connect import setup_lock
+    with setup_lock(config_root):
+        current_profile, _digest = _read_profile(config_root)
+        if not current_profile or current_profile["mode"] != "hosted":
+            raise EasyError("storage_config_conflict", "Storage mode changed while this claim was preparing; retry the command.")
+        result = execute("claim_task", {}, record_id=_rid(record), expected_revision=record["revision"])
+        claims = _load_claims(data_root)
+        claims[_rid(record)] = {"claim_ref": result["claim_ref"], "session_id": _session_id(),
+                                "revision": result["revision"]}
+        _save_claims(data_root, claims)
     print(f"점유함: {record.get('title')} (rev {result['revision']})")
     return 0
 
@@ -212,6 +328,9 @@ def _owned(record):
 
 def cmd_pause(args):
     record = _find(args.item)
+    if _roots()[2]["mode"] == "local":
+        from .client_setup.local_commands import pause
+        return pause(sys.modules[__name__], record, args)
     data_root, claims, claim = _owned(record)
     result = execute("release_claim", {"claim_ref": claim["claim_ref"], "status": "Paused",
                                        "reason": args.reason or "pmt pause", "resume": args.next},
@@ -318,13 +437,15 @@ def cmd_done(args):
     sibling helper Item provides it and is canceled again afterwards.
     """
     import platform
-    import shlex
     import sqlite3
     import subprocess
     from .util import canonical_json, fingerprint
 
     config_root, data_root, profile, _ = _roots()
     record = _find(args.item)
+    if profile["mode"] == "local":
+        from .client_setup.local_commands import done
+        return done(sys.modules[__name__], args, record)
     item_id = _rid(record)
     _, claims, claim = _owned(record)
     session = claim["session_id"]
@@ -337,7 +458,11 @@ def cmd_done(args):
     criteria = (record.get("body") or {}).get("criteria") or []
     if not criteria:
         raise EasyError("criteria_missing", "The item has no completion criteria.")
-    command = shlex.split(args.test)
+    from .client_setup.local_commands import _parse_command
+    try:
+        command = _parse_command(args.test)
+    except (OSError, ValueError) as error:
+        raise EasyError("test_command_invalid", "The test command could not be parsed.") from error
     if not command:
         raise EasyError("test_required", "Give the test command with --test.")
 
@@ -444,12 +569,37 @@ def _print_rows(rows):
 def build_parser():
     parser = argparse.ArgumentParser(prog="pmt", description="PMT 간편 명령")
     sub = parser.add_subparsers(dest="command", required=True)
+    connect = sub.add_parser("connect", help="서버 인계 파일로 Host 연결")
+    connect.add_argument("--handoff", required=True)
+    credential = connect.add_mutually_exclusive_group()
+    credential.add_argument("--credential-file")
+    credential.add_argument("--credential-stdin", action="store_true")
+    connect.add_argument("--dry-run", action="store_true")
+    connect.set_defaults(func=cmd_connect)
+    sub.add_parser("disconnect", help="저장된 Host credential만 제거").set_defaults(func=cmd_disconnect)
+    storage = sub.add_parser("storage", help="저장 연결 설정 확인")
+    storage_sub = storage.add_subparsers(dest="storage_command", required=True)
+    storage_sub.add_parser("status", help="저장된 연결 설정을 읽기 전용으로 표시").set_defaults(func=cmd_storage_status)
+    storage_sub.add_parser("probe", help="Host 연결과 호환성을 실제 확인").set_defaults(func=cmd_storage_probe)
+    switch = storage_sub.add_parser("switch", help="local/hosted 저장 모드 전환")
+    switch.add_argument("--to", required=True, choices=("hosted", "local"))
+    switch.add_argument("--handoff")
+    switch.add_argument("--export")
+    switch_credentials = switch.add_mutually_exclusive_group()
+    switch_credentials.add_argument("--credential-file")
+    switch_credentials.add_argument("--credential-stdin", action="store_true")
+    switch.set_defaults(func=cmd_storage_switch)
     sub.add_parser("check", help="연결·인증·기록·재전송 확인").set_defaults(func=cmd_check)
     link = sub.add_parser("link", help="현재 checkout을 PMT project에 연결")
-    link.add_argument("--project")
+    link.add_argument("project", nargs="?")
+    link.add_argument("--new", metavar="TITLE")
+    link.add_argument("--yes", action="store_true")
     link.add_argument("--repository")
     link.add_argument("--graph-path", default="docs/pmt-docs/graph.json")
     link.set_defaults(func=cmd_link)
+    sub.add_parser("unlink", help="현재 branch의 project 연결 해제").set_defaults(func=cmd_unlink)
+    sub.add_parser("projects", help="알려진 PMT project 목록").set_defaults(func=cmd_projects)
+    sub.add_parser("mode", help="현재 저장 모드와 경로 표시").set_defaults(func=cmd_mode)
     sub.add_parser("status", help="현재 project 기록 목록").set_defaults(func=cmd_status)
     add = sub.add_parser("add", help="work/item 추가")
     add.add_argument("kind", choices=["work", "item"])
@@ -473,6 +623,144 @@ def build_parser():
     pause.add_argument("--reason")
     pause.set_defaults(func=cmd_pause)
     return parser
+
+
+def cmd_unlink(args):
+    from .client_setup.local_commands import unlink
+    return unlink(sys.modules[__name__])
+
+
+def cmd_projects(args):
+    from .client_setup.local_commands import list_projects
+    return list_projects(sys.modules[__name__])
+
+
+def cmd_mode(args):
+    from .client_setup.local_commands import mode
+    return mode(sys.modules[__name__])
+
+
+def _read_credential_input(args):
+    if args.credential_file:
+        try:
+            with Path(args.credential_file).open("rb") as stream:
+                raw = stream.read(65537)
+        except OSError as error:
+            raise PmtError("credential_input_unavailable", "Credential input file could not be read") from error
+        if len(raw) > 65536:
+            raise PmtError("credential_input_invalid", "Credential input exceeds its size limit")
+    elif args.credential_stdin:
+        stream = getattr(sys.stdin, "buffer", None)
+        raw = stream.read(65537) if stream is not None else sys.stdin.read(65537).encode("utf-8")
+        if len(raw) > 65536:
+            raise PmtError("credential_input_invalid", "Credential input exceeds its size limit")
+    else:
+        return None
+    try:
+        value = raw.decode("utf-8").rstrip("\r\n")
+    except UnicodeError as error:
+        raise PmtError("credential_input_invalid", "Credential input must be UTF-8 text") from error
+    if not value or "\x00" in value or "\n" in value or "\r" in value:
+        raise PmtError("credential_input_invalid", "Credential input must contain one nonempty line")
+    return value
+
+
+def cmd_connect(args):
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    from .client_setup.connect import connect
+    result = connect(config_root, args.handoff, credential=_read_credential_input(args), dry_run=args.dry_run)
+    _print_connect_summary(result["connect_summary"], dry_run=args.dry_run)
+    return 0
+
+
+def _print_connect_summary(summary, *, dry_run=False, status=None):
+    print(status or ("Handoff validated only; no files written and no Host contact." if dry_run
+                     else "Connected to PMT Host; protected credential and profile saved."))
+    print(f"Endpoint: {summary['endpoint']}")
+    print(f"Namespace: {summary['namespace_id']}")
+    print(f"Actor: {summary['actor']}")
+    print(f"Scopes: {', '.join(summary['scopes'])}")
+    print(f"Permissions: {', '.join(summary['permissions'])}")
+    compatibility = summary["compatibility"]
+    versions = (f"Core {compatibility.get('core_version', compatibility.get('core'))}; "
+                f"DB schema {compatibility.get('db_schema')}; "
+                f"graph schema {compatibility.get('graph_schema')}; "
+                f"protocol {compatibility.get('protocol_versions', compatibility.get('protocol'))}")
+    print(f"Compatibility ({summary['compatibility_source']}): {versions}")
+    ca_sha256 = summary.get("ca_sha256")
+    print(f"Public CA SHA-256: {ca_sha256}" if ca_sha256 else "CA trust: system trust store")
+
+
+def cmd_storage_switch(args):
+    from .client_setup.switch import switch_storage
+    config_root, data_root = easy_setup.default_roots(os.environ)
+    if args.to == "local" and (args.handoff or args.credential_file or args.credential_stdin or args.export):
+        raise PmtError("switch_arguments_invalid", "Handoff, credential, and export options apply only to --to hosted", 2)
+    result = switch_storage(config_root, data_root, to=args.to, handoff_path=args.handoff,
+                            credential=_read_credential_input(args) if args.to == "hosted" else None,
+                            export_path=args.export, environ=os.environ)
+    if result.get("unchanged"):
+        print(f"Storage mode is already {result['mode']}.")
+    elif args.to == "hosted":
+        summary = result.get("connect_summary")
+        if summary:
+            _print_connect_summary(summary, status="Switched to hosted; local database remains in place.")
+        else:
+            print("Switched to hosted; local database remains in place.")
+        if result.get("export"):
+            details = result["export"]
+            print(f"Export bundle: {args.export} | files {details['file_count']} | manifest {details['manifest_sha256']}")
+    else:
+        print("Switched to local; existing local database and project mappings were reused.")
+    return 0
+
+
+def cmd_disconnect(args):
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    from .client_setup.connect import disconnect
+    removed = disconnect(config_root)
+    print("Saved Host credential removed." if removed else "No saved Host credential.")
+    return 0
+
+
+def cmd_storage_status(args):
+    from .storage_config import storage_status
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    status = storage_status(config_root)
+    print(f"mode: {status['mode'] if status['configured'] else 'unconfigured'}")
+    print(f"ConfigRoot: {config_root}")
+    if status["configured"] and status["mode"] == "hosted":
+        for field in ("endpoint", "actor", "namespace_id"):
+            print(f"{field}: {status[field]}")
+        print(f"CA: {'configured' if status.get('ca_configured') else 'system trust store'}")
+        from .client_setup.credentials import has_credential_store
+        print(f"saved credential: {'present' if has_credential_store(config_root) else 'absent'}")
+    return 0
+
+
+def cmd_storage_probe(args):
+    from .storage_config import probe_storage
+    from .client_setup.credentials import ENV_NAME, load_credential
+    config_root, _data_root = easy_setup.default_roots(os.environ)
+    profile, _digest = _read_profile(config_root)
+    original = os.environ.get(ENV_NAME)
+    if profile and profile["mode"] == "hosted":
+        try:
+            load_credential(config_root, os.environ)
+        except PmtError as error:
+            raise EasyError(error.code, "PMT credential is unavailable; check the protected credential store.") from error
+    try:
+        result = probe_storage(str(config_root))
+    finally:
+        if original is None:
+            os.environ.pop(ENV_NAME, None)
+        elif profile and profile["mode"] == "hosted":
+            os.environ[ENV_NAME] = original
+    print(f"mode: {result['mode']} | configured: {str(result['configured']).lower()}")
+    if result.get("host_preflight"):
+        preflight = result["host_preflight"]
+        print(f"Host compatible | core {preflight.get('core_version')} | db {preflight.get('db_schema')} | graph {preflight.get('graph_schema')}")
+    return 0
 
 
 def main(argv=None):

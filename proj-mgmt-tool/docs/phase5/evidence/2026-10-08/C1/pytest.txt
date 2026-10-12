@@ -1,0 +1,4 @@
+.........s...                                                            [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\server_admin\test_server_admin.py:155: POSIX mode check
+12 passed, 1 skipped in 2.68s

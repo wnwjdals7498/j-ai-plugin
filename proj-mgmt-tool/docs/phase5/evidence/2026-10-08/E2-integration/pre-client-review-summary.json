@@ -1,0 +1,32 @@
+{
+  "source_commit": "de5c989",
+  "scope": "all new/client/server/Hook contracts; E2 server fixes included, prior to final client P2 fixes",
+  "results": {
+    "python3.14.5rc1": {
+      "passed": 306,
+      "skipped": 4,
+      "exit_code": 0,
+      "seconds": 129.7
+    },
+    "python3.13.13": {
+      "passed": 306,
+      "skipped": 4,
+      "exit_code": 0,
+      "seconds": 133.27
+    }
+  },
+  "skips": [
+    "POSIXclientpermission",
+    "POSIXclientsymlink",
+    "POSIXservermode",
+    "explicitD1samplegenerator"
+  ],
+  "review_after_pass": {
+    "client": [
+      "missing_config_lock on to-local metadata rollback",
+      "handed scopes outside projects/mappings omitted from busy scan"
+    ],
+    "status": "fix in progress"
+  },
+  "no_actual_operating_changes": true
+}

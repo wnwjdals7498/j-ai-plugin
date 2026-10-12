@@ -1,0 +1,16 @@
+  warning: skill is from graphify 0.8.34, package is 0.8.35. Run 'graphify install' to update.
+  warning: skill is from graphify 0.8.34, package is 0.8.35. Run 'graphify install' to update.
+[graphify extract] scanning C:\PMT\src\j-ai-plugin
+[graphify extract] found 255 code, 117 docs, 0 papers, 0 images
+[graphify extract] AST extraction on 255 code files...
+  AST extraction: 255/255 files (100%)
+[graphify] chunk 1/7 failed: HTTP 401 invalid_api_key; provider error detail redacted
+[graphify] chunk 3/7 failed: HTTP 401 invalid_api_key; provider error detail redacted
+[graphify] chunk 2/7 failed: HTTP 401 invalid_api_key; provider error detail redacted
+[graphify] chunk 4/7 failed: HTTP 401 invalid_api_key; provider error detail redacted
+[graphify] chunk 5/7 failed: HTTP 401 invalid_api_key; provider error detail redacted
+[graphify] chunk 7/7 failed: HTTP 401 invalid_api_key; provider error detail redacted
+[graphify] chunk 6/7 failed: HTTP 401 invalid_api_key; provider error detail redacted
+[graphify] WARNING: 7/7 semantic chunk(s) failed — see errors above. Partial results returned.
+[graphify extract] error: all semantic chunks failed for backend 'openai' (117 uncached files) - see per-chunk errors above. If you see 'requires the X package', run `pip install X` and retry.
+[graphify extract] semantic extraction on 117 files via openai...

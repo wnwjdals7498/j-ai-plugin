@@ -1,0 +1,47 @@
+{
+  "baseline": {
+    "passed": 650,
+    "failure": 23,
+    "error": 2,
+    "skipped": 4
+  },
+  "current": {
+    "passed": 926,
+    "failure": 21,
+    "error": 0,
+    "skipped": 8
+  },
+  "new_failures": [],
+  "preserved_problems": [
+    "tests.test_packaging::test_pkg_01_three_separate_bundles_manifest_and_zip_hashes",
+    "tests.test_phase3_batch::test_two_processes_competing_for_same_union_have_one_atomic_winner",
+    "tests.test_phase3_local_integration::test_f10_actual_missing_acceptance_stays_unknown_and_blocks_f8",
+    "tests.test_phase3_local_integration::test_f10_actual_new_session_resume_rebuilds_context_from_current_owner",
+    "tests.test_phase3_local_integration::test_f10_actual_public_group_cancel_before_dispatch_cancels_children",
+    "tests.test_phase3_local_integration::test_f10_actual_public_group_missing_child_remains_reconciling",
+    "tests.test_phase3_local_integration::test_f10_actual_public_two_child_batch_report_collect_and_replay",
+    "tests.test_phase3_local_integration::test_f10_catalog_freezes_six_scenarios_and_not_comparable_reasons",
+    "tests.test_phase3_local_integration::test_f10_local_cli_failure_retry_is_blocked_without_transient_receipt",
+    "tests.test_phase3_local_integration::test_f10_partial_change_baseline_replays_unchanged_legacy_renderer",
+    "tests.test_phase3_local_integration::test_f10_preflight_does_not_call_missing_runtime_capabilities_a_pass",
+    "tests.test_phase3_local_integration::test_f10_prepared_f1_f8_public_localstore_flow_remains_pending_f9",
+    "tests.test_phase3_local_integration::test_f10_prepared_partial_change_requires_f3_f4_evidence_and_holds_unknown_context",
+    "tests.test_phase3_local_integration::test_f10_suite_is_not_run_without_root_go_or_f9_runtime",
+    "tests.test_phase3_pending::test_two_processes_cas_one_physical_pending_resource_upload",
+    "tests.test_phase3_reuse::test_actual_parallel_processes_create_one_claim_and_preserve_both_events",
+    "tests.test_phase4_current_context::test_r1_facts_classify_only_same_basis_link_and_actual_verification_receipts",
+    "tests.test_phase4_foundation::test_actual_separate_process_pointer_competition",
+    "tests.test_phase4_packaging_actual::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[claude]",
+    "tests.test_phase4_packaging_actual::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[codex]",
+    "tests.test_phase4_packaging_actual::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[opencode]"
+  ],
+  "resolved_problems": [
+    "tests.test_easy_setup::test_env_file_lines_are_shell_quoted",
+    "tests.test_easy_setup::test_first_run_publishes_profile_and_keeps_credential_out_of_process_env",
+    "tests.test_phase3_acceptance::test_f15_installed_hosted_cli_two_clients_real_https_and_native_hook",
+    "tests.test_phase3_acceptance::test_f15_installed_package_setup_hook_update_and_code_restore"
+  ],
+  "missing_baseline_tests": [],
+  "new_tests": 276,
+  "comparison_pass": true
+}

@@ -1,9 +1,9 @@
 {
   "description": "PMT lifecycle event bridge",
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "command", "command": "python \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SessionStart --with-context", "commandWindows": "py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SessionStart --with-context", "timeout": 2 }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "python \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event UserPromptSubmit", "commandWindows": "py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event UserPromptSubmit", "timeout": 2 }] }],
-    "Stop": [{ "hooks": [{ "type": "command", "command": "python \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event Stop", "commandWindows": "py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event Stop", "timeout": 2 }] }],
-    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "python \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SubagentStop", "commandWindows": "py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SubagentStop", "timeout": 2 }] }]
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "\"${PMT_PYTHON:-python}\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SessionStart --with-context", "commandWindows": "if defined PMT_PYTHON (\"%PMT_PYTHON%\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SessionStart --with-context) else (py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SessionStart --with-context)", "timeout": 2 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "\"${PMT_PYTHON:-python}\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event UserPromptSubmit", "commandWindows": "if defined PMT_PYTHON (\"%PMT_PYTHON%\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event UserPromptSubmit) else (py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event UserPromptSubmit)", "timeout": 2 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "\"${PMT_PYTHON:-python}\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event Stop", "commandWindows": "if defined PMT_PYTHON (\"%PMT_PYTHON%\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event Stop) else (py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event Stop)", "timeout": 2 }] }],
+    "SubagentStop": [{ "hooks": [{ "type": "command", "command": "\"${PMT_PYTHON:-python}\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SubagentStop", "commandWindows": "if defined PMT_PYTHON (\"%PMT_PYTHON%\" -B \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SubagentStop) else (py -3 \"${PLUGIN_ROOT}/integrations/codex/hook.py\" --event SubagentStop)", "timeout": 2 }] }]
   }
 }

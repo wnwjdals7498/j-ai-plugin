@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="5" time="61.734" timestamp="2026-10-08T11:23:41.714664+09:00" hostname="FKNPOC83BVCHY1L"><testcase classname="tests.test_phase3_acceptance" name="test_f15_installed_package_setup_hook_update_and_code_restore" time="36.294" /><testcase classname="tests.test_phase3_acceptance" name="test_f15_installed_hosted_cli_two_clients_real_https_and_native_hook" time="25.206" /><testcase classname="tests.test_phase4_packaging_actual" name="test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[codex]" time="0.003"><failure message="AssertionError: Actual pinned schema4 package fixture is required&#10;assert False&#10; +  where False = is_file()&#10; +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/codex') / 'pmt-package.json').is_file">tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-build-recheck/test_portable_package_upgrade_0')
+product = 'codex'
+
+    @pytest.mark.parametrize("product", ["codex", "claude", "opencode"])
+    def test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data(tmp_path, product):
+        historical = ROOT / "docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0" / product
+&gt;       assert (historical / "pmt-package.json").is_file(), "Actual pinned schema4 package fixture is required"
+E       AssertionError: Actual pinned schema4 package fixture is required
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/codex') / 'pmt-package.json').is_file
+
+tests\test_phase4_packaging_actual.py:50: AssertionError</failure></testcase><testcase classname="tests.test_phase4_packaging_actual" name="test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[claude]" time="0.003"><failure message="AssertionError: Actual pinned schema4 package fixture is required&#10;assert False&#10; +  where False = is_file()&#10; +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/claude') / 'pmt-package.json').is_file">tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-build-recheck/test_portable_package_upgrade_1')
+product = 'claude'
+
+    @pytest.mark.parametrize("product", ["codex", "claude", "opencode"])
+    def test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data(tmp_path, product):
+        historical = ROOT / "docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0" / product
+&gt;       assert (historical / "pmt-package.json").is_file(), "Actual pinned schema4 package fixture is required"
+E       AssertionError: Actual pinned schema4 package fixture is required
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/claude') / 'pmt-package.json').is_file
+
+tests\test_phase4_packaging_actual.py:50: AssertionError</failure></testcase><testcase classname="tests.test_phase4_packaging_actual" name="test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[opencode]" time="0.003"><failure message="AssertionError: Actual pinned schema4 package fixture is required&#10;assert False&#10; +  where False = is_file()&#10; +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/opencode') / 'pmt-package.json').is_file">tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-build-recheck/test_portable_package_upgrade_2')
+product = 'opencode'
+
+    @pytest.mark.parametrize("product", ["codex", "claude", "opencode"])
+    def test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data(tmp_path, product):
+        historical = ROOT / "docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0" / product
+&gt;       assert (historical / "pmt-package.json").is_file(), "Actual pinned schema4 package fixture is required"
+E       AssertionError: Actual pinned schema4 package fixture is required
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/opencode') / 'pmt-package.json').is_file
+
+tests\test_phase4_packaging_actual.py:50: AssertionError</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,132 @@
+[
+  {
+    "argv": [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\claude-validate.ps1",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\.claude-plugin\\plugin.json"
+    ],
+    "exit": 0,
+    "report": {
+      "success": true,
+      "strict": false,
+      "target": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\.claude-plugin\\plugin.json",
+      "manifest": {
+        "file": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\.claude-plugin\\plugin.json",
+        "type": "plugin",
+        "errors": [],
+        "warnings": [],
+        "notes": []
+      },
+      "contents": []
+    },
+    "stdout": "{\n  \"success\": true,\n  \"strict\": false,\n  \"target\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\claude\\\\.claude-plugin\\\\plugin.json\",\n  \"manifest\": {\n    \"file\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\claude\\\\.claude-plugin\\\\plugin.json\",\n    \"type\": \"plugin\",\n    \"errors\": [],\n    \"warnings\": [],\n    \"notes\": []\n  },\n  \"contents\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\claude-validate.ps1",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\server\\.claude-plugin\\plugin.json"
+    ],
+    "exit": 0,
+    "report": {
+      "success": true,
+      "strict": false,
+      "target": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\server\\.claude-plugin\\plugin.json",
+      "manifest": {
+        "file": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\server\\.claude-plugin\\plugin.json",
+        "type": "plugin",
+        "errors": [],
+        "warnings": [],
+        "notes": []
+      },
+      "contents": []
+    },
+    "stdout": "{\n  \"success\": true,\n  \"strict\": false,\n  \"target\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\server\\\\.claude-plugin\\\\plugin.json\",\n  \"manifest\": {\n    \"file\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\server\\\\.claude-plugin\\\\plugin.json\",\n    \"type\": \"plugin\",\n    \"errors\": [],\n    \"warnings\": [],\n    \"notes\": []\n  },\n  \"contents\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\claude-validate.ps1",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\.claude-plugin\\marketplace.json"
+    ],
+    "exit": 0,
+    "report": {
+      "success": true,
+      "strict": false,
+      "target": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\.claude-plugin\\marketplace.json",
+      "manifest": {
+        "file": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\claude\\.claude-plugin\\marketplace.json",
+        "type": "marketplace",
+        "errors": [],
+        "warnings": [],
+        "notes": []
+      },
+      "contents": []
+    },
+    "stdout": "{\n  \"success\": true,\n  \"strict\": false,\n  \"target\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\claude\\\\.claude-plugin\\\\marketplace.json\",\n  \"manifest\": {\n    \"file\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\claude\\\\.claude-plugin\\\\marketplace.json\",\n    \"type\": \"marketplace\",\n    \"errors\": [],\n    \"warnings\": [],\n    \"notes\": []\n  },\n  \"contents\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\claude-validate.ps1",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\server\\.claude-plugin\\marketplace.json"
+    ],
+    "exit": 0,
+    "report": {
+      "success": true,
+      "strict": false,
+      "target": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\server\\.claude-plugin\\marketplace.json",
+      "manifest": {
+        "file": "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\0.5.0\\server\\.claude-plugin\\marketplace.json",
+        "type": "marketplace",
+        "errors": [],
+        "warnings": [],
+        "notes": []
+      },
+      "contents": []
+    },
+    "stdout": "{\n  \"success\": true,\n  \"strict\": false,\n  \"target\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\server\\\\.claude-plugin\\\\marketplace.json\",\n  \"manifest\": {\n    \"file\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-release-aa39931\\\\0.5.0\\\\server\\\\.claude-plugin\\\\marketplace.json\",\n    \"type\": \"marketplace\",\n    \"errors\": [],\n    \"warnings\": [],\n    \"notes\": []\n  },\n  \"contents\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "powershell.exe",
+      "-NoProfile",
+      "-NonInteractive",
+      "-File",
+      "C:\\PMT\\work\\phase5-test\\E3-release-aa39931\\claude-validate.ps1",
+      "C:\\PMT\\work\\phase5-test\\E3-source-aa39931\\.claude-plugin\\marketplace.json"
+    ],
+    "exit": 0,
+    "report": {
+      "success": true,
+      "strict": false,
+      "target": "C:\\PMT\\work\\phase5-test\\E3-source-aa39931\\.claude-plugin\\marketplace.json",
+      "manifest": {
+        "file": "C:\\PMT\\work\\phase5-test\\E3-source-aa39931\\.claude-plugin\\marketplace.json",
+        "type": "marketplace",
+        "errors": [],
+        "warnings": [],
+        "notes": []
+      },
+      "contents": []
+    },
+    "stdout": "{\n  \"success\": true,\n  \"strict\": false,\n  \"target\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-source-aa39931\\\\.claude-plugin\\\\marketplace.json\",\n  \"manifest\": {\n    \"file\": \"C:\\\\PMT\\\\work\\\\phase5-test\\\\E3-source-aa39931\\\\.claude-plugin\\\\marketplace.json\",\n    \"type\": \"marketplace\",\n    \"errors\": [],\n    \"warnings\": [],\n    \"notes\": []\n  },\n  \"contents\": []\n}\n",
+    "stderr": ""
+  }
+]
