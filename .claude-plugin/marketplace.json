@@ -3,13 +3,21 @@
   "owner": {
     "name": "PMT"
   },
-  "description": "PMT plugins for Codex and Claude Code.",
+  "description": "PMT and model-handoff plugins for Codex and Claude Code.",
   "plugins": [
     {
       "name": "pmt-lifecycle",
       "source": "./proj-mgmt-tool",
       "description": "Project memory and lifecycle events with local or hosted storage.",
       "version": "0.4.0",
+      "category": "Productivity",
+      "strict": true
+    },
+    {
+      "name": "model-handoff",
+      "source": "./model-handoff",
+      "description": "Priority-ordered parallel handoff to Codex, Antigravity and Claude with usage-limit fallback.",
+      "version": "0.1.0",
       "category": "Productivity",
       "strict": true
     }
