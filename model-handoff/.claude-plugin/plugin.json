@@ -1,6 +1,6 @@
 {
   "name": "model-handoff",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hand off planned tasks to Codex, Antigravity or a personal Claude account in priority order, switching to the next executor when one hits its usage limit.",
   "author": {
     "name": "PMT"

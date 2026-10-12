@@ -28,7 +28,7 @@ DEFAULT_CONFIG = {
     "capacity_cooldown_minutes": 10,
     "timeout_minutes": 12,
     "executors": {
-        "codex": {"enabled": True, "command": "codex", "model": None, "permission": "auto", "network": True, "codex_home": None},
+        "codex": {"enabled": True, "command": "codex", "model": None, "permission": "auto", "network": True, "codex_home": None, "effort": None},
         "agy": {"enabled": True, "command": "agy", "model": None, "permission": "auto"},
         "claude": {"enabled": False, "command": "claude", "model": None, "permission": "auto", "config_dir": None},
     },
@@ -61,6 +61,8 @@ CAPACITY_PATTERNS = {
 #   claude --permission-mode auto    classifier reviews each action; blocked actions are denied
 # "bypass" skips all checks and must only be used in an externally isolated environment.
 PERMISSIONS = ("auto", "bypass")
+# Reasoning levels listed in ~/.codex/models_cache.json (codex 0.155.1); support varies by model.
+CODEX_EFFORTS = ("low", "medium", "high", "xhigh", "max", "ultra")
 
 EXIT_OK, EXIT_FAILED, EXIT_USAGE, EXIT_UNAVAILABLE = 0, 1, 2, 3
 
@@ -297,6 +299,8 @@ def build_command(name, opts, prompt, cwd, timeout_min):
             cmd += ["-c", "sandbox_workspace_write.network_access=true"]
         if model:
             cmd += ["-m", model]
+        if opts.get("effort"):
+            cmd += ["-c", f"model_reasoning_effort={opts['effort']}"]
         cmd.append(prompt)
         if opts.get("codex_home"):
             env["CODEX_HOME"] = os.path.expanduser(opts["codex_home"])
@@ -461,6 +465,8 @@ def cmd_config(args):
                     return fail(f"unknown key {key}; allowed: {', '.join(head + '.' + k for k in DEFAULT_CONFIG['executors'][head])}", EXIT_USAGE)
                 if tail == "permission" and value not in PERMISSIONS:
                     return fail(f"{key} must be one of {', '.join(PERMISSIONS)}", EXIT_USAGE)
+                if tail == "effort" and value is not None and value not in CODEX_EFFORTS:
+                    return fail(f"{key} must be one of {', '.join(CODEX_EFFORTS)} or null", EXIT_USAGE)
                 cfg["executors"][head][tail] = value
             elif key in DEFAULT_CONFIG and key not in ("order", "executors"):
                 if not isinstance(value, int) or value <= 0:

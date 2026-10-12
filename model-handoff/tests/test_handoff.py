@@ -165,6 +165,18 @@ class HandoffTest(unittest.TestCase):
         cmd, _ = handoff.build_command("codex", opts, "p", "/w", 12)
         self.assertNotIn("sandbox_workspace_write.network_access=true", cmd)
 
+    def test_codex_effort_is_validated_and_passed(self):
+        cmd, _ = handoff.build_command("codex", handoff.DEFAULT_CONFIG["executors"]["codex"], "p", "/w", 12)
+        self.assertFalse([a for a in cmd if a.startswith("model_reasoning_effort")], cmd)
+        self.assertEqual(self.cli("config", "set", "codex.effort", "huge")[0], 2)
+        code, cfg = self.cli("config", "set", "codex.effort", "xhigh")
+        self.assertEqual(code, 0)
+        cmd, _ = handoff.build_command("codex", cfg["executors"]["codex"], "p", "/w", 12)
+        self.assertIn("model_reasoning_effort=xhigh", cmd)
+        self.assertEqual(cmd[-1], "p")
+        code, cfg = self.cli("config", "set", "codex.effort", "null")
+        self.assertEqual((code, cfg["executors"]["codex"]["effort"]), (0, None))
+
     def test_setup_agy_merges_settings_with_backup(self):
         fake_home = self.dir / "userhome"
         settings = fake_home / ".gemini" / "antigravity-cli" / "settings.json"
