@@ -1,0 +1,170 @@
+{
+  "task": "A0",
+  "source_commit": "8054c83a85b73356f0e2e52322855b9e03b419ce",
+  "exit_code": 1,
+  "tests": 679,
+  "passed": 650,
+  "failed": 23,
+  "errors": 2,
+  "skipped": 4,
+  "duration_seconds": 1112.039,
+  "problems": [
+    {
+      "kind": "failure",
+      "test": "tests.test_easy_setup::test_first_run_publishes_profile_and_keeps_credential_out_of_process_env",
+      "message": "AssertionError: assert 'not_linked' == 'not_git'\n  \n  - not_git\n  + not_linked"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_easy_setup::test_env_file_lines_are_shell_quoted",
+      "message": "assert '|' == \"/a b/c|x'y\"\n  \n  - /a b/c|x'y\n  + |"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_packaging::test_pkg_01_three_separate_bundles_manifest_and_zip_hashes",
+      "message": "AssertionError: assert (True and (33206 & 73))\n +  where True = is_file()\n +    where is_file = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_pkg_01_three_separate_bun0/distribution/0.1.1/claude/bin/pmt').is_file\n +  and   33206 = os.stat_result(st_mode=33206, st_ino=2251799813969123, st"
+    },
+    {
+      "kind": "error",
+      "test": "tests.test_phase3_acceptance::test_f15_installed_package_setup_hook_update_and_code_restore",
+      "message": "failed on setup with \"AssertionError: isolated wheel build failed\nassert 2 == 0\n +  where 2 = CompletedProcess(args=['C:\\\\PMT\\\\src\\\\venv-dev\\\\Scripts\\\\python.exe', '-m', 'pip', 'wheel', '--no-deps', '--no-build-i....<4 lines>...\\n    )\\npip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import \\'setuptools.bu"
+    },
+    {
+      "kind": "error",
+      "test": "tests.test_phase3_acceptance::test_f15_installed_hosted_cli_two_clients_real_https_and_native_hook",
+      "message": "failed on setup with \"AssertionError: isolated wheel build failed\nassert 2 == 0\n +  where 2 = CompletedProcess(args=['C:\\\\PMT\\\\src\\\\venv-dev\\\\Scripts\\\\python.exe', '-m', 'pip', 'wheel', '--no-deps', '--no-build-i....<4 lines>...\\n    )\\npip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import \\'setuptools.bu"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_batch::test_two_processes_competing_for_same_union_have_one_atomic_winner",
+      "message": "AssertionError: [1, 1]\nassert False\n +  where False = all(<generator object test_two_processes_competing_for_same_union_have_one_atomic_winner.<locals>.<genexpr> at 0x0000014F5B680EE0>)"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_catalog_freezes_six_scenarios_and_not_comparable_reasons",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_preflight_does_not_call_missing_runtime_capabilities_a_pass",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_suite_is_not_run_without_root_go_or_f9_runtime",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_partial_change_baseline_replays_unchanged_legacy_renderer",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_prepared_f1_f8_public_localstore_flow_remains_pending_f9",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_prepared_partial_change_requires_f3_f4_evidence_and_holds_unknown_context",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_local_cli_failure_retry_is_blocked_without_transient_receipt",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_actual_new_session_resume_rebuilds_context_from_current_owner",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_actual_missing_acceptance_stays_unknown_and_blocks_f8",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_actual_public_two_child_batch_report_collect_and_replay",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_actual_public_group_missing_child_remains_reconciling",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_local_integration::test_f10_actual_public_group_cancel_before_dispatch_cancels_children",
+      "message": "ValueError: frozen canonical graph hash changed"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_pending::test_two_processes_cas_one_physical_pending_resource_upload",
+      "message": "assert False\n +  where False = all(<generator object test_two_processes_cas_one_physical_pending_resource_upload.<locals>.<genexpr> at 0x0000014F5BE3CD40>)"
+    },
+    {
+      "kind": "skipped",
+      "test": "tests.test_phase3_publication::test_outside_root_and_linked_stage_are_rejected",
+      "message": "This Windows account cannot create symlinks"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase3_reuse::test_actual_parallel_processes_create_one_claim_and_preserve_both_events",
+      "message": "_queue.Empty"
+    },
+    {
+      "kind": "skipped",
+      "test": "tests.test_phase3_workspace::test_path_traversal_and_symlink_are_rejected",
+      "message": "symlink creation is unavailable in this test environment"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase4_current_context::test_r1_facts_classify_only_same_basis_link_and_actual_verification_receipts",
+      "message": "assert []"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase4_foundation::test_actual_separate_process_pointer_competition",
+      "message": "AssertionError: assert ['committed', 'database_busy'] == ['committed',...ion_conflict']\n  \n  At index 1 diff: 'database_busy' != 'revision_conflict'\n  Use -v to get more diff"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase4_packaging_actual::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[codex]",
+      "message": "AssertionError: Actual pinned schema4 package fixture is required\nassert False\n +  where False = is_file()\n +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/codex') / 'pmt-package.json').is_file"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase4_packaging_actual::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[claude]",
+      "message": "AssertionError: Actual pinned schema4 package fixture is required\nassert False\n +  where False = is_file()\n +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/claude') / 'pmt-package.json').is_file"
+    },
+    {
+      "kind": "failure",
+      "test": "tests.test_phase4_packaging_actual::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[opencode]",
+      "message": "AssertionError: Actual pinned schema4 package fixture is required\nassert False\n +  where False = is_file()\n +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/opencode') / 'pmt-package.json').is_file"
+    },
+    {
+      "kind": "skipped",
+      "test": "tests.test_resources::test_resource_rejects_escape_and_symlink",
+      "message": "This Windows account cannot create symlinks"
+    },
+    {
+      "kind": "skipped",
+      "test": "tests.test_resources::test_diagnose_reports_resource_links_without_traversing_them",
+      "message": "This Windows account cannot create symlinks"
+    }
+  ],
+  "core_source_changes": false,
+  "decision_gate": "D1-D8 pending",
+  "python_full_suite": "3.14.5rc1",
+  "stable_python_scope": "redirect fixture diagnostic only; no full-suite result",
+  "environment_only_build_recheck": {
+    "passed": 2,
+    "failed": 3,
+    "errors": 0,
+    "exit_code": 1,
+    "scope": "5 installed/portable-package tests after installing declared build backend; product source unchanged",
+    "remaining_failure_reason": "Pinned historical 0.3.0 package-snapshot fixture absent. Per handoff A0, no past evidence files added/deleted."
+  }
+}

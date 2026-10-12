@@ -22,7 +22,7 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-PRODUCTS = ("codex", "claude", "opencode")
+PRODUCTS = ("codex", "claude", "opencode", "server")
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 
@@ -77,6 +77,12 @@ def _source_map(root: Path, product: str) -> dict[Path, PurePosixPath]:
             else:
                 source_map[source] = PurePosixPath(output_relative)
 
+    if product == "server":
+        for relative in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json",
+                         "hooks", "bin", "skills/pmt-server", "templates"):
+            add_tree("../pmt-server/" + relative, relative)
+        return source_map
+
     add_tree("src/pmt", "src/pmt")
     add_tree("skills/proj-mgmt-tool", "skills/proj-mgmt-tool")
     add_tree(f"integrations/{product}/hook.py" if product != "opencode" else "integrations/opencode/pmt.js",
@@ -84,9 +90,10 @@ def _source_map(root: Path, product: str) -> dict[Path, PurePosixPath]:
     add_tree("docs/usage.md", "USAGE.md")
     if product in {"codex", "claude"}:
         add_tree(f"integrations/{product}/hooks/hooks.json", "hooks/hooks.json")
-        if product == "claude":
-            add_tree("integrations/claude/bin/pmt", "bin/pmt")
-        add_tree(f"integrations/{product}/{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json",
+        add_tree("bin/pmt", "bin/pmt")
+        add_tree("bin/pmt.cmd", "bin/pmt.cmd")
+        add_tree("scripts/pmt_easy.py", "scripts/pmt_easy.py")
+        add_tree(f"{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json",
                  f"{'.codex-plugin' if product == 'codex' else '.claude-plugin'}/plugin.json")
     elif product == "opencode":
         add_tree("integrations/opencode/bridge.py", "integrations/opencode/bridge.py")
@@ -97,7 +104,7 @@ def _source_map(root: Path, product: str) -> dict[Path, PurePosixPath]:
 def _copy_one(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, destination)
-    if destination.parent.name == "bin":
+    if destination.parent.name == "bin" and destination.suffix != ".cmd":
         # Plugin bin/ entries are placed on the Bash tool PATH and must be executable.
         destination.chmod(0o755)
 
@@ -106,7 +113,7 @@ def _version_manifest(source: dict[str, Any], product: str, version: str, file_h
     return {
         "manifest_version": 1,
         "product": product,
-        "plugin_name": "pmt-lifecycle",
+        "plugin_name": "pmt-server" if product == "server" else "pmt-lifecycle",
         "plugin_version": version,
         "core_version": source["core_version"],
         "protocol_version": 1,
@@ -148,6 +155,47 @@ def _standalone_launcher() -> str:
 
 def _write_generated_files(package: Path, product: str, version: str,
                            source_info: dict[str, Any]) -> None:
+    if product == "server":
+        for relative in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+            path = package / relative
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["version"] = version
+            path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        portable = {"name": "pmt-server", "version": version,
+                    "description": "Configure and operate the PMT storage Host."}
+        (package / "plugin.json").write_text(json.dumps(portable, indent=2) + "\n", encoding="utf-8")
+        claude_market = {"name": "pmt-server-local", "owner": {"name": "PMT"},
+                         "description": "Configure and operate the PMT storage Host.",
+                         "plugins": [{"name": "pmt-server", "source": "./", "version": version, "strict": True}]}
+        (package / ".claude-plugin/marketplace.json").write_text(json.dumps(claude_market, indent=2) + "\n", encoding="utf-8")
+        codex_market = {"name": "pmt-server-local", "interface": {"displayName": "PMT Server"},
+                        "plugins": [{"name": "pmt-server", "source": {"source": "local", "path": "./"},
+                                     "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                                     "category": "Productivity"}]}
+        market_root = package / ".agents/plugins"
+        market_root.mkdir(parents=True, exist_ok=True)
+        (market_root / "marketplace.json").write_text(json.dumps(codex_market, indent=2) + "\n", encoding="utf-8")
+        return
+    # USAGE is copied from docs/ to the package root. Preserve working links to
+    # bundled client references and turn repository-only links into source URLs.
+    import posixpath
+    usage_path = package / "USAGE.md"
+    usage = usage_path.read_text(encoding="utf-8")
+    def usage_link(match):
+        label, target = match.group(1), match.group(2)
+        if target.startswith(("http://", "https://", "#")):
+            return match.group(0)
+        if target.startswith("../skills/"):
+            return "[" + label + "](./skills/" + target[len("../skills/"):] + ")"
+        path, marker, anchor = target.partition("#")
+        relative = posixpath.normpath("proj-mgmt-tool/docs/" + path)
+        url = "https://github.com/wnwjdals7498/j-ai-plugin/blob/master/" + relative
+        if marker:
+            url += "#" + anchor
+        return "[" + label + "](" + url + ")"
+    usage = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", usage_link, usage)
+    usage_path.write_text(usage, encoding="utf-8", newline="\n")
+
     scripts = package / "scripts"
     scripts.mkdir(parents=True, exist_ok=True)
     (scripts / "pmt.py").write_text(_standalone_launcher(), encoding="utf-8", newline="\n")
@@ -162,6 +210,7 @@ def _write_generated_files(package: Path, product: str, version: str,
         compat_path = package / ".codex-plugin" / "plugin.json"
         compat = json.loads(compat_path.read_text(encoding="utf-8"))
         compat["version"] = version
+        compat["hooks"] = "./hooks/hooks.json"
         compat.setdefault("author", {"name": "PMT"})
         compat_path.write_text(json.dumps(compat, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         marketplace_root = package / ".agents" / "plugins"
@@ -181,6 +230,7 @@ def _write_generated_files(package: Path, product: str, version: str,
         plugin_path = package / ".claude-plugin" / "plugin.json"
         plugin = json.loads(plugin_path.read_text(encoding="utf-8"))
         plugin["version"] = version
+        plugin["hooks"] = "./hooks/hooks.json"
         plugin.setdefault("author", {"name": "PMT"})
         plugin_path.write_text(json.dumps(plugin, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         marketplace = {
@@ -233,7 +283,9 @@ def _make_zip(package: Path, destination: Path) -> None:
                 raise BuildError("Package ZIP contains an unsafe path")
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = (0o100755 if name.startswith("bin/") else 0o100644) << 16
+            info.create_system = 3  # Unix creator makes these mode bits meaningful to extractors.
+            executable = name.startswith("bin/") and not name.endswith(".cmd")
+            info.external_attr = (0o100755 if executable else 0o100644) << 16
             archive.writestr(info, path.read_bytes())
 
 
@@ -281,7 +333,13 @@ def _remove_stage_safely(stage: Path, output_root: Path) -> None:
 def build_plugins(output_dir: str | Path, version: str | None = None,
                   source_root: str | Path = PROJECT_ROOT) -> dict[str, Any]:
     root = Path(source_root).resolve(strict=True)
+    metadata_sources = [root / "pyproject.toml", root / "src/pmt/__init__.py",
+                        root / "src/pmt/db.py", *sorted((root / "src/pmt").glob("*_schema.py")),
+                        root / ".claude-plugin/plugin.json", root / ".codex-plugin/plugin.json",
+                        root.parent / "pmt-server/.claude-plugin/plugin.json",
+                        root.parent / "pmt-server/.codex-plugin/plugin.json"]
     try:
+        metadata_hashes = {path: _sha256(path) for path in metadata_sources}
         pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
         core_version = pyproject["project"]["version"]
         from_src = (root / "src" / "pmt" / "__init__.py").read_text(encoding="utf-8")
@@ -290,16 +348,23 @@ def build_plugins(output_dir: str | Path, version: str | None = None,
         schema_version = _static_schema_version(root, schema_text)
         if not core_version_match or core_version_match.group(1) != core_version:
             raise ValueError
-        source_info = {"core_version": core_version, "schema_version": schema_version}
+        manifest_paths = [root / ".claude-plugin/plugin.json", root / ".codex-plugin/plugin.json",
+                          root.parent / "pmt-server/.claude-plugin/plugin.json",
+                          root.parent / "pmt-server/.codex-plugin/plugin.json"]
+        release_versions = {json.loads(path.read_text(encoding="utf-8"))["version"] for path in manifest_paths}
+        if len(release_versions) != 1:
+            raise ValueError("Plugin release versions differ")
+        source_info = {"core_version": core_version, "schema_version": schema_version,
+                       "plugin_version": release_versions.pop()}
     except (OSError, KeyError, TypeError, ValueError, tomllib.TOMLDecodeError) as exc:
         raise BuildError("Project version or schema metadata is invalid") from exc
-    version = version or source_info["core_version"]
+    version = version or source_info["plugin_version"]
     if not isinstance(version, str) or not VERSION_RE.fullmatch(version):
         raise BuildError("Version must use numeric major.minor.patch form")
 
     out = Path(output_dir).expanduser().resolve()
     protected_sources = [(root / "src" / "pmt").resolve(), (root / "skills" / "proj-mgmt-tool").resolve(),
-                         (root / "integrations").resolve()]
+                         (root / "integrations").resolve(), (root.parent / "pmt-server").resolve()]
     if any(out == source or source in out.parents for source in protected_sources):
         raise BuildError("Output directory cannot be inside a package source directory")
     out.mkdir(parents=True, exist_ok=True)
@@ -308,11 +373,14 @@ def build_plugins(output_dir: str | Path, version: str | None = None,
         raise BuildError("That version output already exists; choose a new version")
     # Snapshot the complete source set and each unique source digest before any
     # product is copied. Shared core/skill sources must keep the same baseline
-    # across all three products.
+    # across all product targets.
     source_maps = {product: _source_map(root, product) for product in PRODUCTS}
     source_sets = {product: set(source_map) for product, source_map in source_maps.items()}
     all_inputs = {source: _sha256(source)
                   for source in sorted({source for source_map in source_maps.values() for source in source_map})}
+    if any(_sha256(path) != digest for path, digest in metadata_hashes.items()):
+        raise BuildError("Package metadata changed during build; no output was published")
+    all_inputs.update(metadata_hashes)
     stage = Path(tempfile.mkdtemp(prefix=f".pmt-build-{version}-", dir=out))
     try:
         for product in PRODUCTS:
@@ -357,7 +425,7 @@ def build_plugins(output_dir: str | Path, version: str | None = None,
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", required=True, type=Path)
-    parser.add_argument("--version", help="Plugin package version; defaults to the core version")
+    parser.add_argument("--version", help="Plugin package version; defaults to the plugin manifest version")
     args = parser.parse_args(argv)
     try:
         print(json.dumps({"ok": True, **build_plugins(args.output_dir, args.version)}, ensure_ascii=False))

@@ -1,0 +1,6 @@
+..............s......................................................... [ 82%]
+............s..                                                          [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\server_admin\test_d1_registry.py:265: persistent D2 sample is created only by explicit D1 evidence run
+SKIPPED [1] tests\server_admin\test_server_admin.py:333: POSIX mode check
+85 passed, 2 skipped in 40.26s

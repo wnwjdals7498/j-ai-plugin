@@ -1,0 +1,16 @@
+{
+  "cache_inside_isolated_codex_home": true,
+  "skill_rpc_matches": 1,
+  "skill_name": "pmt-server:pmt-server",
+  "skill_enabled": true,
+  "skill_cache_sha256": "69803FE52BA700619BFADC7AFE1E5B5E2755024EDFB0D655E53A31603EC9791A",
+  "skill_matches_frozen_bundle": true,
+  "cached_claude_hook_sha256": "5C78BAFEEE0142E4B03A9067E18C8326CE198D01EE5BD925DAB37E1915CDAE8F",
+  "claude_hook_matches_frozen_bundle": true,
+  "cached_codex_manifest_sha256": "AFD624DB443616C1A79B43D3303C84FF81BFE2F09CDCBACB23188E66E27C441E",
+  "codex_manifest_matches_frozen_bundle": true,
+  "generic_hooks_json_present": false,
+  "hooks_list_count": 0,
+  "hooks_list_errors": 0,
+  "app_server_process_stopped": true
+}

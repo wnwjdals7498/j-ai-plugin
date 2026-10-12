@@ -1,0 +1,1 @@
+{"Command":"python -m pytest -q tests/test_phase3_acceptance.py::<two installed-package tests> tests/test_phase4_packaging_actual.py::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data --basetemp=.pmt-test/pytest-build-recheck","ExitCode":1,"SourceChanged":false,"BuildDependency":"setuptools>=68 declared in pyproject build-system"}

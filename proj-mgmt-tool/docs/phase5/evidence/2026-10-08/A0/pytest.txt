@@ -1,0 +1,1272 @@
+..............................................F....F.................... [ 10%]
+...............................................F........................ [ 21%]
+........................................................................ [ 31%]
+EE......F............................................................... [ 42%]
+........................................................................ [ 53%]
+..................FF.F........FFFFFFFFF................................. [ 63%]
+.......F......................s.....................................F... [ 74%]
+.......................s.......................F.......F................ [ 84%]
+...FFF............................................................s..... [ 95%]
+..s............................                                          [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_f15_installed_package_setup_hook_update_and_code_restore _
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f15_installed_package_set0')
+
+    @pytest.fixture
+    def installed_package(tmp_path):
+        stage = tmp_path / ("package-source-" + CORE_VERSION)
+        wheelhouse = tmp_path / "wheelhouse"
+        wheelhouse.mkdir()
+        _copy_python_package(stage)
+>       wheel = _build_wheel(stage, wheelhouse)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_acceptance.py:67: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+stage = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f15_installed_package_set0/package-source-0.4.0')
+wheelhouse = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f15_installed_package_set0/wheelhouse')
+
+    def _build_wheel(stage: Path, wheelhouse: Path):
+        completed = subprocess.run([str(BASE_PYTHON), "-m", "pip", "wheel", "--no-deps",
+            "--no-build-isolation", "--no-index", "--wheel-dir", str(wheelhouse), str(stage)],
+            cwd=wheelhouse.parent, env=_portable_env(), capture_output=True, text=True,
+            encoding="utf-8", timeout=120, check=False)
+>       assert completed.returncode == 0, "isolated wheel build failed"
+E       AssertionError: isolated wheel build failed
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['C:\\PMT\\src\\venv-dev\\Scripts\\python.exe', '-m', 'pip', 'wheel', '--no-deps', '--no-build-i....<4 lines>...\n    )\npip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import \'setuptools.build_meta\'\n').returncode
+
+tests\test_phase3_acceptance.py:55: AssertionError
+_ ERROR at setup of test_f15_installed_hosted_cli_two_clients_real_https_and_native_hook _
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f15_installed_hosted_cli_0')
+
+    @pytest.fixture
+    def installed_package(tmp_path):
+        stage = tmp_path / ("package-source-" + CORE_VERSION)
+        wheelhouse = tmp_path / "wheelhouse"
+        wheelhouse.mkdir()
+        _copy_python_package(stage)
+>       wheel = _build_wheel(stage, wheelhouse)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_acceptance.py:67: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+stage = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f15_installed_hosted_cli_0/package-source-0.4.0')
+wheelhouse = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f15_installed_hosted_cli_0/wheelhouse')
+
+    def _build_wheel(stage: Path, wheelhouse: Path):
+        completed = subprocess.run([str(BASE_PYTHON), "-m", "pip", "wheel", "--no-deps",
+            "--no-build-isolation", "--no-index", "--wheel-dir", str(wheelhouse), str(stage)],
+            cwd=wheelhouse.parent, env=_portable_env(), capture_output=True, text=True,
+            encoding="utf-8", timeout=120, check=False)
+>       assert completed.returncode == 0, "isolated wheel build failed"
+E       AssertionError: isolated wheel build failed
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['C:\\PMT\\src\\venv-dev\\Scripts\\python.exe', '-m', 'pip', 'wheel', '--no-deps', '--no-build-i....<4 lines>...\n    )\npip._vendor.pyproject_hooks._impl.BackendUnavailable: Cannot import \'setuptools.build_meta\'\n').returncode
+
+tests\test_phase3_acceptance.py:55: AssertionError
+================================== FAILURES ===================================
+__ test_first_run_publishes_profile_and_keeps_credential_out_of_process_env ___
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_first_run_publishes_profi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000014F5B237C50>
+
+    def test_first_run_publishes_profile_and_keeps_credential_out_of_process_env(tmp_path, monkeypatch):
+        monkeypatch.delenv("PMT_HOST_CREDENTIAL", raising=False)
+        configure = FakeConfigure()
+        result = easy_setup.prepare(options_env(tmp_path), tmp_path, configure=configure, python="/opt/py")
+        assert result["status"] == "ready" and result["configured_now"] is True
+        assert len(configure.calls) == 1
+        assert configure.calls[0]["expected_config_sha256"] is None
+        assert configure.calls[0]["credential_env"] == "PMT_HOST_CREDENTIAL"
+        assert "secret-value" not in json.dumps(configure.calls[0])
+        assert "PMT_HOST_CREDENTIAL" not in os.environ
+        config_root = tmp_path / "home" / ".config" / "pmt"
+        assert result["env"]["PMT_CONFIG_ROOT"] == str(config_root)
+        assert result["env"]["PMT_DATA_ROOT"] == str(tmp_path / "home" / ".local" / "share" / "pmt" / "data")
+        assert result["env"]["PMT_PYTHON"] == "/opt/py"
+        assert "PMT_SCOPE_ID" not in result["env"]
+>       assert result["link"] == "not_git"
+E       AssertionError: assert 'not_linked' == 'not_git'
+E         
+E         - not_git
+E         + not_linked
+
+tests\test_easy_setup.py:92: AssertionError
+____________________ test_env_file_lines_are_shell_quoted _____________________
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_env_file_lines_are_shell_0')
+
+    def test_env_file_lines_are_shell_quoted(tmp_path):
+        path = tmp_path / "env"
+        easy_setup.write_env_file(path, {"PMT_CONFIG_ROOT": "/a b/c", "PMT_HOST_CREDENTIAL": "x'y"})
+        out = subprocess.run(["bash", "-c", f". {path}; printf '%s|%s' \"$PMT_CONFIG_ROOT\" \"$PMT_HOST_CREDENTIAL\""],
+                             stdout=subprocess.PIPE, check=True).stdout.decode()
+>       assert out == "/a b/c|x'y"
+E       assert '|' == "/a b/c|x'y"
+E         
+E         - /a b/c|x'y
+E         + |
+
+tests\test_easy_setup.py:156: AssertionError
+---------------------------- Captured stderr call -----------------------------
+/bin/bash: line 1: C:PMTsrcj-ai-pluginproj-mgmt-tool.pmt-testpytest-temptest_env_file_lines_are_shell_0env: No such file or directory
+_________ test_pkg_01_three_separate_bundles_manifest_and_zip_hashes __________
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_pkg_01_three_separate_bun0')
+
+    def test_pkg_01_three_separate_bundles_manifest_and_zip_hashes(tmp_path):
+        built = build(tmp_path, "0.1.1")
+        assert built["version"] == "0.1.1"
+        assert built["core_version"] == CORE_VERSION
+        assert built["schema_version"] == SCHEMA_VERSION
+        for product in ("codex", "claude", "opencode"):
+            package = Path(built["products"][product]["directory"])
+            archive = Path(built["products"][product]["zip"])
+            manifest = json.loads((package / "pmt-package.json").read_text(encoding="utf-8"))
+            assert manifest["plugin_version"] == "0.1.1"
+            assert manifest["core_version"] == CORE_VERSION
+            assert manifest["protocol_version"] == 1
+            assert manifest["schema_version"] == SCHEMA_VERSION
+            assert set(manifest["files"]) == set(tree_hashes(package)) - {"pmt-package.json"}
+            for relative, digest in manifest["files"].items():
+                assert sha256(package / Path(relative)) == digest
+            assert sha256(archive) == built["products"][product]["zip_sha256"]
+            with zipfile.ZipFile(archive) as zipped:
+                names = zipped.namelist()
+                assert set(names) == set(tree_hashes(package))
+                assert all(not PurePosixPath(name).is_absolute() and ".." not in PurePosixPath(name).parts for name in names)
+            assert (package / "src" / "pmt" / "cli.py").is_file()
+            assert (package / "scripts" / "pmt.py").is_file()
+            assert (package / "skills" / "proj-mgmt-tool" / "SKILL.md").is_file()
+            assert (package / "skills" / "proj-mgmt-tool" / "references" / "cli-workflow.md").is_file()
+            assert not any(part in {".venv", "__pycache__", "tests", ".git"} for path in package.rglob("*") for part in path.parts)
+            for path in package.rglob("*"):
+                if path.is_file() and path.suffix in {".json", ".md", ".py", ".js"}:
+                    assert str(ROOT).lower() not in path.read_text(encoding="utf-8").lower()
+    
+        codex = Path(built["products"]["codex"]["directory"])
+        assert (codex / "plugin.json").is_file()
+        assert (codex / ".codex-plugin" / "plugin.json").is_file()
+        codex_portable = json.loads((codex / "plugin.json").read_text(encoding="utf-8"))
+        assert {"name", "version", "description"} == set(codex_portable)
+        codex_compat = json.loads((codex / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        assert codex_compat["hooks"] == "./hooks/hooks.json"
+        assert (codex / "integrations" / "codex" / "hook.py").is_file()
+        assert sha256(codex / "integrations" / "codex" / "hook.py") == sha256(ROOT / "integrations" / "codex" / "hook.py")
+        codex_market = json.loads((codex / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+        entry = codex_market["plugins"][0]
+        assert entry["source"] == {"source": "local", "path": "./"}
+        assert {"installation", "authentication"} <= entry["policy"].keys()
+    
+        claude = Path(built["products"]["claude"]["directory"])
+        assert (claude / "integrations" / "claude" / "hook.py").is_file()
+        assert sha256(claude / "integrations" / "claude" / "hook.py") == sha256(ROOT / "integrations" / "claude" / "hook.py")
+        claude_market = json.loads((claude / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        assert {"name", "owner", "plugins"} <= claude_market.keys()
+        assert claude_market["plugins"][0]["source"] == "./"
+        claude_plugin = json.loads((claude / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        python_option = claude_plugin["userConfig"]["python_path"]
+        assert python_option["type"] == "file" and python_option["required"] is True
+        assert "default" not in python_option
+        launcher = claude / "bin" / "pmt"
+>       assert launcher.is_file() and launcher.stat().st_mode & 0o111
+E       AssertionError: assert (True and (33206 & 73))
+E        +  where True = is_file()
+E        +    where is_file = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_pkg_01_three_separate_bun0/distribution/0.1.1/claude/bin/pmt').is_file
+E        +  and   33206 = os.stat_result(st_mode=33206, st_ino=2251799813969123, st_dev=4379821769930861418, st_nlink=1, st_uid=0, st_gid=0, st_size=457, st_atime=1791425043, st_mtime=1791425043, st_ctime=1791425043).st_mode
+E        +    where os.stat_result(st_mode=33206, st_ino=2251799813969123, st_dev=4379821769930861418, st_nlink=1, st_uid=0, st_gid=0, st_size=457, st_atime=1791425043, st_mtime=1791425043, st_ctime=1791425043) = stat()
+E        +      where stat = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_pkg_01_three_separate_bun0/distribution/0.1.1/claude/bin/pmt').stat
+
+tests\test_packaging.py:109: AssertionError
+_____ test_two_processes_competing_for_same_union_have_one_atomic_winner ______
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5990F250>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool...v/repo'), 'project_id': '8b4f0582-2c35-4be7-b9c7-9d2dfec15a1a', 'repo_id': 'e10fadb0-3b4e-4752-96e5-fd9929175ac6', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000014F5B2E6350>
+
+    def test_two_processes_competing_for_same_union_have_one_atomic_winner(actual_context_env, monkeypatch):
+        import multiprocessing
+        from contextlib import closing
+        import pmt.runners.service as runner_service
+    
+        env = _queue_two_actual_runs(actual_context_env)
+        monkeypatch.setattr(runner_service.shutil, "which", lambda _name: "fixture-codex")
+        base = {"protocol_version": 1, "operation": "prepare_step_batch",
+            "actor": env["actor"], "session_id": env["session"], "scope_id": env["project_id"],
+            "source": {"product": "cli"}, "payload": {"run_refs": env["batch_runs"],
+                "workspace": str(env["workspace"]), "repository_id": env["repo_id"],
+                "relative_graph_path": env["graph_path"], "expected_source": env["batch_pin"]}}
+        requests = []
+        for index in range(2):
+            request = copy.deepcopy(base)
+            request["request_id"] = _id()
+            request["payload"]["event_id"] = _id()
+            requests.append(request)
+        context = multiprocessing.get_context("spawn")
+        barrier, output = context.Barrier(2), context.Queue()
+        processes = [context.Process(target=_concurrent_prepare_worker,
+            args=(str(env["db"].root), str(env["db"].config_root), request, barrier, output))
+            for request in requests]
+        for process in processes:
+            process.start()
+        for process in processes:
+            process.join(timeout=45)
+        try:
+>           assert all(process.exitcode == 0 for process in processes), [process.exitcode for process in processes]
+E           AssertionError: [1, 1]
+E           assert False
+E            +  where False = all(<generator object test_two_processes_competing_for_same_union_have_one_atomic_winner.<locals>.<genexpr> at 0x0000014F5B680EE0>)
+
+tests\test_phase3_batch.py:380: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:05:54.228759Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":36,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:05:54.265668Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+---------------------------- Captured stderr call -----------------------------
+{"request_id":"d493afd7-9529-4365-8550-b8caca545e9a","operation":null,"session_id":null,"source":null,"scope_id":"8b4f0582-2c35-4be7-b9c7-9d2dfec15a1a","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"c58579390cbb05fd006e839be2f67bef6a3b826cf44d1a39f160bb1e381e1d21","graph_hash":"2a376db23886068e9970d5bc6dd92915d45e71c56c8ffa043a67334183af6154","graph_revision":1,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":"git","device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:05:54.854861Z","level":"INFO","component":"pmt","event_name":"planning.source_pin_captured"}
+{"request_id":"18b1be85-e2e2-485a-a38d-e1ed0f150fe8","operation":"rebuild_graph_index","session_id":"context-session","source":{},"scope_id":"8b4f0582-2c35-4be7-b9c7-9d2dfec15a1a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":14,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:05:55.792515Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+Traceback (most recent call last):
+
+Traceback (most recent call last):
+
+  File "<string>", line 1, in <module>
+
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=24980, pipe_handle=1444)
+
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "<string>", line 1, in <module>
+
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=24980, pipe_handle=672)
+
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+
+    exitcode = _main(fd, parent_sentinel)
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+
+    exitcode = _main(fd, parent_sentinel)
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 132, in _main
+
+    self = reduction.pickle.load(from_parent)
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 132, in _main
+
+    self = reduction.pickle.load(from_parent)
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\tests\test_phase3_batch.py", line 12, in <module>
+
+    from pmt.errors import PmtError
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\scripts\pmt.py", line 7, in <module>
+
+    from pmt.cli import main
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\tests\test_phase3_batch.py", line 12, in <module>
+
+    from pmt.errors import PmtError
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\scripts\pmt.py", line 7, in <module>
+
+    from pmt.cli import main
+
+ModuleNotFoundError: No module named 'pmt.cli'; 'pmt' is not a package
+
+ModuleNotFoundError: No module named 'pmt.cli'; 'pmt' is not a package
+
+______ test_f10_catalog_freezes_six_scenarios_and_not_comparable_reasons ______
+
+    def test_f10_catalog_freezes_six_scenarios_and_not_comparable_reasons():
+>       catalog = f10.load_catalog()
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:108: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+____ test_f10_preflight_does_not_call_missing_runtime_capabilities_a_pass _____
+
+    def test_f10_preflight_does_not_call_missing_runtime_capabilities_a_pass():
+>       report = f10.preflight()
+                 ^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:124: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:163: in preflight
+    for case in load_catalog()["cases"]],
+                ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+___________ test_f10_suite_is_not_run_without_root_go_or_f9_runtime ___________
+
+    def test_f10_suite_is_not_run_without_root_go_or_f9_runtime():
+        called = []
+        no_go = f10.run_integrated_suite(lambda case: called.append(case) or {}, root_go=False)
+        assert no_go["status"] == "not_run" and no_go["overall_acceptance"] == "not_run"
+>       if f10.preflight()["capabilities"]["F9 batch"]["state"] != "ready":
+           ^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:165: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:163: in preflight
+    for case in load_catalog()["cases"]],
+                ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+_____ test_f10_partial_change_baseline_replays_unchanged_legacy_renderer ______
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f10_partial_change_baseli0')
+
+    def test_f10_partial_change_baseline_replays_unchanged_legacy_renderer(tmp_path):
+        # Tests write only under pytest's isolated basetemp, never to evidence or user data.
+>       result = f10.capture_partial_change_baseline(output_dir=tmp_path, repetitions=2)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:227: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:1160: in capture_partial_change_baseline
+    catalog = load_catalog()
+              ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+______ test_f10_prepared_f1_f8_public_localstore_flow_remains_pending_f9 ______
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5BFA2C50>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool...q/repo'), 'project_id': '4d5dbf53-5293-4df7-a910-e575c38aa1c2', 'repo_id': '2a591c14-4697-4f45-88cd-1160f08b559b', ...}
+
+    def test_f10_prepared_f1_f8_public_localstore_flow_remains_pending_f9(actual_context_env):
+        env = _use_frozen_plan_fixture(actual_context_env)
+>       result = f10.run_f1_f8_preparation(env, "new-plan-full-graph-render")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:903: in run_f1_f8_preparation
+    if scenario_id not in {item["id"] for item in load_catalog()["cases"]}:
+                                                  ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:51.099169Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":43,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:51.142743Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+_ test_f10_prepared_partial_change_requires_f3_f4_evidence_and_holds_unknown_context _
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5BFA3650>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool..._/repo'), 'project_id': 'cd3a8d5f-f0f4-491f-8ec1-47a85d57decc', 'repo_id': '05990095-aeb6-4efb-93c0-9ec08e69c84d', ...}
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_f10_prepared_partial_chan0')
+
+    def test_f10_prepared_partial_change_requires_f3_f4_evidence_and_holds_unknown_context(actual_context_env, tmp_path):
+        env = _use_frozen_plan_fixture(actual_context_env)
+>       result = f10.run_f1_f8_preparation(env, "partial-plan-change")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:275: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:903: in run_f1_f8_preparation
+    if scenario_id not in {item["id"] for item in load_catalog()["cases"]}:
+                                                  ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:52.309876Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":46,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:52.356628Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+____ test_f10_local_cli_failure_retry_is_blocked_without_transient_receipt ____
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5D6A6A50>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool..._/repo'), 'project_id': 'fb40186f-8a5b-4303-b233-b0d994d11289', 'repo_id': '42bc6a41-c15b-4e1f-93fa-1d03d86e2fb8', ...}
+
+    def test_f10_local_cli_failure_retry_is_blocked_without_transient_receipt(actual_context_env):
+        env = _use_shallow_complete_graph(actual_context_env)
+>       result = f10.run_f1_f8_preparation(env, "failed-operation-retry-and-rework")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:315: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:903: in run_f1_f8_preparation
+    if scenario_id not in {item["id"] for item in load_catalog()["cases"]}:
+                                                  ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:53.601961Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":55,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:53.657313Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+___ test_f10_actual_new_session_resume_rebuilds_context_from_current_owner ____
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5D6A5350>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool...v/repo'), 'project_id': '8cdcfc79-3cd1-4827-aa36-71be841830f6', 'repo_id': '11a2ab6f-5c62-4dc1-b30e-0f1034c41501', ...}
+
+    def test_f10_actual_new_session_resume_rebuilds_context_from_current_owner(actual_context_env):
+        env = _use_frozen_plan_fixture(actual_context_env)
+        import test_phase3_context as f5_fixture
+        pin = f5_fixture._actual_f3_ready(env)
+        old_context, code = f5_fixture._build_actual(env, pin)
+        assert code == 0 and old_context["ok"]
+        previous_context_id = old_context["result"]["context_ref"]["id"]
+        new_session = "f10-resume-session"
+        from pmt.util import new_id, utc_now, canonical_json
+        new_run, new_job = new_id(), new_id()
+        now = utc_now()
+        with env["db"].write() as conn:
+            old = conn.execute("SELECT * FROM execution_runs WHERE id=?", (env["run_id"],)).fetchone()
+            conn.execute("UPDATE execution_runs SET state='failed',revision=revision+1,updated_at=? WHERE id=?",
+                         (now, env["run_id"]))
+            conn.execute("UPDATE execution_jobs SET state='failed',updated_at=? WHERE id=?", (now, old["job_id"]))
+            conn.execute("DELETE FROM scope_locks WHERE run_id=?", (env["run_id"],))
+            conn.execute("INSERT INTO execution_jobs(id,step_id,state,policy_json,created_at,updated_at) VALUES(?,?,'running','{}',?,?)",
+                         (new_job, env["step_id"], now, now))
+            intent = json.loads(old["intent_json"])
+            intent.update(run_id=new_run, job_id=new_job)
+            conn.execute("INSERT INTO execution_runs(id,job_id,step_id,attempt,state,revision,owner_session,directive_version,"
+                "workspace,scopes_json,route_json,intent_json,created_at,updated_at) "
+                "VALUES(?,?,?,2,'running',1,?,1,?,?,?,?,?,?)",
+                (new_run, new_job, env["step_id"], new_session, old["workspace"], old["scopes_json"],
+                 old["route_json"], canonical_json(intent), now, now))
+            conn.execute("INSERT INTO scope_locks(lock_key,run_id,owner_session,kind,workspace,resource,created_at) VALUES(?,?,?,?,?,?,?)",
+                (new_id(), new_run, new_session, "path", str(env["workspace"]), env["graph_path"], now))
+        env.update(session=new_session, run_id=new_run, job_id=new_job, resume_context_id=previous_context_id)
+>       result = f10.run_f1_f8_preparation(env, "resume-existing-plan")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:356: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:903: in run_f1_f8_preparation
+    if scenario_id not in {item["id"] for item in load_catalog()["cases"]}:
+                                                  ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:54.874218Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":47,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:54.921667Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+---------------------------- Captured stderr call -----------------------------
+{"request_id":"e07c7217-9d25-4569-b29a-48bfc8619c05","operation":null,"session_id":null,"source":null,"scope_id":"8cdcfc79-3cd1-4827-aa36-71be841830f6","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"4d1d3a857e3293383db28b61ba44f2e92ee98cc908c32542a3851b8bbf3b7f7f","graph_hash":"a52a073893f3839964042ce105d726a20ddaf887dd8c18056b8181ebc53eace5","graph_revision":1,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":"git","device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:55.883022Z","level":"INFO","component":"pmt","event_name":"planning.source_pin_captured"}
+{"request_id":"dc351662-5134-4c03-a95f-6935d5615fcd","operation":"rebuild_graph_index","session_id":"context-session","source":{},"scope_id":"8cdcfc79-3cd1-4827-aa36-71be841830f6","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":19,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:56.804524Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"7c351456-91d1-47f3-b9cd-2aaff0bd2b23","operation":"build_task_context","session_id":"context-session","source":{},"scope_id":"8cdcfc79-3cd1-4827-aa36-71be841830f6","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":17,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:57.810371Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"7c351456-91d1-47f3-b9cd-2aaff0bd2b23","operation":null,"session_id":null,"source":null,"scope_id":"8cdcfc79-3cd1-4827-aa36-71be841830f6","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":"bc4eaf09-c090-44ac-ad78-65334202e2c8","job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"4d1d3a857e3293383db28b61ba44f2e92ee98cc908c32542a3851b8bbf3b7f7f","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":"bd6c7ba3-4ae3-592d-8d17-0505c7b4464b","batch_id":null,"measurement_id":null,"manifest_hash":null,"count":15,"input_bytes":0,"output_bytes":null,"incomplete":false,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:57.820695Z","level":"INFO","component":"pmt","event_name":"context.built"}
+_______ test_f10_actual_missing_acceptance_stays_unknown_and_blocks_f8 ________
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5D6A4DD0>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool...j/repo'), 'project_id': '58cf7599-d6ab-42f1-acbc-05ce44700645', 'repo_id': 'aaf52394-465d-4b7d-b605-746f052cf413', ...}
+
+    def test_f10_actual_missing_acceptance_stays_unknown_and_blocks_f8(actual_context_env):
+        env = _use_frozen_plan_fixture(actual_context_env)
+        env["criteria"] = []
+        with env["db"].write() as conn:
+            conn.execute("UPDATE step_specs SET criteria_json='[]' WHERE step_id=?", (env["step_id"],))
+            row = conn.execute("SELECT intent_json FROM execution_runs WHERE id=?", (env["run_id"],)).fetchone()
+            intent = json.loads(row["intent_json"])
+            intent["criteria"] = []
+            conn.execute("UPDATE execution_runs SET intent_json=? WHERE id=?",
+                         (json.dumps(intent, sort_keys=True), env["run_id"]))
+>       result = f10.run_f1_f8_preparation(env, "ambiguous-requirement")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_local_integration.py:382: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\verify_phase3_local.py:903: in run_f1_f8_preparation
+    if scenario_id not in {item["id"] for item in load_catalog()["cases"]}:
+                                                  ^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:58.597882Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":45,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:58.643083Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+______ test_f10_actual_public_two_child_batch_report_collect_and_replay _______
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5C480550>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool...p/repo'), 'project_id': '795aa838-b1ab-45b5-a907-1621ca913b4c', 'repo_id': '42ae90c8-562f-4a95-8980-8ddcfede0596', ...}
+
+    def test_f10_actual_public_two_child_batch_report_collect_and_replay(actual_context_env):
+        """Real LocalStore state changes, deterministic child report; never model-quality evidence."""
+        env = _use_frozen_plan_fixture(actual_context_env)
+        trace = []
+        with f10.measure_localstore_calls(trace):
+            from pmt.util import new_id, utc_now
+            with env["db"].write() as conn:
+                if not conn.execute("SELECT 1 FROM scope_locks WHERE run_id=? AND resource=?",
+                        (env["run_id"], "docs/pmt-docs/plan.md")).fetchone():
+                    conn.execute("INSERT INTO scope_locks(lock_key,run_id,owner_session,kind,workspace,resource,created_at) "
+                        "VALUES(?,?,?,?,?,?,?)", (new_id(), env["run_id"], env["session"], "path",
+                        str(env["workspace"]), "docs/pmt-docs/plan.md", utc_now()))
+>           frozen_partial = next(item for item in f10.load_catalog()["cases"]
+                                                   ^^^^^^^^^^^^^^^^^^
+                                  if item["id"] == "partial-plan-change")
+
+tests\test_phase3_local_integration.py:408: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:59.925986Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":40,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:13:59.966268Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+_______ test_f10_actual_public_group_missing_child_remains_reconciling ________
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5C0AA2D0>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool...j/repo'), 'project_id': '9133d49b-61e8-4b63-a3fc-cde689e1333b', 'repo_id': 'f03056d8-d1f0-4457-bd32-2f06f15ec62e', ...}
+
+    def test_f10_actual_public_group_missing_child_remains_reconciling(actual_context_env):
+        env = actual_context_env
+        import test_phase3_batch as f9_fixtures
+        from pmt.util import canonical_json
+        import test_phase3_context as f5_fixture
+        batch_pin = f5_fixture._actual_f3_ready(env)
+        f10._prepare_item_for_reuse(env)
+        reuse = f10.run_f6_public(env, batch_pin)
+        batch_env = f9_fixtures._queue_two_actual_runs(env)
+        batch_env["product"] = "codex"
+        native_route = {**batch_env["batch_route"], "mode": "native", "adapter_kind": "native",
+            "model": "local-native-fixture", "actual_support": "verified_supported"}
+        with batch_env["db"].write() as conn:
+            for ref in batch_env["batch_runs"]:
+                row = conn.execute("SELECT intent_json FROM execution_runs WHERE id=?", (ref["run_id"],)).fetchone()
+                intent = json.loads(row["intent_json"]); intent["route"] = native_route
+                conn.execute("UPDATE execution_runs SET route_json=?,intent_json=? WHERE id=?",
+                    (canonical_json(native_route), canonical_json(intent), ref["run_id"]))
+        trace = []
+        with f10.measure_localstore_calls(trace):
+            f9 = f10.run_f9_native_batch_fixture(batch_env, reuse["decision_ref"],
+                reported_count=1, fail_first=False, trace=trace)
+        obs = f10.observation_from_trace(trace)
+        assert f9["status"] == "reconciling" and f9["reported_child_count"] == 1
+        assert f9["child_states"].count("reconciling") == 1
+        assert f9["collect_replayed"] is True
+        assert obs["calls_by_operation"]["collect_step_batch"] == 2
+        assert obs["internal_calls_by_operation"]["compact_tool_result"] == 1
+        assert obs["tokens"] == {"status": "unknown", "actual": None, "estimate": None}
+        assert obs["quality"]["model_quality"] == "not_evaluated"
+>       _write_f10_scenario_evidence("parallel-investigation-context", result={
+            "status": "partial_pending_f9", "evidence_tier": f9["evidence_tier"],
+            "f1_f4": {}, "f5": {}, "f6": reuse, "f9": f9, "observation": obs}, trace=trace,
+            extra={"reported_child_count": 1, "missing_child_state": "reconciling",
+                   "report_ref": f9["report_ref"], "report_sha256": f9["report_sha256"],
+                   "collect_replayed": True}, variant="missing-child")
+
+tests\test_phase3_local_integration.py:493: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_phase3_local_integration.py:30: in _write_f10_scenario_evidence
+    catalog = f10.load_catalog()
+              ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:01.203454Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":40,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:01.243728Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+---------------------------- Captured stderr call -----------------------------
+{"request_id":"25fe0187-bdf2-41bd-8714-59c7d86b0635","operation":null,"session_id":null,"source":null,"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"2d175aa4347f8e149fb034ead469dfd070155cfeca69327d9ea41cb647731a09","graph_hash":"9cd844c1aedd958c8366cc25fe7d929e9acc91240183cccb1e8c3895e750958d","graph_revision":1,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":"git","device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:01.943317Z","level":"INFO","component":"pmt","event_name":"planning.source_pin_captured"}
+{"request_id":"4b7ce917-f138-418c-8cbc-1bed7ba3783c","operation":"rebuild_graph_index","session_id":"context-session","source":{},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":16,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:03.181562Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"d2afa0c7-ccd2-476b-ad23-c55a35719422","operation":"resolve_reuse","session_id":"context-session","source":{"product":"cli"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":17,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:03.274063Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"9567d0d1-0d04-4956-ad30-77e63622cab0","operation":"resolve_reuse","session_id":"context-session","source":{"product":"cli"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":15,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:03.335920Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"dea97626-fe8e-4ebf-9c4a-a0afbab4d4be","operation":null,"session_id":null,"source":null,"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"2d175aa4347f8e149fb034ead469dfd070155cfeca69327d9ea41cb647731a09","graph_hash":"9cd844c1aedd958c8366cc25fe7d929e9acc91240183cccb1e8c3895e750958d","graph_revision":1,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":"git","device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:03.840531Z","level":"INFO","component":"pmt","event_name":"planning.source_pin_captured"}
+{"request_id":"1fac6d94-9713-48d7-9289-1e9a16ab8aef","operation":"rebuild_graph_index","session_id":"context-session","source":{},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":26,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:04.813459Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"d197ab71-eba7-5162-b473-a8c4b64afbe5","operation":"prepare_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":27,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:04.957482Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"b1ae4683-a864-5df7-bdfc-81a75ecd33c3","operation":"build_task_context","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":26,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:06.407560Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"b1ae4683-a864-5df7-bdfc-81a75ecd33c3","operation":null,"session_id":null,"source":null,"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":"d6501c88-84bd-414b-b31a-d4652406034d","job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"2d175aa4347f8e149fb034ead469dfd070155cfeca69327d9ea41cb647731a09","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":"2cedb3f2-80a4-539d-b838-4c2e88c7d11c","batch_id":null,"measurement_id":null,"manifest_hash":null,"count":15,"input_bytes":0,"output_bytes":null,"incomplete":false,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:06.414589Z","level":"INFO","component":"pmt","event_name":"context.built"}
+{"request_id":"9184ae3e-b59a-5b8c-aa16-3a6ce96b045a","operation":"build_task_context","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":19,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:07.836951Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"9184ae3e-b59a-5b8c-aa16-3a6ce96b045a","operation":null,"session_id":null,"source":null,"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":"747042c8-484a-4342-9d2c-4235b00e9f13","job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"2d175aa4347f8e149fb034ead469dfd070155cfeca69327d9ea41cb647731a09","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":"c355695f-40ad-5536-978d-352e7dde1a6a","batch_id":null,"measurement_id":null,"manifest_hash":null,"count":15,"input_bytes":0,"output_bytes":null,"incomplete":false,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:07.844851Z","level":"INFO","component":"pmt","event_name":"context.built"}
+{"request_id":"fc131c4a-88f4-5f85-b301-784821a89979","operation":"prepare_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":28,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:08.914091Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"e4f7618e-9764-4b06-bce8-bfaf8982d4ff","operation":"prepare_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":13,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:08.928334Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"b17edd9f-4d76-574f-a7eb-08dc52354c0b","operation":"advance_execution_control","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":18,"exit_code":0,"old_revision":null,"new_revision":1,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:09.450509Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"01ccd994-d955-559e-99f2-01428cfdc113","operation":"dispatch_execution","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":17,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:10.501536Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"706b8849-5518-5473-949e-de5d686f34f2","operation":"advance_execution_control","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":21,"exit_code":0,"old_revision":null,"new_revision":2,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:10.531816Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"b11a8e6d-8525-4e21-bc17-24f8b755c51c","operation":"advance_execution_control","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":17,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:10.553516Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"15ec3171-13c4-5aab-8dae-2c690ce40ddf","operation":"attach_execution_handle","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":29,"exit_code":0,"old_revision":null,"new_revision":4,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.091119Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"ad10330f-d560-5f9e-9d02-cf8f0030e3e1","operation":"advance_execution_control","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":18,"exit_code":0,"old_revision":null,"new_revision":3,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.120033Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"63e9fa76-59ff-4bfc-9c20-0cf9a85c722e","operation":"acknowledge_execution_action","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":15,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.140479Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"097f25b5-906f-5174-bef5-d0a75d469e4f","operation":"register_resource","session_id":"context-session","source":{"product":"cli"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":15,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.254053Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"a989a8ed-9aec-4446-8692-36d1869f0ef7","operation":"phase3.put_object","session_id":"context-session","source":{"product":"local_store","source_hash":"0d032c24a4cb7b841395529ff6023714ec3d03b92fd5944e891f310f46582084"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":17,"exit_code":0,"old_revision":null,"new_revision":1,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":"tool_result","object_id":"a26cfc2b-9248-57ab-8e90-fc2e37c9a6b7","checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.320622Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"f2447f90-f62f-43a4-8757-e994bb343c2d","operation":"register_resource","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":15,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.416926Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"a2810374-4638-43c8-a79d-e32013015ddd","operation":"submit_execution_result","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":19,"exit_code":0,"old_revision":null,"new_revision":5,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.510692Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"d40a7343-14ae-5ce6-9533-5eb4d08bb5e4","operation":"register_resource","session_id":"context-session","source":{"product":"cli"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":16,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.636238Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"64e1f2b5-c887-5243-91b0-b3ee371a9491","operation":"phase3.put_object","session_id":"context-session","source":{"product":"local_store","source_hash":"895df796045b1d5af8ad5d820c64a2793eb8c5ec900950c2a19e3bd3da2144e3"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":18,"exit_code":0,"old_revision":null,"new_revision":1,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":"tool_result","object_id":"167a05b3-693e-5349-8f6f-18cdd9f78b97","checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.711098Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"0dc11d41-9ac5-5d38-9f13-b9e4b7e07a0e","operation":"collect_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":30,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.762682Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"f1666ead-4c4b-4383-8943-e071a2fdaf65","operation":"collect_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"9133d49b-61e8-4b63-a3fc-cde689e1333b","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":15,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:11.778828Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+____ test_f10_actual_public_group_cancel_before_dispatch_cancels_children _____
+
+actual_context_env = {'db': <pmt.db.Database object at 0x0000014F5BFA2750>, 'workspace': WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool...8/repo'), 'project_id': '1f7dd360-61bc-4368-a99e-1d0661d7742a', 'repo_id': '0e04cea9-9c18-4a9f-8676-a50aa2c702e3', ...}
+
+    def test_f10_actual_public_group_cancel_before_dispatch_cancels_children(actual_context_env):
+        env = actual_context_env
+        import test_phase3_batch as f9_fixtures
+        from pmt.util import new_id
+        batch_env = f9_fixtures._queue_two_actual_runs(env)
+        batch_env["product"] = "codex"
+        trace = []
+        with f10.measure_localstore_calls(trace):
+            refs = [{"run_id": item["run_id"], "expected_run_revision": item["expected_run_revision"]}
+                    for item in batch_env["batch_runs"]]
+            prepared_envelope, prepared = f10._result(batch_env, "prepare_step_batch",
+                run_refs=refs, workspace=str(batch_env["workspace"]), repository_id=batch_env["repo_id"],
+                relative_graph_path=batch_env["graph_path"], expected_source=batch_env["batch_pin"],
+                context_budget={"max_bytes": 20000, "max_lines": 1000, "unit": "utf8"}, event_id=new_id())
+            assert prepared["status"] == "prepared"
+            for member in prepared.get("member_run_refs", []):
+                context_ref = member.get("context_ref") or {}
+                if isinstance(context_ref.get("id"), str):
+                    trace.append(f10.validate_trace_record({"event_kind": "context_generated",
+                        "operation": "prepare_step_batch.member_context", "request_id": prepared_envelope["request_id"],
+                        "exit_code": 0, "elapsed_ms": 0, "input_bytes": 0, "output_bytes": 0,
+                        "status": "projected", "evidence_refs": [], "context_id": context_ref["id"]}))
+            parent_id = batch_env["batch_runs"][0]["run_id"]
+            with closing(batch_env["db"].connect()) as conn:
+                revision = conn.execute("SELECT revision FROM execution_runs WHERE id=?", (parent_id,)).fetchone()[0]
+            _, canceled = f10._result(batch_env, "request_execution_cancel", run_id=parent_id,
+                expected_run_revision=revision, event_id=new_id())
+            assert canceled["state"] == "canceled"
+            assert canceled["batch"]["status"] == "canceled"
+        with closing(batch_env["db"].connect()) as conn:
+            states = [conn.execute("SELECT state FROM execution_runs WHERE id=?", (item["run_id"],)).fetchone()[0]
+                      for item in batch_env["batch_runs"]]
+            remaining_locks = conn.execute("SELECT count(*) FROM scope_locks WHERE run_id=?", (parent_id,)).fetchone()[0]
+        obs = f10.observation_from_trace(trace)
+        assert states == ["canceled", "canceled"] and remaining_locks == 0
+        assert obs["calls_by_operation"]["prepare_step_batch"] == 1
+        assert obs["calls_by_operation"]["request_execution_cancel"] == 1
+        assert obs["context_generations"] == 2
+>       _write_f10_scenario_evidence("parallel-investigation-context", result={
+            "status": "cancelled_before_dispatch", "evidence_tier": "actual LocalStore group cancellation fixture",
+            "f1_f4": {}, "f5": {}, "f9": {"batch_ref": prepared["batch_ref"], "status": "canceled"},
+            "observation": obs}, trace=trace,
+            extra={"member_run_ids": [item["run_id"] for item in batch_env["batch_runs"]],
+                   "child_states": states, "scope_locks_remaining": remaining_locks}, variant="cancel-before-dispatch")
+
+tests\test_phase3_local_integration.py:539: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_phase3_local_integration.py:30: in _write_f10_scenario_evidence
+    catalog = f10.load_catalog()
+              ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/2026-10-02/local-integration/scenario-catalog.json')
+
+    def load_catalog(path: Path = CATALOG) -> dict[str, Any]:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("schema_version") != 1 or catalog.get("kind") != "phase3-local-scenario-catalog":
+            raise ValueError("unsupported F10 scenario catalog")
+        cases = catalog.get("cases")
+        if not isinstance(cases, list) or len(cases) != 6:
+            raise ValueError("F10 catalog must retain the six frozen representative cases")
+        ids = [case.get("id") for case in cases]
+        if len(set(ids)) != 6 or any(not isinstance(value, str) for value in ids):
+            raise ValueError("F10 case IDs must be six unique strings")
+        fixture = catalog["common"]["source_fixture"]
+        source_path = ROOT / fixture["path"]
+        if _sha256(source_path.read_bytes()) != fixture["sha256"]:
+>           raise ValueError("frozen canonical graph hash changed")
+E           ValueError: frozen canonical graph hash changed
+
+scripts\verify_phase3_local.py:119: ValueError
+---------------------------- Captured stderr setup ----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:12.521560Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":38,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:12.560286Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+---------------------------- Captured stderr call -----------------------------
+{"request_id":"77264975-c5f2-491e-b8fa-171f62c4391a","operation":null,"session_id":null,"source":null,"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"739855b6ffa3340ed9fdecb129b6c043358074f6bc85bdd03c5e65dc2874aca7","graph_hash":"32b674851574c941be983910012f52443179d51bb7d426923efc041cdaf8cec0","graph_revision":1,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":"git","device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:13.290637Z","level":"INFO","component":"pmt","event_name":"planning.source_pin_captured"}
+{"request_id":"192faea5-e5ec-42a6-8a9b-177b7baef4fd","operation":"rebuild_graph_index","session_id":"context-session","source":{},"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":15,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:14.276781Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"0b3d0c67-905d-55e1-bbcd-c8f9829f543f","operation":"prepare_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":30,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:14.404853Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"1468471a-b8ee-5dce-970b-00851e0ac783","operation":"build_task_context","session_id":"context-session","source":{"product":"codex"},"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":19,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:15.905181Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"1468471a-b8ee-5dce-970b-00851e0ac783","operation":null,"session_id":null,"source":null,"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":"6520b78a-0827-45ed-8820-c82c9da63d7b","job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"739855b6ffa3340ed9fdecb129b6c043358074f6bc85bdd03c5e65dc2874aca7","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":"a002e633-4a26-5dd9-be5b-a9869bd5fc2e","batch_id":null,"measurement_id":null,"manifest_hash":null,"count":15,"input_bytes":0,"output_bytes":null,"incomplete":false,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:15.914431Z","level":"INFO","component":"pmt","event_name":"context.built"}
+{"request_id":"6ed9e15b-2c28-5365-b1ca-d4f5057d206f","operation":"build_task_context","session_id":"context-session","source":{"product":"codex"},"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":19,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:17.423526Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"6ed9e15b-2c28-5365-b1ca-d4f5057d206f","operation":null,"session_id":null,"source":null,"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":"a9250484-3d0f-4627-a8c1-b7fa7717bb0f","job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"739855b6ffa3340ed9fdecb129b6c043358074f6bc85bdd03c5e65dc2874aca7","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":"ec8e9dcf-d722-53c1-a44d-7db873662cbd","batch_id":null,"measurement_id":null,"manifest_hash":null,"count":15,"input_bytes":0,"output_bytes":null,"incomplete":false,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:17.431523Z","level":"INFO","component":"pmt","event_name":"context.built"}
+{"request_id":"7d737b83-5474-5afd-89ac-0da6b8a84b46","operation":"prepare_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":24,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:18.471475Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"4b2ee51b-3dd2-4c07-823a-371dd713eb8d","operation":"prepare_step_batch","session_id":"context-session","source":{"product":"codex"},"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":14,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:18.485927Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"ebfe8da5-9c1b-4c9c-ab0f-e05b0a001856","operation":"request_execution_cancel","session_id":"context-session","source":{"product":"codex"},"scope_id":"1f7dd360-61bc-4368-a99e-1d0661d7742a","record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":26,"exit_code":0,"old_revision":null,"new_revision":4,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:14:18.516580Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+_________ test_two_processes_cas_one_physical_pending_resource_upload _________
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_two_processes_cas_one_phy0')
+
+    def test_two_processes_cas_one_physical_pending_resource_upload(tmp_path):
+        identity = _identity()
+        box = _outbox(tmp_path, identity)
+        scope_id, upload_request_id = new_id(), new_id()
+        source_pin = _pin(scope_id)
+        facts = _facts(identity, {"scope_id": scope_id, "payload": {}}, source_pin=source_pin, revision=0, state=None)
+        content = b"one already-created upload"
+        staged = box.stage_resource(upload_request_id=upload_request_id, scope_id=scope_id, purpose="result",
+            source_fingerprint=facts["source_fingerprint"], output_ref="existing-result", output_reader=lambda _ref: content)
+        calls_path = str(tmp_path / "upload-calls.sqlite3")
+        context = multiprocessing.get_context("spawn")
+        barrier = context.Barrier(2)
+        results = context.Queue()
+        workers = [context.Process(target=_parallel_pending_resource_publish,
+            args=(str(tmp_path), identity, upload_request_id, facts, barrier, results, calls_path)) for _ in range(2)]
+        for worker in workers:
+            worker.start()
+        for worker in workers:
+            worker.join(timeout=20)
+>       assert all(worker.exitcode == 0 for worker in workers)
+E       assert False
+E        +  where False = all(<generator object test_two_processes_cas_one_physical_pending_resource_upload.<locals>.<genexpr> at 0x0000014F5BE3CD40>)
+
+tests\test_phase3_pending.py:424: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+
+  File "<string>", line 1, in <module>
+
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=24980, pipe_handle=2016)
+
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+
+    exitcode = _main(fd, parent_sentinel)
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 132, in _main
+
+    self = reduction.pickle.load(from_parent)
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\tests\test_phase3_pending.py", line 12, in <module>
+
+    from pmt.errors import PmtError
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\scripts\pmt.py", line 7, in <module>
+
+    from pmt.cli import main
+
+ModuleNotFoundError: No module named 'pmt.cli'; 'pmt' is not a package
+
+Traceback (most recent call last):
+
+  File "<string>", line 1, in <module>
+
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=24980, pipe_handle=2020)
+
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+
+    exitcode = _main(fd, parent_sentinel)
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 132, in _main
+
+    self = reduction.pickle.load(from_parent)
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\tests\test_phase3_pending.py", line 12, in <module>
+
+    from pmt.errors import PmtError
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\scripts\pmt.py", line 7, in <module>
+
+    from pmt.cli import main
+
+ModuleNotFoundError: No module named 'pmt.cli'; 'pmt' is not a package
+
+__ test_actual_parallel_processes_create_one_claim_and_preserve_both_events ___
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_actual_parallel_processes0')
+
+    def test_actual_parallel_processes_create_one_claim_and_preserve_both_events(tmp_path):
+        env = _actual_fixture(tmp_path)
+        second_step, second_job, second_run, session = new_id(), new_id(), new_id(), "reuse-session-2"
+        now = utc_now()
+        with env["db"].write() as conn:
+            conn.execute("INSERT INTO records(id,kind,scope_id,parent_id,title,state,body_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                         (second_step, "step", env["scope"], env["target"], "Parallel step", "In Progress", "{}", now, now))
+            conn.execute("INSERT INTO execution_jobs(id,step_id,state,policy_json,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                         (second_job, second_step, "running", "{}", now, now))
+            conn.execute("INSERT INTO execution_runs(id,job_id,step_id,attempt,state,revision,owner_session,directive_version,workspace,scopes_json,route_json,intent_json,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                         (second_run, second_job, second_step, 1, "running", 1, session, 1,
+                          str(env["root"]), "[]", "{}", "{}", now, now))
+            conn.execute("INSERT INTO scope_locks(lock_key,run_id,owner_session,kind,workspace,resource,created_at) VALUES(?,?,?,?,?,?,?)",
+                         (new_id(), second_run, session, "path", str(env["root"]), "src/target.py", now))
+        request_a = _actual_request(env, "resolve_reuse")
+        request_b_env = {**env, "run": second_run}
+        request_b = _actual_request(request_b_env, "resolve_reuse", session=session)
+        ctx = multiprocessing.get_context("spawn")
+        barrier, output = ctx.Barrier(2), ctx.Queue()
+        args = (str(env["db"].root), str(env["db"].config_root))
+        processes = [ctx.Process(target=_parallel_actual_resolve,
+                                 args=(*args, request, barrier, output)) for request in (request_a, request_b)]
+        for process in processes:
+            process.start()
+>       results = [output.get(timeout=30) for _ in processes]
+                   ^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_phase3_reuse.py:454: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <multiprocessing.queues.Queue object at 0x0000014F5BD7BED0>, block = True
+timeout = 29.999994101002812
+
+    def get(self, block=True, timeout=None):
+        if self._closed:
+            raise ValueError(f"Queue {self!r} is closed")
+        if block and timeout is None:
+            with self._rlock:
+                res = self._recv_bytes()
+            self._sem.release()
+        else:
+            if block:
+                deadline = time.monotonic() + timeout
+            if not self._rlock.acquire(block, timeout):
+                raise Empty
+            try:
+                if block:
+                    timeout = deadline - time.monotonic()
+                    if not self._poll(timeout):
+>                       raise Empty
+E                       _queue.Empty
+
+D:\Application\Python314\Lib\multiprocessing\queues.py:112: Empty
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:15:32.611411Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":49,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:15:32.661222Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+Traceback (most recent call last):
+
+  File "<string>", line 1, in <module>
+
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=24980, pipe_handle=2620)
+
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+
+    exitcode = _main(fd, parent_sentinel)
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 132, in _main
+
+    self = reduction.pickle.load(from_parent)
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\tests\test_phase3_reuse.py", line 11, in <module>
+
+    from pmt.efficiency.reuse import (
+
+    ...<8 lines>...
+
+    )
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\scripts\pmt.py", line 7, in <module>
+
+    from pmt.cli import main
+
+ModuleNotFoundError: No module named 'pmt.cli'; 'pmt' is not a package
+
+Traceback (most recent call last):
+
+  File "<string>", line 1, in <module>
+
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=24980, pipe_handle=2412)
+
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+
+    exitcode = _main(fd, parent_sentinel)
+
+  File "D:\Application\Python314\Lib\multiprocessing\spawn.py", line 132, in _main
+
+    self = reduction.pickle.load(from_parent)
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\tests\test_phase3_reuse.py", line 11, in <module>
+
+    from pmt.efficiency.reuse import (
+
+    ...<8 lines>...
+
+    )
+
+  File "C:\PMT\src\j-ai-plugin\proj-mgmt-tool\scripts\pmt.py", line 7, in <module>
+
+    from pmt.cli import main
+
+ModuleNotFoundError: No module named 'pmt.cli'; 'pmt' is not a package
+
+_ test_r1_facts_classify_only_same_basis_link_and_actual_verification_receipts _
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_r1_facts_classify_only_sa0')
+
+    def test_r1_facts_classify_only_same_basis_link_and_actual_verification_receipts(tmp_path):
+        env = _source_fixture(tmp_path)
+        from pmt.storage_config import configure_storage
+    
+        branch = subprocess.run(["git", "-C", str(env["repo"]), "symbolic-ref", "--quiet", "--short", "HEAD"],
+            check=True, capture_output=True, text=True, encoding="utf-8").stdout.strip()
+        configure_storage(env["db"].config_root, {"mode": "local", "expected_config_sha256": None,
+            "workspace_mappings": [{"repository_id": env["repo_id"], "project_id": env["project_id"],
+                "branch": branch, "branch_key_sha256": hashlib.sha256(branch.encode("utf-8")).hexdigest(),
+                "local_root": str(env["repo"]), "relative_graph_path": env["graph_path"]}]})
+        verification_id, definition_id = new_id(), new_id()
+        with env["db"].write() as conn:
+            conn.execute("INSERT INTO verifications(id,definition_id,definition_version,target_id,environment_id,"
+                "input_fingerprint,outcome,exit_code,evidence_json,includes_json,command_json,completed_at,state) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", (verification_id, definition_id, "definition-v1",
+                    env["step_id"], env["db"].environment_id, "a" * 64, "pass", 0,
+                    canonical_json([env["directive_id"]]), "[]", "{}", "2026-10-06T00:00:01Z", "valid"))
+        captured, code = env["store"].execute(_continuity_request(env, "capture_work_basis", {
+            "run_id": env["run_id"], "repository_id": env["repo_id"], "workspace": str(env["repo"]),
+            "relative_graph_path": env["graph_path"], "inventory_paths": [env["graph_path"]],
+            "condition_refs": [verification_id]}))
+        assert code == 0, captured.get("error")
+        basis_ref = captured["result"]["basis_ref"]
+        links, code = env["store"].execute(_continuity_request(env, "build_implementation_links", {
+            "run_id": env["run_id"], "repository_id": env["repo_id"], "workspace": str(env["repo"]),
+            "relative_graph_path": env["graph_path"], "paths": [env["graph_path"]],
+            "basis_ref": basis_ref, "expected_pointer_revision": 0}))
+        assert code == 0, links.get("error")
+    
+        facts_request = _continuity_request(env, "read_current_facts", {"basis_ref": basis_ref})
+        facts, code = env["store"].execute(facts_request)
+        assert code == 0, facts.get("error")
+        implementation = facts["result"]["facts"]["implementation"]
+        assert implementation["level"] == "verification_at_basis"
+        assert implementation["source_currentness"] == "not_revalidated_by_metadata_read"
+        assert implementation["implementation_refs"][0]["ref"] == links["result"]["index_ref"]
+        assert implementation["verification_at_basis"][0]["verification_ref"] == verification_id
+        assert implementation["current_applicability"] == "unknown_requires_read_applicability"
+    
+        with env["db"].write() as conn:
+            conn.execute("INSERT INTO verifications(id,definition_id,definition_version,target_id,environment_id,"
+                "input_fingerprint,outcome,exit_code,evidence_json,includes_json,command_json,completed_at,state) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", (new_id(), definition_id, "definition-v1", env["step_id"],
+                    env["db"].environment_id, "b" * 64, "fail", 1, "[]", "[]", "{}",
+                    "2026-10-07T00:00:01Z", "valid"))
+        after_failure, code = env["store"].execute(_continuity_request(env, "read_current_facts", {
+            "basis_ref": basis_ref, "implementation_refs": ["caller-forged-ref"], "verified": True}))
+        assert code == 0, after_failure.get("error")
+        after = after_failure["result"]["facts"]["implementation"]
+        assert after["level"] == "verification_at_basis"
+>       assert after["verification_after_basis_fail_refs"]
+E       assert []
+
+tests\test_phase4_current_context.py:511: AssertionError
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:07.040509Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":41,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:07.082293Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+{"request_id":"8eccbd01-3ad5-4716-91cc-b12af8164a3e","operation":null,"session_id":null,"source":null,"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":null,"event_id":null,"outcome":"applying","error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":"pending","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":"db6111b7-b146-5a85-9f3c-e2f017db81c5","coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:07.298287Z","level":"INFO","component":"pmt","event_name":"continuity.effect_prepared"}
+{"request_id":"8eccbd01-3ad5-4716-91cc-b12af8164a3e","operation":null,"session_id":null,"source":null,"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":null,"event_id":null,"outcome":"candidate","error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"d65022ed0173d65bef5270982c3ddb70c8166dff15b91521f57429023f2635f2","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":"detail","object_id":"53b4c18b-9ad2-524f-b7f1-79826ec66ecf","checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:08.397304Z","level":"INFO","component":"pmt","event_name":"continuity.object_prepared"}
+{"request_id":"8eccbd01-3ad5-4716-91cc-b12af8164a3e","operation":null,"session_id":null,"source":null,"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":null,"event_id":null,"outcome":"candidate","error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"5097972676d6ee2d2d95ac05a5ea59b361fe06499ca8d70e3d2a9fd591c3a88d","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":"basis","object_id":"cc7b8f64-d91a-57b9-95ca-eabd9158c0c6","checkpoint_id":null,"basis_hash":"5097972676d6ee2d2d95ac05a5ea59b361fe06499ca8d70e3d2a9fd591c3a88d","pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:08.398225Z","level":"INFO","component":"pmt","event_name":"continuity.object_prepared"}
+{"request_id":"8eccbd01-3ad5-4716-91cc-b12af8164a3e","operation":null,"session_id":null,"source":null,"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":null,"event_id":null,"outcome":"completed","error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":"pending","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":"db6111b7-b146-5a85-9f3c-e2f017db81c5","coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:08.398645Z","level":"INFO","component":"pmt","event_name":"continuity.effect_prepared"}
+{"request_id":"8eccbd01-3ad5-4716-91cc-b12af8164a3e","operation":"capture_work_basis","session_id":"phase4-session","source":{},"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":"c2fae8e2-68ba-4b8d-a679-d7fdeba0e3f6","event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":19,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:08.413854Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+{"request_id":"8eccbd01-3ad5-4716-91cc-b12af8164a3e","operation":null,"session_id":null,"source":null,"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":"5097972676d6ee2d2d95ac05a5ea59b361fe06499ca8d70e3d2a9fd591c3a88d","pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:08.414447Z","level":"INFO","component":"pmt","event_name":"continuity.basis_captured"}
+{"request_id":"2c0d0ab2-e6a2-4e79-b0e3-075f0303213b","operation":null,"session_id":null,"source":null,"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":null,"event_id":null,"outcome":"candidate","error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":"77b26b8c79bbd570971ccd29e7775ec1fefe86bb293e9b6baddc10a16686274c","graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":"link_index","object_id":"6a662865-c202-52da-8d65-efa3e626c963","checkpoint_id":null,"basis_hash":"5097972676d6ee2d2d95ac05a5ea59b361fe06499ca8d70e3d2a9fd591c3a88d","pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:09.038087Z","level":"INFO","component":"pmt","event_name":"continuity.object_prepared"}
+{"request_id":"2c0d0ab2-e6a2-4e79-b0e3-075f0303213b","operation":null,"session_id":null,"source":null,"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":null,"event_id":null,"outcome":"partial","error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":"pending","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":"5097972676d6ee2d2d95ac05a5ea59b361fe06499ca8d70e3d2a9fd591c3a88d","pointer_key":null,"effect_id":"3c531cb6-beaf-55d3-8701-c8b71c54e79c","coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:09.038623Z","level":"INFO","component":"pmt","event_name":"continuity.effect_prepared"}
+{"request_id":"2c0d0ab2-e6a2-4e79-b0e3-075f0303213b","operation":"build_implementation_links","session_id":"phase4-session","source":{},"scope_id":"3ec75f7f-8c77-4ba9-b2e2-3a07412d328c","record_id":"c2fae8e2-68ba-4b8d-a679-d7fdeba0e3f6","event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":20,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:09.054685Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+______________ test_actual_separate_process_pointer_competition _______________
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_actual_separate_process_p0')
+
+    def test_actual_separate_process_pointer_competition(tmp_path):
+        db, scope = setup(tmp_path)
+        gate = tmp_path / "go"
+        script = r'''
+    import sys,time
+    from pathlib import Path
+    from pmt.db import Database
+    from pmt.continuity.storage import ContinuityStore
+    from pmt.errors import PmtError
+    from pmt.util import new_id
+    db=Database(sys.argv[1],sys.argv[2]);store=ContinuityStore(db)
+    req={'request_id':new_id(),'operation':'continuity.test','scope_id':sys.argv[3],'actor':'main','session_id':sys.argv[4],'payload':{}}
+    while not Path(sys.argv[5]).exists(): time.sleep(.01)
+    try:
+     with db.write() as conn:
+      obj=store.put(conn,req,'checkpoint',{'actor_ref':sys.argv[4]})
+      store.advance_pointer(conn,req,{'purpose':'race','branch':'main'},obj['id'],0)
+     print('committed')
+    except PmtError as error: print(error.code)
+    '''
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1] / "src")
+        processes = [subprocess.Popen([sys.executable, "-c", script, str(db.root), str(db.config_root), scope,
+                                      owner, str(gate)], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     text=True, encoding="utf-8") for owner in ("a", "b")]
+        gate.touch()
+        outputs = [process.communicate(timeout=20) for process in processes]
+        assert all(process.returncode == 0 for process in processes), outputs
+>       assert sorted(output[0].strip() for output in outputs) == ["committed", "revision_conflict"]
+E       AssertionError: assert ['committed', 'database_busy'] == ['committed',...ion_conflict']
+E         
+E         At index 1 diff: 'database_busy' != 'revision_conflict'
+E         Use -v to get more diff
+
+tests\test_phase4_foundation.py:181: AssertionError
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:22.095574Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":38,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:22.133660Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+{"request_id":"e518e364-a917-4253-bd43-f82b7ad20b57","operation":"create_scope","session_id":"first","source":{},"scope_id":null,"record_id":null,"event_id":null,"outcome":"success","error_code":null,"retryable":null,"duration_ms":13,"exit_code":0,"old_revision":null,"new_revision":null,"transaction_outcome":"commit","ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":"project","object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T02:17:22.150373Z","level":"INFO","component":"pmt","event_name":"request_committed"}
+_ test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[codex] _
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_portable_package_upgrade_0')
+product = 'codex'
+
+    @pytest.mark.parametrize("product", ["codex", "claude", "opencode"])
+    def test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data(tmp_path, product):
+        historical = ROOT / "docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0" / product
+>       assert (historical / "pmt-package.json").is_file(), "Actual pinned schema4 package fixture is required"
+E       AssertionError: Actual pinned schema4 package fixture is required
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/codex') / 'pmt-package.json').is_file
+
+tests\test_phase4_packaging_actual.py:50: AssertionError
+_ test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[claude] _
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_portable_package_upgrade_1')
+product = 'claude'
+
+    @pytest.mark.parametrize("product", ["codex", "claude", "opencode"])
+    def test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data(tmp_path, product):
+        historical = ROOT / "docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0" / product
+>       assert (historical / "pmt-package.json").is_file(), "Actual pinned schema4 package fixture is required"
+E       AssertionError: Actual pinned schema4 package fixture is required
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/claude') / 'pmt-package.json').is_file
+
+tests\test_phase4_packaging_actual.py:50: AssertionError
+_ test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[opencode] _
+
+tmp_path = WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/.pmt-test/pytest-temp/test_portable_package_upgrade_2')
+product = 'opencode'
+
+    @pytest.mark.parametrize("product", ["codex", "claude", "opencode"])
+    def test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data(tmp_path, product):
+        historical = ROOT / "docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0" / product
+>       assert (historical / "pmt-package.json").is_file(), "Actual pinned schema4 package fixture is required"
+E       AssertionError: Actual pinned schema4 package fixture is required
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = (WindowsPath('C:/PMT/src/j-ai-plugin/proj-mgmt-tool/docs/phase3/evidence/local-acceptance/repaired-source/package-snapshot/0.3.0/opencode') / 'pmt-package.json').is_file
+
+tests\test_phase4_packaging_actual.py:50: AssertionError
+============================== warnings summary ===============================
+tests/test_phase3_transfer.py::test_archive_rejects_slip_duplicate_reparse_and_size_excess
+  D:\Application\Python314\Lib\zipfile\__init__.py:1722: UserWarning: Duplicate name: 'manifest.json'
+    return self._open_to_write(zinfo, force_zip64=force_zip64)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_phase3_publication.py:212: This Windows account cannot create symlinks
+SKIPPED [1] tests\test_phase3_workspace.py:275: symlink creation is unavailable in this test environment
+SKIPPED [1] tests\test_resources.py:61: This Windows account cannot create symlinks
+SKIPPED [1] tests\test_resources.py:237: This Windows account cannot create symlinks
+ERROR tests/test_phase3_acceptance.py::test_f15_installed_package_setup_hook_update_and_code_restore
+ERROR tests/test_phase3_acceptance.py::test_f15_installed_hosted_cli_two_clients_real_https_and_native_hook
+FAILED tests/test_easy_setup.py::test_first_run_publishes_profile_and_keeps_credential_out_of_process_env
+FAILED tests/test_easy_setup.py::test_env_file_lines_are_shell_quoted - asser...
+FAILED tests/test_packaging.py::test_pkg_01_three_separate_bundles_manifest_and_zip_hashes
+FAILED tests/test_phase3_batch.py::test_two_processes_competing_for_same_union_have_one_atomic_winner
+FAILED tests/test_phase3_local_integration.py::test_f10_catalog_freezes_six_scenarios_and_not_comparable_reasons
+FAILED tests/test_phase3_local_integration.py::test_f10_preflight_does_not_call_missing_runtime_capabilities_a_pass
+FAILED tests/test_phase3_local_integration.py::test_f10_suite_is_not_run_without_root_go_or_f9_runtime
+FAILED tests/test_phase3_local_integration.py::test_f10_partial_change_baseline_replays_unchanged_legacy_renderer
+FAILED tests/test_phase3_local_integration.py::test_f10_prepared_f1_f8_public_localstore_flow_remains_pending_f9
+FAILED tests/test_phase3_local_integration.py::test_f10_prepared_partial_change_requires_f3_f4_evidence_and_holds_unknown_context
+FAILED tests/test_phase3_local_integration.py::test_f10_local_cli_failure_retry_is_blocked_without_transient_receipt
+FAILED tests/test_phase3_local_integration.py::test_f10_actual_new_session_resume_rebuilds_context_from_current_owner
+FAILED tests/test_phase3_local_integration.py::test_f10_actual_missing_acceptance_stays_unknown_and_blocks_f8
+FAILED tests/test_phase3_local_integration.py::test_f10_actual_public_two_child_batch_report_collect_and_replay
+FAILED tests/test_phase3_local_integration.py::test_f10_actual_public_group_missing_child_remains_reconciling
+FAILED tests/test_phase3_local_integration.py::test_f10_actual_public_group_cancel_before_dispatch_cancels_children
+FAILED tests/test_phase3_pending.py::test_two_processes_cas_one_physical_pending_resource_upload
+FAILED tests/test_phase3_reuse.py::test_actual_parallel_processes_create_one_claim_and_preserve_both_events
+FAILED tests/test_phase4_current_context.py::test_r1_facts_classify_only_same_basis_link_and_actual_verification_receipts
+FAILED tests/test_phase4_foundation.py::test_actual_separate_process_pointer_competition
+FAILED tests/test_phase4_packaging_actual.py::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[codex]
+FAILED tests/test_phase4_packaging_actual.py::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[claude]
+FAILED tests/test_phase4_packaging_actual.py::test_portable_package_upgrade_reinstall_and_fresh_session_keep_schema4_data[opencode]
+23 failed, 650 passed, 4 skipped, 1 warning, 2 errors in 1112.09s (0:18:32)

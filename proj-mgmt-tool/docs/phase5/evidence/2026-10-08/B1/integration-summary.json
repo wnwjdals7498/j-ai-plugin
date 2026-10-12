@@ -1,0 +1,24 @@
+{
+  "task": "B1",
+  "status": "implementation_verified_on_windows",
+  "worker_suite": {
+    "passed": 31,
+    "skipped": 2,
+    "failed": 0,
+    "errors": 0
+  },
+  "parent_integration": {
+    "passed": 68,
+    "skipped": 2,
+    "exit_code": 0,
+    "scope": "B1 + shared handoff"
+  },
+  "review": "APPROVE, previous routing P1 resolved",
+  "gaps": [
+    "real POSIX permission/symlink fixture: F2",
+    "real different Windows account DPAPI rejection: not run",
+    "actual hosted connect transaction: D2",
+    "actual product installation/new session: F2/F3"
+  ],
+  "production_host_changed": false
+}

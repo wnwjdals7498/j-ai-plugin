@@ -64,6 +64,10 @@ def build_parser():
 
 
 def _serve(db, args):
+    return serve_host(db, args)
+
+
+def serve_host(db, args, *, claim_keys=None, log_config=None):
     try:
         address = ipaddress.ip_address(args.host)
     except ValueError:
@@ -87,8 +91,8 @@ def _serve(db, args):
                 raise PmtError("host_proxy_invalid", "Trusted proxies must be literal IPs")
     elif args.trusted_proxy:
         raise PmtError("host_proxy_invalid", "Trusted proxy settings require proxy mode")
-    keys = {args.claim_key_id: _key_reference(args.claim_key_env)}
-    for mapping in args.retained_key:
+    keys = dict(claim_keys) if claim_keys is not None else {args.claim_key_id: _key_reference(args.claim_key_env)}
+    for mapping in ([] if claim_keys is not None else args.retained_key):
         if "=" not in mapping:
             raise PmtError("host_key_unavailable", "Retained key mapping must be KEY_ID=ENV_NAME", 5)
         key_id, env_name = mapping.split("=", 1)
@@ -112,10 +116,11 @@ def _serve(db, args):
     resource_port = HostResourceStore(db, application.auth)
     application.extension = HostDataExtension(db, application.auth, resource_port, authorizer=application.authorize)
     application.resources = resource_port
+    logging_options = {} if log_config is None else {"log_config": log_config}
     uvicorn.run(create_app(application), host=args.host, port=args.port, workers=1,
                 ssl_certfile=args.ssl_certfile, ssl_keyfile=args.ssl_keyfile,
                 proxy_headers=args.behind_proxy, forwarded_allow_ips=trusted,
-                access_log=False, log_level="info", timeout_graceful_shutdown=15)
+                access_log=False, log_level="info", timeout_graceful_shutdown=15, **logging_options)
     return 0
 
 

@@ -1,0 +1,42 @@
+.............F......F....................                                [100%]
+================================== FAILURES ===================================
+_ test_hook_03_pending_directory_write_failure_never_calls_core_or_claims_storage _
+
+tmp_path = WindowsPath('C:/PMT/work/phase5-test/B3/pytest-hook-integration-final-temp/test_hook_03_pending_directory0')
+
+    def test_hook_03_pending_directory_write_failure_never_calls_core_or_claims_storage(tmp_path):
+        db, env = create_db(tmp_path)
+        (db.root / "hook-pending").write_text("blocking file", encoding="utf-8")
+        hook_script = ROOT / "integrations" / "codex" / "hook.py"
+        completed = subprocess.run([sys.executable, str(hook_script), "--event", "UserPromptSubmit"],
+                                   input=json.dumps(fixture("codex-user-prompt.json")), text=True,
+                                   capture_output=True, env=env, timeout=5, check=False)
+        assert completed.returncode == 0
+        warning = json.loads(completed.stdout)
+>       assert "systemMessage" in warning and "could not confirm" in warning["systemMessage"]
+E       AssertionError: assert ('systemMessage' in {'systemMessage': 'PMT setup failed (not_configured). Check the PMT configuration.'} and 'could not confirm' in 'PMT setup failed (not_configured). Check the PMT configuration.')
+
+tests\test_hook_acceptance.py:97: AssertionError
+---------------------------- Captured stderr call -----------------------------
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":null,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T04:42:43.037155Z","level":"INFO","component":"pmt","event_name":"database_init_started"}
+{"request_id":null,"operation":null,"session_id":null,"source":null,"scope_id":null,"record_id":null,"event_id":null,"outcome":null,"error_code":null,"retryable":null,"duration_ms":44,"exit_code":null,"old_revision":null,"new_revision":null,"transaction_outcome":null,"ownership_result":null,"correlation_id":null,"work_id":null,"item_id":null,"step_id":null,"job_id":null,"run_id":null,"resource_id":null,"model":null,"route":null,"directive_version":null,"last_seen":null,"last_changed":null,"wait_reason":null,"source_hash":null,"graph_hash":null,"graph_revision":null,"rule_version":null,"template_version":null,"context_id":null,"batch_id":null,"measurement_id":null,"manifest_hash":null,"count":null,"input_bytes":null,"output_bytes":null,"incomplete":null,"reason_code":null,"device_id":null,"environment_id":null,"namespace_id":null,"api_version":null,"host_schema_version":null,"object_kind":null,"object_id":null,"checkpoint_id":null,"basis_hash":null,"pointer_key":null,"effect_id":null,"coverage":null,"cache_hit":null,"response_bytes":null,"response_lines":null,"completeness":null,"sqlite_errorcode":null,"sqlite_errorname":null,"at_utc":"2026-10-08T04:42:43.081655Z","level":"INFO","component":"pmt","event_name":"database_init_succeeded"}
+_ test_hook_03_database_and_pending_root_failure_is_visible_without_false_save _
+
+tmp_path = WindowsPath('C:/PMT/work/phase5-test/B3/pytest-hook-integration-final-temp/test_hook_03_database_and_pend0')
+
+    def test_hook_03_database_and_pending_root_failure_is_visible_without_false_save(tmp_path):
+        data_root, config_root = tmp_path / "blocked-data", tmp_path / "config"
+        data_root.write_text("both DB and pending are obstructed", encoding="utf-8")
+        env = environment(data_root, config_root)
+        native = subprocess.run([sys.executable, str(ROOT / "integrations/codex/hook.py"), "--event", "UserPromptSubmit"],
+                                input=json.dumps(fixture("codex-user-prompt.json")), text=True,
+                                capture_output=True, env=env, timeout=5)
+>       assert native.returncode == 0 and "could not confirm" in json.loads(native.stdout)["systemMessage"]
+E       assert (0 == 0 and 'could not confirm' in 'PMT setup failed (not_configured). Check the PMT configuration.')
+E        +  where 0 = CompletedProcess(args=['C:\\PMT\\src\\venv-dev\\Scripts\\python.exe', 'C:\\PMT\\src\\j-ai-plugin\\proj-mgmt-tool\\inte...turncode=0, stdout='{"systemMessage": "PMT setup failed (not_configured). Check the PMT configuration."}\n', stderr='').returncode
+
+tests\test_hook_acceptance.py:257: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_hook_acceptance.py::test_hook_03_pending_directory_write_failure_never_calls_core_or_claims_storage
+FAILED tests/test_hook_acceptance.py::test_hook_03_database_and_pending_root_failure_is_visible_without_false_save
+2 failed, 39 passed in 16.17s

@@ -1,0 +1,73 @@
+.F...................................                                    [100%]
+================================== FAILURES ===================================
+_________ test_pkg_01_three_separate_bundles_manifest_and_zip_hashes __________
+
+tmp_path = WindowsPath('C:/PMT/work/phase5-test/E3-package-preflight/pytest/test_pkg_01_three_separate_bun0')
+
+    def test_pkg_01_three_separate_bundles_manifest_and_zip_hashes(tmp_path):
+        built = build(tmp_path, "0.1.1")
+        assert built["version"] == "0.1.1"
+        assert built["core_version"] == CORE_VERSION
+        assert built["schema_version"] == SCHEMA_VERSION
+        for product in ("codex", "claude", "opencode"):
+            package = Path(built["products"][product]["directory"])
+            archive = Path(built["products"][product]["zip"])
+            manifest = json.loads((package / "pmt-package.json").read_text(encoding="utf-8"))
+            assert manifest["plugin_version"] == "0.1.1"
+            assert manifest["core_version"] == CORE_VERSION
+            assert manifest["protocol_version"] == 1
+            assert manifest["schema_version"] == SCHEMA_VERSION
+            assert set(manifest["files"]) == set(tree_hashes(package)) - {"pmt-package.json"}
+            for relative, digest in manifest["files"].items():
+                assert sha256(package / Path(relative)) == digest
+            assert sha256(archive) == built["products"][product]["zip_sha256"]
+            with zipfile.ZipFile(archive) as zipped:
+                names = zipped.namelist()
+                assert set(names) == set(tree_hashes(package))
+                assert all(not PurePosixPath(name).is_absolute() and ".." not in PurePosixPath(name).parts for name in names)
+            assert (package / "src" / "pmt" / "cli.py").is_file()
+            assert (package / "scripts" / "pmt.py").is_file()
+            assert (package / "skills" / "proj-mgmt-tool" / "SKILL.md").is_file()
+            assert (package / "skills" / "proj-mgmt-tool" / "references" / "cli-workflow.md").is_file()
+            assert not any(part in {".venv", "__pycache__", "tests", ".git"} for path in package.rglob("*") for part in path.parts)
+            for path in package.rglob("*"):
+                if path.is_file() and path.suffix in {".json", ".md", ".py", ".js"}:
+                    assert str(ROOT).lower() not in path.read_text(encoding="utf-8").lower()
+    
+        codex = Path(built["products"]["codex"]["directory"])
+        assert (codex / "plugin.json").is_file()
+        assert (codex / ".codex-plugin" / "plugin.json").is_file()
+        codex_portable = json.loads((codex / "plugin.json").read_text(encoding="utf-8"))
+        assert {"name", "version", "description"} == set(codex_portable)
+        codex_compat = json.loads((codex / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        assert codex_compat["hooks"] == "./hooks/hooks.json"
+        assert (codex / "integrations" / "codex" / "hook.py").is_file()
+        assert sha256(codex / "integrations" / "codex" / "hook.py") == sha256(ROOT / "integrations" / "codex" / "hook.py")
+        codex_market = json.loads((codex / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
+        entry = codex_market["plugins"][0]
+        assert entry["source"] == {"source": "local", "path": "./"}
+        assert {"installation", "authentication"} <= entry["policy"].keys()
+    
+        claude = Path(built["products"]["claude"]["directory"])
+        assert (claude / "integrations" / "claude" / "hook.py").is_file()
+        assert sha256(claude / "integrations" / "claude" / "hook.py") == sha256(ROOT / "integrations" / "claude" / "hook.py")
+        claude_market = json.loads((claude / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        assert {"name", "owner", "plugins"} <= claude_market.keys()
+        assert claude_market["plugins"][0]["source"] == "./"
+        claude_plugin = json.loads((claude / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        python_option = claude_plugin["userConfig"]["python_path"]
+        assert python_option["type"] == "file" and python_option["required"] is True
+        assert "default" not in python_option
+        launcher = claude / "bin" / "pmt"
+>       assert launcher.is_file() and launcher.stat().st_mode & 0o111
+E       AssertionError: assert (True and (33206 & 73))
+E        +  where True = is_file()
+E        +    where is_file = WindowsPath('C:/PMT/work/phase5-test/E3-package-preflight/pytest/test_pkg_01_three_separate_bun0/distribution/0.1.1/claude/bin/pmt').is_file
+E        +  and   33206 = os.stat_result(st_mode=33206, st_ino=1407374883911192, st_dev=4379821769930861418, st_nlink=1, st_uid=0, st_gid=0, st_size=579, st_atime=1791441773, st_mtime=1791441773, st_ctime=1791441773).st_mode
+E        +    where os.stat_result(st_mode=33206, st_ino=1407374883911192, st_dev=4379821769930861418, st_nlink=1, st_uid=0, st_gid=0, st_size=579, st_atime=1791441773, st_mtime=1791441773, st_ctime=1791441773) = stat()
+E        +      where stat = WindowsPath('C:/PMT/work/phase5-test/E3-package-preflight/pytest/test_pkg_01_three_separate_bun0/distribution/0.1.1/claude/bin/pmt').stat
+
+tests\test_packaging.py:109: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_packaging.py::test_pkg_01_three_separate_bundles_manifest_and_zip_hashes
+1 failed, 36 passed in 89.30s (0:01:29)

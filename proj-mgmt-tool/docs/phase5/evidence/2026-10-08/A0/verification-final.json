@@ -1,0 +1,29 @@
+{
+  "Agent": "Verifier",
+  "Scope": "A0 checkpoint documentation and evidence accuracy; not product test pass or Phase5 completion",
+  "Status": "pass",
+  "PassedCriteria": [
+    "Full XML/summary 650 passed,23 failed,2 errors,4 skipped match",
+    "Build recheck XML/summary 2 passed,3 failed,0 errors match",
+    "Required pushed files exist",
+    "Core/src/tests/pyproject and historical evidence unchanged",
+    "D1-D8 pending; A1 onward unstarted",
+    "Stale progress observations corrected",
+    "Safe metadata contains references only; no actual secret value",
+    "TLS raw expiry remains UTC +00:00"
+  ],
+  "FailedCriteria": [],
+  "Outstanding": [
+    "Whole baseline suite nonpassing",
+    "Historical 0.3.0 package-snapshot fixture missing for 3 portable-package tests",
+    "D1-D8 user decision required before A1",
+    "F1 operating transition and F2/F3 handoff not performed"
+  ],
+  "IndependentRole": "native read-only explorer assigned A0 verification",
+  "MainChecks": [
+    "JSON parse",
+    "XML count assertions",
+    "authored-doc/config whitespace excluding generated raw pytest output",
+    "staged write scope"
+  ]
+}

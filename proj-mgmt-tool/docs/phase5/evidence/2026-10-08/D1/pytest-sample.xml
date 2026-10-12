@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="2.052" timestamp="2026-10-08T14:52:51.046613+09:00" hostname="FKNPOC83BVCHY1L"><testcase classname="tests.server_admin.test_d1_registry" name="test_create_persistent_d1_handoff_sample" time="1.940" /></testsuite></testsuites>
