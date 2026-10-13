@@ -24,6 +24,8 @@ cd /home/wnwjdals7498/j-ai-plugin/docdb && .venv/bin/python -m pytest
 | 9 검증 | T27 매트릭스, T28 GitHub Actions, T29 실사용 확인, T30 문서 반영 | T27 Sonnet, 나머지 오케스트레이터 | T26 |
 | 보류 | T31 gate·기준선·승인, T32 렌더, T33 내보내기, T34 보존 정리 | — | 해당 B·C 결정 |
 
+병렬로 돌릴 수 있는 쌍(대상 파일이 겹치지 않고 선행이 충족됨): T09∥T10, T21∥T23, T24∥T27. 실행자별 분배는 [handoff/README.md](handoff/README.md).
+
 ---
 
 ## 0단계 — 실측 (오케스트레이터)
@@ -252,8 +254,8 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 
 ### T10 카탈로그
 
-- **선행**: T09. **계약**: C-23. **결정**: D2, D11, D12, O5 기본값. **참조**: [../07-catalogue.md](../07-catalogue.md), [../03-relations.md](../03-relations.md) 6절, 원본 `test_token.py`의 `mini_catalogue()`, 원본 `docdb_seed_item_types.sql`, 원본 `load_catalogue.py`.
-- **대상 파일**: `src/docdb/catalogue.py`, `catalogue/starter.json`, `catalogue/item_types.json`, `tests/fixtures/mini_catalogue.json`, `tests/unit/test_t10_catalogue.py`
+- **선행**: T08(T09와 대상 파일이 겹치지 않아 병렬 가능). **계약**: C-23. **결정**: D2, D11, D12, O5 기본값. **참조**: [../07-catalogue.md](../07-catalogue.md), [../03-relations.md](../03-relations.md) 6절, 원본 `test_token.py`의 `mini_catalogue()`, 원본 `docdb_seed_item_types.sql`, 원본 `load_catalogue.py`.
+- **대상 파일**: `src/docdb/catalogue.py`, `catalogue/starter.json`, `catalogue/item_types.json`, `tests/fixtures/mini_catalogue.json`, `tests/conftest.py`(`starter_paths`, `mini_paths` 추가), `tests/unit/test_t10_catalogue.py`
 - **`starter.json` 작성 규칙**:
   - 07 문서 3절 표의 18종. `title_ko`는 표의 "이름", 그룹은 `kind_id` 첫 글자.
   - 표의 "문서에 나온 필드"는 그 키로 필수 필드에 넣고 설명은 07·03 문서 문구로. 그 밖에 각 narrative 종류에 `overview`(필수), `owners`(필수), `notes`(선택)를 넣고 설명 끝에 `[설계 판단]`.
@@ -336,7 +338,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 ### T13 원본 시나리오·검수 이식
 
 - **선행**: T12. **계약**: C-27(이식 규칙). **원본**: `test_scenarios.py`, `audit.py`.
-- **대상 파일**: `tests/legacy/test_scenarios_port.py`, `tests/legacy/test_audit_port.py`, 필요하면 `src/docdb/` 중 **원본 시나리오가 드러낸 결함이 있는 파일**(수정 범위는 완료 보고에 명시)
+- **대상 파일**: `tests/legacy/test_scenarios_port.py`, `tests/legacy/test_audit_port.py`. 원본 시나리오가 `src/docdb/`의 결함을 드러내면 고치지 말고 멈춤 보고한다(오케스트레이터가 별도 수정 작업으로 만든다)
 - **규칙**: 원본 검사 조건을 바꾸지 않는다. 원본의 `ev()` 평가기는 테스트 안에 그대로 둔다(T19에서 `profile.evaluate`로 교체 확인).
 
 | # | 상황 | 기대 |
@@ -539,7 +541,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 
 ### T23 요약
 
-- **선행**: T22. **계약**: C-22, C-14(`sum`), C-13(`sum=` 표기). **결정**: D16.
+- **선행**: T20(T21·T22와 대상 파일이 겹치지 않아 T21과 병렬 가능). **계약**: C-22, C-14(`sum`), C-13(`sum=` 표기). **결정**: D16.
 - **대상 파일**: `src/docdb/summaries.py`, `src/docdb/llm.py`, `tests/integration/test_t23_summaries.py`
 
 | # | 상황 | 기대 |

@@ -1,0 +1,15 @@
+다음 실행자 규약에 따라 /tmp/model-handoff/j-ai-plugin/t11/docs-db/plan/handoff/docdb-handoff.md의 T11을 수행하라.
+작업 범위는 docdb/src/docdb/backup.py, docdb/src/docdb/cli.py, docdb/src/docdb/__main__.py, docdb/tests/conftest.py, docdb/tests/integration/test_t11_cli_init.py뿐이다. 그 외 파일·디렉토리는 절대 건드리지 마라.
+
+너는 실행자다. 계획 수립·범위 변경은 하지 않는다.
+
+### 인라인 모드 — 계획 파일 태스크를 지시받은 경우
+
+1. 지시받은 계획 파일(`docs/superpowers/plans/<파일>`)의 태스크 `T<N>`**만**
+   수행한다. 다른 태스크, 체크박스, 계획 문서 자체를 수정하지 않는다.
+   태스크의 `대상:`에 명시되지 않은 파일·디렉토리는 **절대 수정·삭제하지
+   않는다** (다른 디렉토리가 비슷해 보여도 별개 프로젝트다).
+2. 작업을 마치면 해당 태스크의 `검증:` 커맨드를 직접 실행한다.
+3. 출력의 **마지막 줄**에 결과를 보고한다:
+   - 검증 통과: `TASK_DONE T<N>`
+   - 검증 실패 또는 수행 불가: `TASK_FAIL T<N>: <한 줄 사유>`
