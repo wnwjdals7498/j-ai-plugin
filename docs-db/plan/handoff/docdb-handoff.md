@@ -73,7 +73,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T11" 절, 01-contracts.md C-09, C-24, C-27. 결정: D5, D21, D22, D25. 의존: T09, T10(반입 완료 후 시작). 묶음 B10, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T11 16 tests/integration/test_t11_cli_init.py && .venv/bin/python -m pytest -q` → `rows ok T11 16/16` 출력, pytest 실패 0
 
-- [ ] T12: 원본 docctl_llm을 이식해 읽기 5종과 필드 쓰기를 구현하고 원본 토큰 테스트 28건을 옮긴다
+- [x] T12: 원본 docctl_llm을 이식해 읽기 5종과 필드 쓰기를 구현하고 원본 토큰 테스트 28건을 옮긴다
   - 대상: `docdb/src/docdb/llm.py`, `docdb/src/docdb/cli.py`, `docdb/tests/legacy/test_token_port.py`, `docdb/tests/unit/test_t12_llm.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T12" 절, 01-contracts.md C-12, C-13, C-14, C-15, C-16, C-24. 결정: D8, D18, D19, D23. 의존: T11(반입 완료 후 시작). 묶음 B11, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T12 37 tests/legacy/test_token_port.py tests/unit/test_t12_llm.py && .venv/bin/python -m pytest -q` → `rows ok T12 37/37` 출력, pytest 실패 0
