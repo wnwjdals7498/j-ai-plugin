@@ -560,7 +560,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 
 ### T24 부트스트랩 `docdb_launch.py`
 
-- **선행**: T23. **계약**: C-04(venv·스탬프), C-05(환경 오류), C-24(`docdb_launch.py`). **결정**: D3, D4, D13.
+- **선행**: T23. **계약**: C-04(venv·스탬프), C-05(환경 오류), C-24(`docdb_launch.py`). **결정**: D3, D4, D13, D26.
 - **대상 파일**: `src/docdb_launch.py`, `tests/integration/test_t24_launch.py`
 - **규칙**: `setup`의 외부 명령은 모듈 수준 함수 `_run(cmd: list) -> None`(내부에서 `subprocess.run(cmd, check=True)`)으로만 부른다. 테스트는 `_run`을 monkeypatch한다.
 - **테스트 건너뛰기 허용**: `/usr/bin/python3.6`이 없으면 #1만 `pytest.skip("python3.6 없음")`(C-27).
@@ -574,6 +574,8 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 | 5 | `setup --remove` | venv 폴더 삭제, `backups/`는 남음 |
 | 6 | `DOCDB_HOME/venv`를 개발 venv에 심볼릭 링크 + 맞는 스탬프, `cli --db <DB> actor list` | 종료 0, 행위자 목록 |
 | 7 | 패키지 없는 빈 venv(`uv venv`) + 맞는 스탬프 | 종료 2, `DEP_MISSING` |
+| 8 | #6 방식 venv, `DOCDB_START_DIR` 없음, `PWD=<tmp>/proj`, `mcp`(가짜 `docdb.mcp_server`를 `sys.modules`에 주입해 `main` 호출 시점의 환경을 기록) | 기록된 `DOCDB_START_DIR == "<tmp>/proj"` (C-24, D26) |
+| 9 | #8과 같고 `DOCDB_START_DIR=<tmp>/other` | 기록된 값이 `<tmp>/other` 그대로 |
 
 ### T25 MCP 서버
 
@@ -593,7 +595,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 
 ### T26 플러그인 패키징
 
-- **선행**: T25, **T00b 반영 완료**(C-26 Codex 절이 채워져 있어야 시작). **계약**: C-26. **결정**: D1, D14, D18.
+- **선행**: T25, **T00b 반영 완료**(C-26 Codex 절이 채워져 있어야 시작). **계약**: C-26. **결정**: D1, D14, D18, D26.
 - **대상 파일**: `docdb/.claude-plugin/plugin.json`, `docdb/.codex-plugin/plugin.json`, `docdb/codex.mcp.json`, `docdb/bin/docctl`(실행 권한), `docdb/skills/docdb/SKILL.md`, `j-ai-plugin/.claude-plugin/marketplace.json`, `j-ai-plugin/.agents/plugins/marketplace.json`, `j-ai-plugin/README.md`(docdb 절 추가), `docdb/tests/integration/test_t26_plugin.py`
 
 | # | 상황 | 기대 |
@@ -604,6 +606,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 | 4 | venv 없는 `DOCDB_HOME`에서 `bin/docctl` | 종료 2, stderr `ERROR NO_VENV` |
 | 5 | `SKILL.md` | C-26 필수 절이 그 순서로 있고 앞 2,000자 안에 "언제 쓰나" |
 | 6 | 두 마켓플레이스 | `docdb` 항목, 버전 일치 |
+| 7 | `codex.mcp.json`의 `docdb` 서버 | C-26 Codex 절과 같다: `cwd == "."`, `args == ["./src/docdb_launch.py", "mcp"]`, `env_vars`에 `PWD` 포함 |
 
 ---
 

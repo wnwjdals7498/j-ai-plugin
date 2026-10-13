@@ -134,8 +134,8 @@
 
 - [ ] T24: 표준 라이브러리 부트스트랩 docdb_launch.py를 만든다
   - 대상: `docdb/src/docdb_launch.py`, `docdb/tests/integration/test_t24_launch.py`
-  - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T24" 절, 01-contracts.md C-04, C-05, C-24. 결정: D3, D4, D13. 의존: T22, T23(반입 완료 후 시작). 묶음 B22, 지정 실행자 codex.
-  - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T24 7 tests/integration/test_t24_launch.py && .venv/bin/python -m pytest -q` → `rows ok T24 7/7` 출력, pytest 실패 0
+  - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T24" 절, 01-contracts.md C-04, C-05, C-24. 결정: D3, D4, D13, D26. 의존: T22, T23(반입 완료 후 시작). 묶음 B22, 지정 실행자 codex.
+  - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T24 9 tests/integration/test_t24_launch.py && .venv/bin/python -m pytest -q` → `rows ok T24 9/9` 출력, pytest 실패 0
 
 - [ ] T25: MCP 서버를 이식한다
   - 대상: `docdb/src/docdb/mcp_server.py`, `docdb/tests/integration/test_t25_mcp.py`
@@ -144,8 +144,8 @@
 
 - [ ] T26: 플러그인 매니페스트, 실행 래퍼, 스킬, 마켓플레이스 항목을 만든다
   - 대상: `docdb/.claude-plugin/plugin.json`, `docdb/.codex-plugin/plugin.json`, `docdb/codex.mcp.json`, `docdb/bin/docctl`, `docdb/skills/docdb/SKILL.md`, `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `README.md`, `docdb/tests/integration/test_t26_plugin.py`
-  - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T26" 절, 01-contracts.md C-26. 결정: D1, D14, D18. 의존: T25, T00b(메인 실측)(반입 완료 후 시작). 묶음 B24, 지정 실행자 codex.
-  - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T26 6 tests/integration/test_t26_plugin.py && .venv/bin/python -m pytest -q && cd .. && claude plugin validate docdb` → `rows ok T26 6/6` 출력, pytest 실패 0, `Validation passed`
+  - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T26" 절, 01-contracts.md C-26. 결정: D1, D14, D18, D26. 의존: T25, T00b(메인 실측)(반입 완료 후 시작). 묶음 B24, 지정 실행자 codex.
+  - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T26 7 tests/integration/test_t26_plugin.py && .venv/bin/python -m pytest -q && cd .. && claude plugin validate docdb` → `rows ok T26 7/7` 출력, pytest 실패 0, `Validation passed`
 
 - [ ] T27: Python 3.10~3.14 매트릭스 실행 스크립트를 만든다
   - 대상: `docdb/tools/matrix.sh`

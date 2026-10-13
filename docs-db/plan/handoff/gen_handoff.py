@@ -110,16 +110,16 @@ T = [
      ["src/docdb/summaries.py", "src/docdb/llm.py", "tests/integration/test_t23_summaries.py"],
      ["tests/integration/test_t23_summaries.py"], 7),
     ("T24", "표준 라이브러리 부트스트랩 docdb_launch.py를 만든다", "codex", "B22", "T22, T23",
-     "C-04, C-05, C-24", "D3, D4, D13",
-     ["src/docdb_launch.py", "tests/integration/test_t24_launch.py"], ["tests/integration/test_t24_launch.py"], 7),
+     "C-04, C-05, C-24", "D3, D4, D13, D26",
+     ["src/docdb_launch.py", "tests/integration/test_t24_launch.py"], ["tests/integration/test_t24_launch.py"], 9),
     ("T25", "MCP 서버를 이식한다", "codex", "B23", "T24",
      "C-03, C-14, C-25", "D3, D18, O21 기본값",
      ["src/docdb/mcp_server.py", "tests/integration/test_t25_mcp.py"], ["tests/integration/test_t25_mcp.py"], 6),
     ("T26", "플러그인 매니페스트, 실행 래퍼, 스킬, 마켓플레이스 항목을 만든다", "codex", "B24", "T25, T00b(메인 실측)",
-     "C-26", "D1, D14, D18",
+     "C-26", "D1, D14, D18, D26",
      [".claude-plugin/plugin.json", ".codex-plugin/plugin.json", "codex.mcp.json", "bin/docctl",
       "skills/docdb/SKILL.md", "@.claude-plugin/marketplace.json", "@.agents/plugins/marketplace.json",
-      "@README.md", "tests/integration/test_t26_plugin.py"], ["tests/integration/test_t26_plugin.py"], 6),
+      "@README.md", "tests/integration/test_t26_plugin.py"], ["tests/integration/test_t26_plugin.py"], 7),
     ("T27", "Python 3.10~3.14 매트릭스 실행 스크립트를 만든다", "agy", "B22", "T22, T23",
      "C-27", "D9",
      ["tools/matrix.sh"], [], 0),
@@ -162,11 +162,13 @@ COMMON = """# docdb 구현 핸드오프 계획
 ## 태스크
 """
 
+_prev = OUT / "docdb-handoff.md"
+DONE = set(re.findall(r"^- \[x\] (T\d+):", _prev.read_text(encoding="utf-8"), re.M)) if _prev.exists() else set()
 lines = [COMMON]
 for t in T:
     tid, goal, ex, batch, deps, contracts, decisions, targets, tests, rows = t
     tl = ", ".join(f"`{full(p)}`" for p in targets)
-    lines.append(f"- [ ] {tid}: {goal}")
+    lines.append(f"- [{'x' if tid in DONE else ' '}] {tid}: {goal}")
     lines.append(f"  - 대상: {tl}")
     lines.append(f"  - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md \"{tid}\" 절, 01-contracts.md {contracts}. 결정: {decisions}. "
                  f"의존: {deps}(반입 완료 후 시작). 묶음 {batch}, 지정 실행자 {ex}.")
