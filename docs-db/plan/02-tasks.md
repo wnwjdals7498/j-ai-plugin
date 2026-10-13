@@ -61,7 +61,7 @@ cd /home/wnwjdals7498/j-ai-plugin/docdb && .venv/bin/python -m pytest
 - **대상 파일**: `docdb/src/docdb/__init__.py`, `docdb/pytest.ini`, `docdb/constraints.txt`, `docdb/constraints-dev.txt`, `docdb/tests/conftest.py`(이 작업에서는 `frozen_now`, `plugin_root`만), `docdb/tests/unit/test_t01_skeleton.py`
 - **규칙**:
   - 개발 venv: `uv venv docdb/.venv --python /usr/bin/python3.12`.
-  - `constraints.txt`: 빈 venv에 `pysqlite3==0.6.1 mcp==2.3.0`을 설치하고 `uv pip freeze --python <venv python>` 결과에서 `pip`, `setuptools`, `wheel` 줄을 뺀 것.
+  - `constraints.txt`: `uv pip compile --universal --python-version 3.10 --no-header --no-annotate`로 `pysqlite3==0.6.1 mcp==2.3.0`을 해석한 결과(C-02, 2026-10-14 보정. 처음에는 3.12 venv의 freeze였으나 3.10에서 설치되지 않았다).
   - `constraints-dev.txt`: 첫 줄 `-c constraints.txt`, 다음 줄부터 `pytest`와 그 하위 의존성 고정 버전.
   - 설치: `uv pip install --python docdb/.venv/bin/python -c docdb/constraints-dev.txt pytest pysqlite3 mcp`.
 

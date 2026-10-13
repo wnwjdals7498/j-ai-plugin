@@ -74,11 +74,11 @@ docdb/
 | 항목 | 값 |
 |---|---|
 | Python | 3.10 이상. 3.11 이상에만 있는 기능 금지: `tomllib`, `ExceptionGroup`/`except*`, `typing.Self`, `datetime.UTC`, `enum.StrEnum`, `asyncio.TaskGroup`, `typing.LiteralString` |
-| 런타임 의존성 | `pysqlite3==0.6.1`, `mcp==2.3.0` (2026-10-13 설치 확인한 버전). 이 둘의 하위 의존성은 `constraints.txt`에 `pip freeze` 결과로 고정 |
+| 런타임 의존성 | `pysqlite3==0.6.1`, `mcp==2.3.0` (2026-10-13 설치 확인한 버전). 이 둘의 하위 의존성은 `constraints.txt`에 고정한다. 생성: `uv pip compile --universal --python-version 3.10 --no-header --no-annotate`(입력 `pysqlite3==0.6.1`, `mcp==2.3.0`, 기존 파일을 선호값으로). 버전·플랫폼 표시(`; python_full_version < '3.11'` 등)를 포함해 3.10~3.14·Windows에서 같은 파일로 설치된다(2026-10-14 매트릭스에서 3.12 freeze 고정값이 3.10 설치를 막은 것을 수정) |
 | 개발 의존성 | `pytest` (T01에서 설치한 버전을 `constraints-dev.txt`에 고정). 그 밖에 추가 금지 |
 | 네트워크 | 코드에서 네트워크 호출 금지. 예외: `setup`의 `pip install` |
 
-`constraints-dev.txt`는 `-c constraints.txt` 한 줄과 `pytest==<버전>`, 그 하위 의존성 고정으로 구성한다.
+`constraints-dev.txt`는 `-c constraints.txt` 한 줄과 `pytest==<버전>`, 그 하위 의존성 고정(같은 `uv pip compile --universal` 결과에서 런타임 줄을 뺀 것)으로 구성한다.
 
 ---
 
