@@ -58,7 +58,7 @@ docdb/
 | 모듈 | import 가능 | import 금지 |
 |---|---|---|
 | `errors`, `clock`, `textnorm`, `paths` (부트스트랩 안전 모듈) | 표준 라이브러리, 서로 간 | `docdb.db` 및 그 밖의 `docdb` 모듈, 서드파티 |
-| `docdb_launch.py` | 표준 라이브러리, 부트스트랩 안전 모듈. venv 경로를 붙인 **뒤에만** `docdb.cli`, `docdb.mcp_server` | 그 밖의 모든 것 |
+| `docdb_launch.py` | 표준 라이브러리, 부트스트랩 안전 모듈. venv 경로를 붙인 **뒤에만** `docdb.cli`, `docdb.mcp_server`, 그리고 설치 확인용 `importlib.import_module("pysqlite3")`·`importlib.import_module("mcp")`(C-24 `DEP_MISSING`). `import pysqlite3`·`import mcp` 문장은 금지(importlib만) | 그 밖의 모든 것 |
 | `db` | 표준 라이브러리, `pysqlite3`, 부트스트랩 안전 모듈 | `mcp` |
 | `mcp_server` | 표준 라이브러리, `mcp`, `docdb.*` | — |
 | 그 밖의 `docdb.*` | 표준 라이브러리, `docdb.*` | `pysqlite3` 직접 import, 표준 `sqlite3`, `mcp` |

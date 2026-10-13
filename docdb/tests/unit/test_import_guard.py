@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
+PYSQLITE_IMPORT = re.compile(r"^\s*(?:import|from)\s+pysqlite3\b", re.MULTILINE)
 MCP_IMPORT = re.compile(r"^\s*(?:import|from)\s+mcp\b", re.MULTILINE)
 
 
@@ -25,6 +26,12 @@ def test_t04_11_import_guard() -> None:
         if re.search(STD_SQLITE_IMPORT, source, re.MULTILINE):
             sqlite_imports.append(relative_path)
 
-    assert pysqlite_files == {"docdb/db.py"}
+    # docdb_launch.py는 venv를 붙인 뒤 importlib로 설치만 확인한다(C-01, C-24). import 문은 금지.
+    assert pysqlite_files - {"docdb_launch.py"} == {"docdb/db.py"}
+    launcher = (src_dir / "docdb_launch.py")
+    if launcher.exists():
+        launcher_source = launcher.read_text(encoding="utf-8")
+        assert not PYSQLITE_IMPORT.search(launcher_source)
+        assert not MCP_IMPORT.search(launcher_source)
     assert mcp_files <= {"docdb/mcp_server.py"}
     assert sqlite_imports == []
