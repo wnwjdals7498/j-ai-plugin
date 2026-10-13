@@ -47,7 +47,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T06" 절, 01-contracts.md C-09, C-10. 결정: D6, D7, D10, D17, D18. 의존: T05(반입 완료 후 시작). 묶음 B06, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T06 17 tests/unit/test_t06_schema.py && .venv/bin/python -m pytest -q` → `rows ok T06 17/17` 출력, pytest 실패 0
 
-- [ ] T07: change_log 이력 기록·검증 모듈을 만든다
+- [x] T07: change_log 이력 기록·검증 모듈을 만든다
   - 대상: `docdb/src/docdb/history.py`, `docdb/tests/unit/test_t07_history.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T07" 절, 01-contracts.md C-15. 결정: D19. 의존: T06(반입 완료 후 시작). 묶음 B07, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T07 10 tests/unit/test_t07_history.py && .venv/bin/python -m pytest -q` → `rows ok T07 10/10` 출력, pytest 실패 0
