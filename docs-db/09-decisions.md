@@ -88,6 +88,7 @@ T00b 실측([08](08-verification.md) 3.1절) 뒤 사용자가 선택했다.
 | # | 원 번호 | 결정 |
 |---|---|---|
 | D26 | O7(S2) | Codex MCP 서버는 `"cwd": "."`(플러그인 루트)와 상대 `args`로 실행하고, 프로젝트 폴더는 `env_vars`로 받은 `PWD`를 `docdb_launch.py mcp`가 `DOCDB_START_DIR`가 없을 때만 옮겨 쓴다. `paths.find_db`는 바꾸지 않는다. 대안(`find_db`에 `PWD` 추가, Codex 호출 메타의 workspaces 사용)은 채택하지 않음. 한계: `PWD`는 Codex를 띄운 셸의 폴더라 `codex -C`·데스크톱 앱에서는 다를 수 있고 그때는 `NO_DB`로 드러난다 |
+| D27 | O7·05-import 3절 | import scan 옵션(`--owner`, `--export-policy`)은 scan마다 남기는 `run(run_type='import')`의 `env_snapshot`에 두고, 그 scan이 등록한 artifact의 `access_policy_ref='r:<RUN-ID>'`로 연결한다. 정책을 알 수 없으면 `local_only`로 본다(fail-closed). 대안(마이그레이션 0009 컬럼 추가, `import_segment.rule` JSON)은 채택하지 않음. 2026-10-14 사용자 선택 |
 
 ## 3. 원 설계와 달라진 점
 

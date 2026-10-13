@@ -716,6 +716,10 @@ def split_segments(raw: bytes) -> list[dict]: ...   # {"seq","heading","start_of
 | 적용 | 본문 = 구간 텍스트에서 제목 줄을 뺀 나머지의 앞뒤 빈 줄 제거. 비면 `skipped(why='empty')`. 문서가 없으면 생성: `doc_id` = `DOC-<kind_id>-<파일 이름의 ASCII 영숫자 대문자, 최대 32자>`(비면 `DOC-<kind_id>-IMP-<artifact 순번 4자리>`), 충돌 시 `-2`, `-3`. 제목 = 첫 `#` 제목 또는 파일 이름. `lifecycle`·`category`는 종류 기본값, `authority='normative'`, `baseline_mode='desired'`, `owner_id=owner`, `export_policy=<scan 옵션>`. 같은 필드의 여러 구간은 `seq` 순으로 `append`(구분 `"\n\n"`). 쓰기는 `put`과 같은 내부 경로(C-14 필드 쓰기 처리 순서) |
 | 재확인 | 적용 직전 원본 바이트를 다시 읽어 구간 digest를 비교. 다르거나 파일이 없으면 `status='stale'`, `ERR s:<id> IMPORT_STALE` |
 | 백업 | `scan`·`label` 시작 시 `backup.backup` |
+| scan 기록(D27) | `scan`은 같은 `write_tx` 안에서 `runs.ingest`로 `run(run_type='import', target_ref=<프로젝트 기준 폴더 상대 경로>, runner='docctl', trust_source='runner', result='PASS', command_argv=["import","scan",<폴더>,"--owner",<owner>,"--export-policy",<policy>], env_snapshot={"owner":<owner>,"export_policy":<policy>})` 1행을 남긴다(행위자가 `ai`면 C-20대로 `trust_source='ai_reported'`). 이 scan이 새로 등록한 artifact의 `access_policy_ref`는 `'r:<RUN-ID>'` |
+| scan 옵션 조회 | 라벨·적용 시점에 문서를 만들 때 `owner_id`·`export_policy`는 그 artifact의 `access_policy_ref`가 가리키는 run의 `env_snapshot`에서 읽는다. 참조가 없거나 읽을 수 없으면 `export_policy='local_only'`(fail-closed), `owner`가 없으면 `BAD_ARGS`. `next`의 `policy=local_only` 판정: 문서가 있으면 문서의 `export_policy`, 없으면 같은 run 참조, 알 수 없으면 `local_only` |
+| `import_segment.rule` | 필드 규칙으로 정해지면 `'field'`, 라벨로 정해지면 `'agent'`(11-schema 7.4). 다른 값·용도 금지 |
+| 재라벨·재적용 | `applied`·`skipped` 구간은 다시 바꾸지 않는다: 그런 구간을 가리키는 `seg` 라벨은 `ERR s:<id> BAD_ARGS already <status>`. 이미 문서가 연결된 파일의 `doc` 라벨은 기존 `doc_id`를 유지하고 `pending`·`ruled`·`stale` 구간만 다시 규칙을 적용한다(새 문서를 만들지 않음). 한 `label` 호출 안의 같은 `seg` 중복은 `BAD_ARGS` |
 
 `next_batch` 출력:
 
