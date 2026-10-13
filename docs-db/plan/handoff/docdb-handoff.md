@@ -118,7 +118,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T20" 절, 01-contracts.md C-17, C-20, C-24. 결정: D15. 의존: T19(반입 완료 후 시작). 묶음 B19, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T20 10 tests/integration/test_t20_runs.py && .venv/bin/python -m pytest -q` → `rows ok T20 10/10` 출력, pytest 실패 0
 
-- [ ] T21: import 분할, scan, 규칙 적용을 만든다
+- [x] T21: import 분할, scan, 규칙 적용을 만든다
   - 대상: `docdb/src/docdb/importer.py`, `docdb/src/docdb/cli.py`, `docdb/tests/fixtures/import/요구사항.md`, `docdb/tests/fixtures/import/서버 목록.md`, `docdb/tests/fixtures/import/notes.txt`, `docdb/tests/fixtures/import/bad.bin`, `docdb/tests/fixtures/import/bom.md`, `docdb/tests/fixtures/import/crlf.md`, `docdb/tests/integration/test_t21_import_scan.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T21" 절, 01-contracts.md C-14, C-21. 결정: D6, D22. 의존: T20(반입 완료 후 시작). 묶음 B20, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T21 12 tests/integration/test_t21_import_scan.py && .venv/bin/python -m pytest -q` → `rows ok T21 12/12` 출력, pytest 실패 0

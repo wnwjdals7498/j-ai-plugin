@@ -14,6 +14,7 @@ from docdb import (
     catalogue,
     db,
     history,
+    importer,
     migrate,
     paths,
     policy,
@@ -149,6 +150,17 @@ def _parser() -> argparse.ArgumentParser:
     run_commands = run_parser.add_subparsers(dest="run_command", required=True)
     run_ingest = run_commands.add_parser("ingest")
     run_ingest.add_argument("file", help="JSON 파일 경로 또는 - (표준 입력)")
+
+    import_parser = commands.add_parser("import")
+    import_commands = import_parser.add_subparsers(dest="import_command", required=True)
+    import_scan = import_commands.add_parser("scan")
+    import_scan.add_argument("folder", type=Path)
+    import_scan.add_argument("--owner", required=True)
+    import_scan.add_argument(
+        "--export-policy",
+        choices=("public", "approved_providers", "local_only"),
+        default="approved_providers",
+    )
     return parser
 
 
@@ -477,6 +489,16 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
                 raise DocdbError("BAD_ARGS", "JSON 객체여야 함")
             run_id = runs.ingest(con, actor, payload)
             sys.stdout.write(f"OK r:{run_id}\n")
+            return 0
+
+        if args.command == "import":
+            actor = actors.resolve_actor(con, args.actor)
+            result = importer.scan(
+                con, actor, args.folder, args.owner, args.export_policy
+            )
+            if result:
+                sys.stdout.write(result + "\n")
+                return 1
             return 0
 
         raise DocdbError("BAD_ARGS", "지원하지 않는 명령")
