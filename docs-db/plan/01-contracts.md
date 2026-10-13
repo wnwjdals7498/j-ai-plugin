@@ -569,7 +569,7 @@ def pending_count(con, work_id: str | None = None) -> int: ...
 def missing_links(con, doc_ids: list[str] | None = None) -> list[tuple[str, str]]: ...
 ```
 
-`after_*`는 `NOTE` 줄 목록을 반환한다(C-13). 규칙 관계는 `source='rule:Rn'`, `status='confirmed'`, `proposed_by=NULL`, `anchor`에 출처 핸들을 둔다. 규칙이 만든 관계의 추가·삭제도 `change_log`에 기록하며, 행위자는 규칙을 일으킨 행위자, `reason='rule:Rn'`이다.
+`after_*`는 `NOTE` 줄 목록을 반환한다(C-13). 규칙 관계는 `source='rule:Rn'`, `status='confirmed'`, `proposed_by=NULL`, `anchor`에 출처 핸들을 둔다. 규칙이 만든 관계의 추가·삭제도 `change_log`에 기록하며, 행위자는 규칙을 일으킨 행위자, `reason='rule:Rn'`이다. `since`는 `entity_type='relation'`이고 그 관계의 `source`가 `rule:`로 시작하는 `change_log` 행을 결과에 넣지 않는다(규칙 관계는 원인인 `f:`·`i:` 변경으로 이미 보고되며, 원본 `since` 출력을 바꾸지 않기 위함. 삭제된 규칙 관계는 `before_json`의 `source`로 판정).
 
 ### 허용 끝점 (D11)
 
@@ -594,7 +594,7 @@ ID 추출 정규식(공통): 알려진 접두어 목록 P(`cat_item_type.id_pref
 
 | 규칙 | 계기 | 동작 | anchor |
 |---|---|---|---|
-| R1 정의 | `f:` 쓰기, `(kind_id, field_key)`가 어떤 `cat_item_type`의 `(defined_by_kind, defined_by_field)`와 같음 | 그 필드의 각 줄에서 해당 접두어 ID 추출. 제목 = 줄에서 ID 뒤 텍스트의 앞쪽을 아래 `R1_TITLE_STRIP` 정규식으로 걷어 낸 값(최대 200자, 비면 ID). 항목이 없으면 생성(`defined_in`=문서), 같은 문서에 정의되어 있고 제목이 다르면 제목 갱신, 다른 문서에 정의되어 있으면 건드리지 않고 `NOTE R1 skip …`. 필드에서 사라진 ID의 항목은 삭제하지 않는다 | — |
+| R1 정의 | `f:` 쓰기, `(kind_id, field_key)`가 어떤 `cat_item_type`의 `(defined_by_kind, defined_by_field)`와 같음 | 그 필드의 각 줄에서 해당 접두어 ID 추출. 제목 = 줄에서 ID 뒤 텍스트의 앞쪽을 아래 `R1_TITLE_STRIP` 정규식으로 걷어 낸 값(최대 200자, 비면 ID). 항목이 없으면 생성(`defined_in`=문서), 같은 문서에 정의되어 있고 제목이 다르면 제목 갱신, 다른 문서에 정의되어 있으면 건드리지 않고 `NOTE R1 skip …`. 기존 항목의 `defined_in`이 NULL(`i:` upsert로 정의 없이 만든 항목)이면 이 문서를 정의 문서로 채택해 `defined_in`과 제목을 갱신하고(update 이력) `NOTE`를 내지 않는다. 필드에서 사라진 ID의 항목은 삭제하지 않는다 | — |
 | R2 언급 | 모든 `f:` 쓰기 | 문서의 모든 필드 본문에서 **이미 있는** 항목 ID 중 `defined_in`이 이 문서가 아닌 것의 집합 M을 구한다. `relation(document → item, references, rule:R2, anchor='d:<doc>')`을 M과 같게 맞춘다(없으면 추가, M에 없는 기존 R2 관계는 삭제) | `d:<doc>` |
 | R3 필드 규칙 | `f:` 쓰기, 필드에 `extract_rel`이 있음 | 각 줄에서 `from_prefix` ID들과 `to_prefix` ID들(둘 다 이미 있는 항목)을 찾아 모든 쌍에 `relation(item → item, <rel>, rule:R3)`. 이 필드 anchor의 기존 R3 관계를 새 집합과 같게 맞춘다 | `f:<doc>/<kind>/<field>` |
 | R4 실행 | `run ingest`의 `covers` | 각 항목에 `relation(run → item, evidence_for, rule:R4)` | `r:<run>` |
