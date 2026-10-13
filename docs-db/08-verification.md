@@ -52,6 +52,10 @@ T00c(2026-10-14, GitHub Actions run 38484842771, 임시 orphan 브랜치 `spike/
 
 반영: [06](06-runtime-plugin.md) 1.1절 지원 범위 표, 저장소 README 지원 플랫폼(T26).
 
+### 3.2 로컬 매트릭스 (T27, 2026-10-14, 개발 서버 Linux x86_64)
+
+`docdb/tools/matrix.sh`(uv, `UV_PYTHON_DOWNLOADS=never`, `PYTHONNOUSERSITE=1`) 결과: `py3.10 PASS`, `py3.11 PASS`, `py3.12 PASS`, `py3.13 PASS`, `py3.14 SKIP(인터프리터 없음)` — 종료 코드 0, 버전마다 전체 pytest. 3.14는 GitHub Actions 매트릭스(T28)에서 확인한다. 이 실행 전 두 결함을 고쳤다: 3.12에서 뽑은 `constraints.txt`가 3.10 설치를 막음(범용 해석으로 교체), T24 테스트가 `docdb/.venv`에 묶여 다른 인터프리터에서 실패함(실행 중 venv 사용).
+
 ## 4. 완료 기준
 
 1. 로컬 매트릭스(Python 3.10~3.14) 전체 통과.

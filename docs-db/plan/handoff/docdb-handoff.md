@@ -148,7 +148,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T26" 절, 01-contracts.md C-26. 결정: D1, D14, D18, D26. 의존: T25, T00b(메인 실측)(반입 완료 후 시작). 묶음 B24, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T26 7 tests/integration/test_t26_plugin.py && .venv/bin/python -m pytest -q && cd .. && claude plugin validate docdb` → `rows ok T26 7/7` 출력, pytest 실패 0, `Validation passed`
 
-- [ ] T27: Python 3.10~3.14 매트릭스 실행 스크립트를 만든다
+- [x] T27: Python 3.10~3.14 매트릭스 실행 스크립트를 만든다
   - 대상: `docdb/tools/matrix.sh`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T27" 절, 01-contracts.md C-27. 결정: D9. 의존: T22, T23(반입 완료 후 시작). 묶음 B22, 지정 실행자 agy.
   - 검증: `bash -n docdb/tools/matrix.sh && echo syntax-ok` → `syntax-ok`(메인이 별도로 실제 실행)
