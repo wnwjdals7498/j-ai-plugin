@@ -545,7 +545,7 @@ SECRET_PATTERNS = [
 - `assert_no_secrets`: 걸린 패턴이 있고 유효한 예외가 없으면 `DocdbError("SECRET_DETECTED", "<패턴 이름 목록>")`. 비밀 값 자체는 어디에도 출력·기록하지 않는다.
 - 유효한 예외: `policy_exception`에서 `scope = "secret:" + handle`이고 `expires_at > now_iso()`이며 `approved_by`가 `human`인 행.
 - `allow_secret`은 사람 전용(`require_human`), `exception_id = next_id("exception")`, `kind_id=NULL`, 이력 기록.
-- 검사 대상: `field_value` 본문(텍스트·JSON 직렬화), 항목 제목·`attrs`, 관계 `why`, `sum`, 인계 `payload`, 실행 적재 `findings[].message/evidence`, import 적용 본문.
+- 검사 대상: `field_value` 본문(텍스트·JSON 직렬화), 항목 제목·`attrs`, 관계 `why`, `sum`, 인계 `payload`·`from_role`·`to_role`, 작업 제목, 모든 패치 `why`와 `put`·CLI의 `reason`, 실행 적재(C-20) 입력의 모든 문자열 값(`findings[].message/evidence`, `limitations`, `target_ref`, `runner`, `raw_log.uri`, `command_argv`·`env_snapshot`·`target_versions`의 JSON 직렬화 등, 키 이름 제외), import 적용 본문. 요약: 사람이나 에이전트가 넣어 DB에 남는 모든 자유 텍스트(전역 제약)이며, 이 목록은 그 예시를 빠짐없이 적은 것이다.
 - `can_export`: `document.export_policy != 'local_only'`. `classification`은 보지 않는다(O20 미결). 적용 위치는 C-13의 "정책 차단" 줄.
 
 ---
