@@ -11,7 +11,7 @@ ENTITY = "DOC-REQ-HWCHECK|D01|behavior"
 @pytest.fixture
 def scenario_con(mini_db, frozen_now):
     """시나리오가 공유하는 최소 프로젝트와 레코드를 준비한다."""
-    from docdb import db, history
+    from docdb import db, history, profile
 
     con = db.connect(mini_db)
     try:
@@ -39,18 +39,8 @@ def scenario_con(mini_db, frozen_now):
                 )
             }
 
-            def ev(rule):  # 제한 연산만 지원 (eval 금지, 10.6)
-                if 'always' in rule: return True
-                if 'fact' in rule:
-                    v = facts.get(rule['fact']); return None if v is None else bool(v)
-                if 'selected_kind' in rule: return False
-                if 'all' in rule:
-                    vs = [ev(r) for r in rule['all']]
-                    return False if False in vs else (True if all(v is True for v in vs) else None)
-                if 'any' in rule:
-                    vs = [ev(r) for r in rule['any']]
-                    return True if True in vs else (False if all(v is False for v in vs) else None)
-                raise ValueError(rule)
+            def ev(rule):
+                return profile.evaluate(rule, facts, set())
 
             tri = lambda value: {True: "true", False: "false", None: "unknown"}[value]
             for kind_id, applies_rule, required_rule in con.execute(

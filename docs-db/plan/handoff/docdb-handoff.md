@@ -108,7 +108,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T18" 절, 01-contracts.md C-14, C-18, C-24. 결정: D15, D24, D25. 의존: T17(반입 완료 후 시작). 묶음 B17, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T18 11 tests/integration/test_t18_workflow.py && .venv/bin/python -m pytest -q` → `rows ok T18 11/11` 출력, pytest 실패 0
 
-- [ ] T19: 사실 입력과 적용 판정을 만든다
+- [x] T19: 사실 입력과 적용 판정을 만든다
   - 대상: `docdb/src/docdb/profile.py`, `docdb/src/docdb/cli.py`, `docdb/tests/legacy/test_scenarios_port.py`, `docdb/tests/unit/test_t19_profile.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T19" 절, 01-contracts.md C-19, C-24. 결정: O5 기본값. 의존: T18(반입 완료 후 시작). 묶음 B18, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T19 7 tests/unit/test_t19_profile.py tests/legacy/test_scenarios_port.py && .venv/bin/python -m pytest -q` → `rows ok T19 7/7` 출력, pytest 실패 0
