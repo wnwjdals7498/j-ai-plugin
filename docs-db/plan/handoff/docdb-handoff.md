@@ -57,7 +57,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T08" 절, 01-contracts.md C-10, C-11. 결정: D17, D18, D24. 의존: T07(반입 완료 후 시작). 묶음 B08, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T08 14 tests/unit/test_t08_ids_actors.py && .venv/bin/python -m pytest -q` → `rows ok T08 14/14` 출력, pytest 실패 0
 
-- [ ] T09: 민감 정보 검사, 예외, 외부 전송 정책 모듈을 만든다
+- [x] T09: 민감 정보 검사, 예외, 외부 전송 정책 모듈을 만든다
   - 대상: `docdb/src/docdb/policy.py`, `docdb/tests/unit/test_t09_policy.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T09" 절, 01-contracts.md C-16. 결정: D8, D23. 의존: T08(반입 완료 후 시작). 묶음 B09, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T09 15 tests/unit/test_t09_policy.py && .venv/bin/python -m pytest -q` → `rows ok T09 15/15` 출력, pytest 실패 0
