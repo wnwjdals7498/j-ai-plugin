@@ -52,7 +52,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T07" 절, 01-contracts.md C-15. 결정: D19. 의존: T06(반입 완료 후 시작). 묶음 B07, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T07 10 tests/unit/test_t07_history.py && .venv/bin/python -m pytest -q` → `rows ok T07 10/10` 출력, pytest 실패 0
 
-- [ ] T08: ID 형식·발급과 행위자 모듈을 만든다
+- [x] T08: ID 형식·발급과 행위자 모듈을 만든다
   - 대상: `docdb/src/docdb/ids.py`, `docdb/src/docdb/actors.py`, `docdb/tests/unit/test_t08_ids_actors.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T08" 절, 01-contracts.md C-10, C-11. 결정: D17, D18, D24. 의존: T07(반입 완료 후 시작). 묶음 B08, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T08 14 tests/unit/test_t08_ids_actors.py && .venv/bin/python -m pytest -q` → `rows ok T08 14/14` 출력, pytest 실패 0
