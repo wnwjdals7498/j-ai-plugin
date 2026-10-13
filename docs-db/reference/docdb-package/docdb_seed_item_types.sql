@@ -1,0 +1,46 @@
+-- docdb_seed_item_types.sql — [확장 제안] 고정 ID 항목 종류 (catalogue.yaml 적재 후 실행)
+-- 근거: 카탈로그 required_fields 중 'ID'를 요구하는 필드 65개 (검수 스크립트로 추출)
+INSERT INTO cat_item_type (item_type, id_prefix, defined_by_kind, description) VALUES
+ ('term',                 'TERM-', 'A04', '용어·약어 (A04.term_id)'),
+ ('work_package',         'WBS-',  'B02', '작업 분해 항목 (B02.items)'),
+ ('role',                 'ROLE-', 'B03', '역할 (B03.roles, Z01.teams)'),
+ ('raid',                 'RAID-', 'B04', '리스크·이슈·가정·의존성 (B04.items)'),
+ ('feature',              'FEAT-', 'C04', '제품 기능 (C04.features)'),
+ ('metric',               'MET-',  'J08', '업무 지표 (J08.metric_id, C06.metric_ids)'),
+ ('requirement',          'REQ-',  'D01', '기능 요구사항 (D01.requirement_ids)'),
+ ('acceptance_criterion', 'AC-',   'D01', '완료 조건 (D01.acceptance)'),
+ ('business_rule',        'RULE-', 'D03', '업무 규칙·계산식 (D03.rule_ids)'),
+ ('state',                'ST-',   'D04', '상태 (D04.states)'),
+ ('error_code',           'ERR-',  'D05', '오류 코드 (D05.error_id, H02.errors)'),
+ ('nfr',                  'NFR-',  'D06', '비기능 요구 (D06.nfr_ids)'),
+ ('screen',               'SCR-',  'E01', '화면 (E01.screen_ids, E02.screen_id, E03.nodes)'),
+ ('ui_message',           'MSG-',  'E04', '화면 메시지 (E04.messages)'),
+ ('design_token',         'TOK-',  'E05', '디자인 토큰 (E05.tokens)'),
+ ('a11y_check',           'A11Y-', 'E06', '접근성 검사 항목 (E06.criteria)'),
+ ('analytics_event',      'AEV-',  'E08', '분석 이벤트 (E08.event_id)'),
+ ('module',               'MOD-',  'F02', '모듈 (F02.modules)'),
+ ('scenario',             'SCN-',  'F03', '실행 시나리오 (F03.scenarios)'),
+ ('tech_debt',            'DEBT-', 'F07', '기술부채 (F07.debt_id)'),
+ ('api_operation',        'API-',  'H01', 'API operation (H01.operations)'),
+ ('message_contract',     'MEV-',  'H05', '이벤트·메시지 계약 (H05.events)'),
+ ('dataset',              'DS-',   'J01', '데이터셋 (J01.datasets, J02.dataset_id)'),
+ ('environment',          'ENV-',  'K01', '환경 (K01.environment_ids, L04.environments)'),
+ ('infra_resource',       'RES-',  'K02', '서버·클러스터·하드웨어 자원 (K02.resources)'),
+ ('asset',                'AST-',  'S03', '형상·자산 (S03.assets)'),
+ ('test_case',            'TC-',   'L02', '테스트 케이스 (L02.test_ids)'),
+ ('defect',               'DEF-',  'L07', '결함 (L07.defects)'),
+ ('vulnerability',        'VULN-', 'M09', '취약점 (M09.findings)'),
+ ('feature_flag',         'FLAG-', 'O06', '기능 플래그 (O06.flags)'),
+ ('service',              'SVC-',  'P01', '서비스 (P01.services)'),
+ ('dashboard',            'DASH-', 'P03', '대시보드 (P03.dashboards)'),
+ ('log_event',            'LOG-',  'P04', '로그 이벤트 코드 (P04.events)'),
+ ('job',                  'JOB-',  'P07', '배치·스케줄 작업 (P07.jobs)'),
+ ('incident',             'INC-',  'Q03', '장애 (Q03.incidents)'),
+ ('known_error',          'KE-',   'Q03', 'Known Error (Q03)'),
+ ('support_case',         'CASE-', 'T07', '지원 요청·공지 (T07.case)'),
+ ('contract',             'CTR-',  'U04', '계약 (U04.contracts)'),
+ ('ai_model',             'AIM-',  'V01', 'AI 모델·에이전트 (V01.identity)');
+
+-- covered_names 중복 4건: 대표 종류 1개만 primary (2026-10-08 확정: B03·G01·C01·S04)
+UPDATE cat_kind_alias SET is_primary = 0 WHERE (kind_id, name) IN
+ (VALUES ('B02','리소스 가용성 계획'), ('K01','작업 환경'), ('C06','제품 성공 기준'), ('K07','환경별 설정 비교표'));
