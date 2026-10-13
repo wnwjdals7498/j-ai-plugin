@@ -371,6 +371,21 @@ def pending_count(con: Connection, work_id: str | None = None) -> int:
     return int(row[0])
 
 
+def missing_links(
+    con: Connection, doc_ids: list[str] | None = None
+) -> list[tuple[str, str]]:
+    """필수 연결이 누락된 문서와 대상 종류를 반환한다."""
+    if doc_ids is not None and not doc_ids:
+        return []
+    sql = "SELECT doc_id, target_kind_id FROM v_missing_required_links"
+    args: list[str] = []
+    if doc_ids is not None:
+        sql += " WHERE doc_id IN (" + ",".join("?" for _ in doc_ids) + ")"
+        args.extend(doc_ids)
+    rows = _execute(con, sql + " ORDER BY doc_id, target_kind_id", args).fetchall()
+    return [(doc_id, kind_id) for doc_id, kind_id in rows]
+
+
 _R1_TITLE_STRIP = re.compile(r"^[\s:|\-–—.)\]]+")
 
 

@@ -362,7 +362,8 @@ class DocDB:
                 seen.add((entity_type, entity_id))
                 sql = (
                     "SELECT from_type, from_id, rel_type, to_type, to_id FROM relation "
-                    "WHERE ((from_type=? AND from_id=?) OR (to_type=? AND to_id=?))"
+                    "WHERE status='confirmed' AND "
+                    "((from_type=? AND from_id=?) OR (to_type=? AND to_id=?))"
                 )
                 args: list = [entity_type, entity_id, entity_type, entity_id]
                 if rel_types:
@@ -495,6 +496,9 @@ class DocDB:
             (work_id,),
         ):
             out.add(f"! r:{run_id} {run_type} {result}", force=True)
+        pending = relations.pending_count(self.con)
+        if pending:
+            out.add(f"! pending_links={pending}", force=True)
         findings = self.x(
             "SELECT f.finding_id, f.severity, f.code, f.target_type, f.target_id, f.message "
             "FROM finding f JOIN run r ON r.run_id=f.run_id "
@@ -528,6 +532,8 @@ class DocDB:
                 (work_id,),
             )
         ]
+        for doc_id, kind_id in relations.missing_links(self.con, docs):
+            out.add(f"! missing_link d:{doc_id} k:{kind_id}")
         for doc_id in docs:
             out.add(self._doc_line(doc_id))
         if docs:
