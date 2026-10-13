@@ -19,6 +19,7 @@ from docdb import (
     policy,
     profile,
     relations,
+    runs,
     workflow,
 )
 from docdb.actors import Actor
@@ -143,6 +144,11 @@ def _parser() -> argparse.ArgumentParser:
     fact_set.add_argument("--reason", required=True)
 
     commands.add_parser("applicability")
+
+    run_parser = commands.add_parser("run")
+    run_commands = run_parser.add_subparsers(dest="run_command", required=True)
+    run_ingest = run_commands.add_parser("ingest")
+    run_ingest.add_argument("file", help="JSON 파일 경로 또는 - (표준 입력)")
     return parser
 
 
@@ -452,6 +458,25 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
             sys.stdout.write(
                 f"true={counts.get('true', 0)} false={counts.get('false', 0)} unknown={counts.get('unknown', 0)}\n"
             )
+            return 0
+
+        if args.command == "run":
+            actor = actors.resolve_actor(con, args.actor)
+            if args.file == "-":
+                raw = sys.stdin.read()
+            else:
+                try:
+                    raw = Path(args.file).read_text(encoding="utf-8")
+                except OSError as exc:
+                    raise DocdbError("BAD_ARGS", f"파일을 읽을 수 없음: {args.file}") from exc
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise DocdbError("BAD_ARGS", "올바른 JSON이 아님") from exc
+            if not isinstance(payload, dict):
+                raise DocdbError("BAD_ARGS", "JSON 객체여야 함")
+            run_id = runs.ingest(con, actor, payload)
+            sys.stdout.write(f"OK r:{run_id}\n")
             return 0
 
         raise DocdbError("BAD_ARGS", "지원하지 않는 명령")
