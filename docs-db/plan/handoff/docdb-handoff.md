@@ -103,7 +103,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T17" 절, 01-contracts.md C-13, C-17. 결정: D10. 의존: T16(반입 완료 후 시작). 묶음 B16, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T17 6 tests/integration/test_t17_ctx.py && .venv/bin/python -m pytest -q` → `rows ok T17 6/6` 출력, pytest 실패 0
 
-- [ ] T18: 작업 생성·상태 변경·인계 작성과 수신 확인을 만든다
+- [x] T18: 작업 생성·상태 변경·인계 작성과 수신 확인을 만든다
   - 대상: `docdb/src/docdb/workflow.py`, `docdb/src/docdb/llm.py`, `docdb/src/docdb/cli.py`, `docdb/tests/integration/test_t18_workflow.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T18" 절, 01-contracts.md C-14, C-18, C-24. 결정: D15, D24, D25. 의존: T17(반입 완료 후 시작). 묶음 B17, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T18 11 tests/integration/test_t18_workflow.py && .venv/bin/python -m pytest -q` → `rows ok T18 11/11` 출력, pytest 실패 0

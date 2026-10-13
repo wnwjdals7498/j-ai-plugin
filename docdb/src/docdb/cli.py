@@ -8,7 +8,18 @@ import re
 import sys
 from pathlib import Path
 
-from docdb import actors, backup, catalogue, db, history, migrate, paths, policy, relations
+from docdb import (
+    actors,
+    backup,
+    catalogue,
+    db,
+    history,
+    migrate,
+    paths,
+    policy,
+    relations,
+    workflow,
+)
 from docdb.actors import Actor
 from docdb.errors import DocdbError, format_error
 from docdb.llm import DocDB
@@ -92,6 +103,22 @@ def _parser() -> argparse.ArgumentParser:
     put_parser = commands.add_parser("put")
     put_parser.add_argument("patches", help="JSON 배열 또는 @파일")
     put_parser.add_argument("--reason")
+
+    work_parser = commands.add_parser("work")
+    work_commands = work_parser.add_subparsers(dest="work_command", required=True)
+    work_status = work_commands.add_parser("status")
+    work_status.add_argument("work_id")
+    work_status.add_argument("status")
+
+    handoff_parser = commands.add_parser("handoff")
+    handoff_commands = handoff_parser.add_subparsers(
+        dest="handoff_command", required=True
+    )
+    handoff_ack = handoff_commands.add_parser("ack")
+    handoff_ack.add_argument("handoff_id")
+    handoff_ack.add_argument("--baseline", required=True)
+    handoff_ack.add_argument("--evidence", nargs="*", default=[])
+    handoff_ack.add_argument("--reject", action="store_true")
 
     link_parser = commands.add_parser("link")
     link_commands = link_parser.add_subparsers(dest="link_command", required=True)
@@ -302,6 +329,28 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
                 result = relations.reject(con, actor, args.rel_id, args.why, interactive)
             else:
                 result = relations.remove(con, actor, args.rel_id, args.why, interactive)
+            sys.stdout.write(result + "\n")
+            return 0
+
+        if args.command == "work":
+            actor = actors.resolve_actor(con, args.actor)
+            result = workflow.set_status(
+                con, actor, args.work_id, args.status, interactive
+            )
+            sys.stdout.write(result + "\n")
+            return 0
+
+        if args.command == "handoff":
+            actor = actors.resolve_actor(con, args.actor)
+            result = workflow.ack_handoff(
+                con,
+                actor,
+                args.handoff_id,
+                args.baseline,
+                args.evidence,
+                not args.reject,
+                interactive,
+            )
             sys.stdout.write(result + "\n")
             return 0
 
