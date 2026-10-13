@@ -17,6 +17,7 @@ from docdb import (
     migrate,
     paths,
     policy,
+    profile,
     relations,
     workflow,
 )
@@ -132,6 +133,16 @@ def _parser() -> argparse.ArgumentParser:
     link_remove = link_commands.add_parser("remove")
     link_remove.add_argument("rel_id", type=int)
     link_remove.add_argument("--why", required=True)
+
+    fact_parser = commands.add_parser("fact")
+    fact_commands = fact_parser.add_subparsers(dest="fact_command", required=True)
+    fact_commands.add_parser("list")
+    fact_set = fact_commands.add_parser("set")
+    fact_set.add_argument("fact_key")
+    fact_set.add_argument("value", choices=("true", "false", "unknown"))
+    fact_set.add_argument("--reason", required=True)
+
+    commands.add_parser("applicability")
     return parser
 
 
@@ -394,6 +405,53 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
                 con, args.handle, args.reason, args.days, actor, interactive
             )
             sys.stdout.write(f"OK {exception_id}\n")
+            return 0
+
+        if args.command == "fact":
+            project_id = _project_id(con)
+            if args.fact_command == "list":
+                rows = con.execute(
+                    """SELECT f.fact_key, v.value
+                    FROM cat_fact f
+                    LEFT JOIN fact_value v ON v.project_id = ? AND v.fact_key = f.fact_key
+                    WHERE f.fact_type = 'cap'
+                    ORDER BY f.fact_key""",
+                    (project_id,),
+                ).fetchall()
+                for key, val in rows:
+                    if val == 1:
+                        st = "true"
+                    elif val == 0:
+                        st = "false"
+                    else:
+                        st = "unknown"
+                    sys.stdout.write(f"{key} {st}\n")
+                return 0
+
+            actor = _human_actor(con, args.actor, interactive)
+            if args.value == "true":
+                b_val = True
+            elif args.value == "false":
+                b_val = False
+            else:
+                b_val = None
+            profile.set_fact(
+                con=con,
+                actor=actor,
+                project_id=project_id,
+                fact_key=args.fact_key,
+                value=b_val,
+                reason=args.reason,
+                interactive=interactive,
+            )
+            return 0
+
+        if args.command == "applicability":
+            project_id = _project_id(con)
+            counts = profile.recompute(con, project_id)
+            sys.stdout.write(
+                f"true={counts.get('true', 0)} false={counts.get('false', 0)} unknown={counts.get('unknown', 0)}\n"
+            )
             return 0
 
         raise DocdbError("BAD_ARGS", "지원하지 않는 명령")
