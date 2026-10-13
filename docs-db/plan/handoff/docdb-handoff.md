@@ -133,7 +133,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T23" 절, 01-contracts.md C-13, C-14, C-22. 결정: D16. 의존: T20(반입 완료 후 시작). 묶음 B20, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T23 7 tests/integration/test_t23_summaries.py && .venv/bin/python -m pytest -q` → `rows ok T23 7/7` 출력, pytest 실패 0
 
-- [ ] T24: 표준 라이브러리 부트스트랩 docdb_launch.py를 만든다
+- [x] T24: 표준 라이브러리 부트스트랩 docdb_launch.py를 만든다
   - 대상: `docdb/src/docdb_launch.py`, `docdb/tests/integration/test_t24_launch.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T24" 절, 01-contracts.md C-04, C-05, C-24. 결정: D3, D4, D13, D26. 의존: T22, T23(반입 완료 후 시작). 묶음 B22, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T24 10 tests/integration/test_t24_launch.py && .venv/bin/python -m pytest -q` → `rows ok T24 10/10` 출력, pytest 실패 0
