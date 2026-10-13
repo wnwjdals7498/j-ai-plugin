@@ -88,7 +88,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T14" 절, 01-contracts.md C-10, C-14, C-16. 결정: D10, D17. 의존: T13(반입 완료 후 시작). 묶음 B13, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T14 10 tests/unit/test_t14_items.py && .venv/bin/python -m pytest -q` → `rows ok T14 10/10` 출력, pytest 실패 0
 
-- [ ] T15: 관계 제안·철회와 사람 확정 CLI를 만든다
+- [x] T15: 관계 제안·철회와 사람 확정 CLI를 만든다
   - 대상: `docdb/src/docdb/relations.py`, `docdb/src/docdb/llm.py`, `docdb/src/docdb/cli.py`, `docdb/tests/unit/test_t15_relations.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T15" 절, 01-contracts.md C-13, C-14, C-17, C-24. 결정: D10, D11. 의존: T14(반입 완료 후 시작). 묶음 B14, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T15 17 tests/unit/test_t15_relations.py && .venv/bin/python -m pytest -q` → `rows ok T15 17/17` 출력, pytest 실패 0

@@ -3,7 +3,7 @@ import difflib
 import json
 import re
 
-from docdb import clock, db, history, ids, policy, textnorm
+from docdb import clock, db, history, ids, policy, relations, textnorm
 from docdb.actors import Actor
 from docdb.db import Connection
 from docdb.errors import DocdbError
@@ -575,6 +575,36 @@ class DocDB:
                     else:
                         handle = str(patch.get("h", "?"))
                         try:
+                            patch_op = patch.get("op")
+                            if patch_op == "link":
+                                handle = str(patch.get("from", "?"))
+                                for key in ("from", "rel", "to", "why"):
+                                    if key not in patch:
+                                        raise DocdbError("BAD_OP", f"link 필수 키 누락: {key}")
+                                result = relations._propose(
+                                    self.con,
+                                    self.actor,
+                                    patch["from"],
+                                    patch["rel"],
+                                    patch["to"],
+                                    patch["why"],
+                                    self.work,
+                                )
+                                results.append(result)
+                                successful += 1
+                                continue
+                            if patch_op == "unlink":
+                                rel_id = patch.get("rel_id")
+                                handle = f"rel={rel_id}" if rel_id is not None else "rel=?"
+                                for key in ("rel_id", "why"):
+                                    if key not in patch:
+                                        raise DocdbError("BAD_OP", f"unlink 필수 키 누락: {key}")
+                                result = relations.withdraw(
+                                    self.con, self.actor, patch["rel_id"], patch["why"]
+                                )
+                                results.append(result)
+                                successful += 1
+                                continue
                             kind, key = parse_handle(handle)
                             if kind == "f":
                                 doc_id, kind_id, field_key = key
