@@ -551,7 +551,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 | 3 | `sum` 61 tok 이상 | `ERR … SUMMARY_TOO_LONG`, 필드도 적용 안 됨 |
 | 4 | 요약 후 `sum` 없이 필드 수정 | `get level=1`에 `sum=stale` |
 | 5 | `sum`에 가짜 키 | `SECRET_DETECTED` |
-| 6 | `ctx`의 항목·실행 줄 | 템플릿 요약 사용 |
+| 6 | `ctx`의 항목·실행 줄 | 원본 형식 그대로(C-22·C-13): 줄 전체가 원본 `ctx`와 같음 |
 | 7 | 이식 S9 검사 | 계속 통과 |
 
 ---
