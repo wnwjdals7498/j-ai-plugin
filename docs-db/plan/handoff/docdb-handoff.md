@@ -83,7 +83,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T13" 절, 01-contracts.md C-27. 결정: —. 의존: T12(반입 완료 후 시작). 묶음 B12, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T13 34 tests/legacy/test_scenarios_port.py tests/legacy/test_audit_port.py && .venv/bin/python -m pytest -q` → `rows ok T13 34/34` 출력, pytest 실패 0
 
-- [ ] T14: put에 항목(i:) upsert를 추가한다
+- [x] T14: put에 항목(i:) upsert를 추가한다
   - 대상: `docdb/src/docdb/llm.py`, `docdb/tests/unit/test_t14_items.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T14" 절, 01-contracts.md C-10, C-14, C-16. 결정: D10, D17. 의존: T13(반입 완료 후 시작). 묶음 B13, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T14 10 tests/unit/test_t14_items.py && .venv/bin/python -m pytest -q` → `rows ok T14 10/10` 출력, pytest 실패 0

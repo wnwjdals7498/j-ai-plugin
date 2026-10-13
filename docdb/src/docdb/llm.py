@@ -3,7 +3,7 @@ import difflib
 import json
 import re
 
-from docdb import clock, db, history, policy, textnorm
+from docdb import clock, db, history, ids, policy, textnorm
 from docdb.actors import Actor
 from docdb.db import Connection
 from docdb.errors import DocdbError
@@ -281,7 +281,11 @@ class DocDB:
                     self._read("document", doc_id)
             elif kind == "i":
                 item_id = key[0]
-                if out.add(self._item_line(item_id, level)) and level >= 1:
+                line = self._item_line(item_id, level)
+                dg_row = self.x("SELECT digest FROM item WHERE item_id=?", (item_id,)).fetchone()
+                if dg_row and dg_row[0]:
+                    line += f" dg={dg_row[0]}"
+                if out.add(line) and level >= 1:
                     self._read("item", item_id)
             elif kind == "k":
                 for field_key, required, description in self.x(
@@ -572,97 +576,294 @@ class DocDB:
                         handle = str(patch.get("h", "?"))
                         try:
                             kind, key = parse_handle(handle)
-                            if kind != "f":
-                                raise DocdbError("UNSUPPORTED_HANDLE")
-                            doc_id, kind_id, field_key = key
-                            if self.x(
-                                "SELECT 1 FROM document d JOIN document_kind dk "
-                                "ON dk.doc_id=d.doc_id WHERE d.doc_id=? AND dk.kind_id=? "
-                                "AND EXISTS (SELECT 1 FROM cat_kind_field f WHERE f.kind_id=? "
-                                "AND f.field_key=?)",
-                                (doc_id, kind_id, kind_id, field_key),
-                            ).fetchone() is None:
-                                raise DocdbError("NOT_FOUND", "문서 또는 필드를 찾을 수 없음")
-                            row = self._field_row(doc_id, kind_id, field_key)
-                            current_text = row[2] if row is not None else None
-                            current_digest = row[6] if row is not None else None
-                            if "expect" in patch and patch["expect"] != current_digest:
-                                raise DocdbError(
-                                    "CONFLICT",
-                                    f"now={current_digest} (since 로 변경분 확인 후 재시도)",
-                                )
-                            op = patch.get("op", "set")
-                            state = patch.get("state", "filled")
-                            if state not in ("filled", "tbd", "unknown", "not_applicable"):
-                                raise DocdbError("BAD_OP", "필드 상태가 올바르지 않음")
-                            if state != "filled":
-                                new_value = None
-                            elif op == "set":
-                                if "text" not in patch:
-                                    raise DocdbError("BAD_OP", "필수 키 누락: text")
-                                new_value = patch["text"]
-                            elif op == "append":
-                                if "text" not in patch:
-                                    raise DocdbError("BAD_OP", "필수 키 누락: text")
-                                new_value = (current_text + "\n" if current_text else "") + patch["text"]
-                            elif op == "replace_section":
-                                if "anchor" not in patch or "text" not in patch:
-                                    raise DocdbError("BAD_OP", "replace_section에 anchor와 text 필요")
-                                new_value = replace_section(
-                                    current_text or "", patch["anchor"], patch["text"]
-                                )
-                                if new_value is None:
+                            if kind == "f":
+                                doc_id, kind_id, field_key = key
+                                if self.x(
+                                    "SELECT 1 FROM document d JOIN document_kind dk "
+                                    "ON dk.doc_id=d.doc_id WHERE d.doc_id=? AND dk.kind_id=? "
+                                    "AND EXISTS (SELECT 1 FROM cat_kind_field f WHERE f.kind_id=? "
+                                    "AND f.field_key=?)",
+                                    (doc_id, kind_id, kind_id, field_key),
+                                ).fetchone() is None:
+                                    raise DocdbError("NOT_FOUND", "문서 또는 필드를 찾을 수 없음")
+                                row = self._field_row(doc_id, kind_id, field_key)
+                                current_text = row[2] if row is not None else None
+                                current_digest = row[6] if row is not None else None
+                                if "expect" in patch and patch["expect"] != current_digest:
                                     raise DocdbError(
-                                        "ANCHOR_NOT_FOUND", textnorm.q(patch["anchor"])
+                                        "CONFLICT",
+                                        f"now={current_digest} (since 로 변경분 확인 후 재시도)",
                                     )
-                            else:
-                                raise DocdbError("BAD_OP", str(op))
-                            new_value = textnorm.normalize_text(new_value)
-                            field_reason = textnorm.normalize_text(patch.get("why"))
-                            normalized_reason = textnorm.normalize_text(reason)
-                            policy.assert_no_secrets(
-                                self.con, handle, [new_value, field_reason, normalized_reason]
-                            )
-                            digest = textnorm.digest16(new_value)
-                            token_est = textnorm.tok_est(new_value)
-                            changed_at = clock.now_iso()
-                            self.x(
-                                "INSERT INTO field_value (doc_id, kind_id, field_key, fill_state, "
-                                "value_text, reason, "
-                                "author_id, updated_at, digest, tok_est) "
-                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
-                                "ON CONFLICT(doc_id, kind_id, field_key) DO UPDATE SET "
-                                "fill_state=excluded.fill_state, value_text=excluded.value_text, "
-                                "reason=excluded.reason, "
-                                "author_id=excluded.author_id, updated_at=excluded.updated_at, "
-                                "digest=excluded.digest, tok_est=excluded.tok_est",
-                                (
-                                    doc_id,
-                                    kind_id,
-                                    field_key,
-                                    state,
-                                    new_value,
-                                    field_reason,
+                                op = patch.get("op", "set")
+                                state = patch.get("state", "filled")
+                                if state not in ("filled", "tbd", "unknown", "not_applicable"):
+                                    raise DocdbError("BAD_OP", "필드 상태가 올바르지 않음")
+                                if state != "filled":
+                                    new_value = None
+                                elif op == "set":
+                                    if "text" not in patch:
+                                        raise DocdbError("BAD_OP", "필수 키 누락: text")
+                                    new_value = patch["text"]
+                                elif op == "append":
+                                    if "text" not in patch:
+                                        raise DocdbError("BAD_OP", "필수 키 누락: text")
+                                    new_value = (current_text + "\n" if current_text else "") + patch["text"]
+                                elif op == "replace_section":
+                                    if "anchor" not in patch or "text" not in patch:
+                                        raise DocdbError("BAD_OP", "replace_section에 anchor와 text 필요")
+                                    new_value = replace_section(
+                                        current_text or "", patch["anchor"], patch["text"]
+                                    )
+                                    if new_value is None:
+                                        raise DocdbError(
+                                            "ANCHOR_NOT_FOUND", textnorm.q(patch["anchor"])
+                                        )
+                                else:
+                                    raise DocdbError("BAD_OP", str(op))
+                                new_value = textnorm.normalize_text(new_value)
+                                field_reason = textnorm.normalize_text(patch.get("why"))
+                                normalized_reason = textnorm.normalize_text(reason)
+                                policy.assert_no_secrets(
+                                    self.con, handle, [new_value, field_reason, normalized_reason]
+                                )
+                                digest = textnorm.digest16(new_value)
+                                token_est = textnorm.tok_est(new_value)
+                                changed_at = clock.now_iso()
+                                self.x(
+                                    "INSERT INTO field_value (doc_id, kind_id, field_key, fill_state, "
+                                    "value_text, reason, "
+                                    "author_id, updated_at, digest, tok_est) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON CONFLICT(doc_id, kind_id, field_key) DO UPDATE SET "
+                                    "fill_state=excluded.fill_state, value_text=excluded.value_text, "
+                                    "reason=excluded.reason, "
+                                    "author_id=excluded.author_id, updated_at=excluded.updated_at, "
+                                    "digest=excluded.digest, tok_est=excluded.tok_est",
+                                    (
+                                        doc_id,
+                                        kind_id,
+                                        field_key,
+                                        state,
+                                        new_value,
+                                        field_reason,
+                                        self.actor.id,
+                                        changed_at,
+                                        digest,
+                                        token_est,
+                                    ),
+                                )
+                                history.append_change(
+                                    self.con,
+                                    "field_value",
+                                    f"{doc_id}|{kind_id}|{field_key}",
+                                    "insert" if row is None else "update",
+                                    {"value_text": current_text} if row is not None else None,
+                                    {"value_text": new_value, "fill_state": state},
                                     self.actor.id,
-                                    changed_at,
-                                    digest,
-                                    token_est,
-                                ),
-                            )
-                            history.append_change(
-                                self.con,
-                                "field_value",
-                                f"{doc_id}|{kind_id}|{field_key}",
-                                "insert" if row is None else "update",
-                                {"value_text": current_text} if row is not None else None,
-                                {"value_text": new_value, "fill_state": state},
-                                self.actor.id,
-                                self.work,
-                                normalized_reason or field_reason,
-                            )
-                            results.append(f"OK {handle} dg={digest} tok={token_est}")
-                            successful += 1
-                            continue
+                                    self.work,
+                                    normalized_reason or field_reason,
+                                )
+                                results.append(f"OK {handle} dg={digest} tok={token_est}")
+                                successful += 1
+                                continue
+                            elif kind == "i":
+                                item_id = key[0]
+                                op = patch.get("op", "upsert")
+                                if op != "upsert":
+                                    raise DocdbError("BAD_OP", f"지원하지 않는 항목 연산: {op}")
+    
+                                if "attrs" in patch and "attrs_patch" in patch:
+                                    raise DocdbError("BAD_OP", "attrs와 attrs_patch를 함께 쓸 수 없음")
+    
+                                if "attrs" in patch and not isinstance(patch["attrs"], dict):
+                                    raise DocdbError("BAD_OP", "attrs는 객체여야 함")
+                                if "attrs_patch" in patch and not isinstance(patch["attrs_patch"], dict):
+                                    raise DocdbError("BAD_OP", "attrs_patch는 객체여야 함")
+
+                                if "title" in patch and not isinstance(patch["title"], str):
+                                    raise DocdbError("BAD_OP", "title은 문자열이어야 함")
+                                if "status" in patch and not isinstance(patch["status"], str):
+                                    raise DocdbError("BAD_OP", "status는 문자열이어야 함")
+    
+                                row = self.x(
+                                    "SELECT project_id, item_type, title, status, defined_in, attrs, digest "
+                                    "FROM item WHERE item_id=?",
+                                    (item_id,),
+                                ).fetchone()
+    
+                                if row is None:
+                                    ids.validate("item", item_id)
+                                    ids.ensure_not_reused(self.con, "item", item_id)
+    
+                                    prefix_rows = self.x(
+                                        "SELECT item_type, id_prefix FROM cat_item_type"
+                                    ).fetchall()
+                                    matching = [
+                                        (it, pfx) for it, pfx in prefix_rows if item_id.startswith(pfx)
+                                    ]
+                                    if not matching:
+                                        raise DocdbError("ID_FORMAT", f"항목 ID에 일치하는 접두어 없음: {item_id}")
+                                    matching.sort(key=lambda pair: len(pair[1]), reverse=True)
+                                    item_type = matching[0][0]
+    
+                                    if "title" not in patch or patch["title"] is None:
+                                        raise DocdbError("BAD_OP", "새 항목에는 title 필수")
+    
+                                    cur_title = None
+                                    cur_status = None
+                                    cur_defined_in = None
+                                    cur_attrs_obj = {}
+                                    cur_digest = None
+                                else:
+                                    item_type = row[1]
+                                    cur_title = row[2]
+                                    cur_status = row[3]
+                                    cur_defined_in = row[4]
+                                    cur_attrs_obj = json.loads(row[5] or "{}")
+                                    cur_digest = row[6]
+    
+                                if "expect" in patch and patch["expect"] != cur_digest:
+                                    raise DocdbError("CONFLICT", f"now={cur_digest}")
+    
+                                new_title = patch.get("title", cur_title)
+                                if new_title is not None:
+                                    new_title = textnorm.normalize_text(new_title)
+    
+                                new_status = patch.get("status", cur_status)
+                                if new_status is not None:
+                                    new_status = textnorm.normalize_text(new_status)
+    
+                                if "defined_in" in patch:
+                                    def_in_raw = patch["defined_in"]
+                                    if def_in_raw is None:
+                                        new_defined_in = None
+                                    elif isinstance(def_in_raw, str) and def_in_raw.startswith("d:"):
+                                        _, d_key = parse_handle(def_in_raw)
+                                        new_defined_in = d_key[0]
+                                    else:
+                                        new_defined_in = def_in_raw
+                                else:
+                                    new_defined_in = cur_defined_in
+    
+                                if "attrs" in patch:
+                                    new_attrs_obj = patch["attrs"]
+                                elif "attrs_patch" in patch:
+                                    merged = dict(cur_attrs_obj)
+                                    for k, v in patch["attrs_patch"].items():
+                                        if v is None:
+                                            merged.pop(k, None)
+                                        else:
+                                            merged[k] = v
+                                    new_attrs_obj = merged
+                                else:
+                                    new_attrs_obj = cur_attrs_obj
+    
+                                field_reason = textnorm.normalize_text(patch.get("why"))
+                                normalized_reason = textnorm.normalize_text(reason)
+                                attrs_str = json.dumps(new_attrs_obj, ensure_ascii=False)
+                                policy.assert_no_secrets(
+                                    self.con,
+                                    handle,
+                                    [new_title, attrs_str, field_reason, normalized_reason],
+                                )
+    
+                                def_in_handle = f"d:{new_defined_in}" if new_defined_in else None
+                                digest_payload = {
+                                    "title": new_title,
+                                    "status": new_status,
+                                    "attrs": new_attrs_obj,
+                                    "defined_in": def_in_handle,
+                                }
+                                canon = textnorm.canonical_json(digest_payload)
+                                digest = textnorm.digest16(canon)
+                                token_est = textnorm.tok_est(canon)
+    
+                                proj_row = self.x("SELECT project_id FROM project LIMIT 1").fetchone()
+                                if not proj_row:
+                                    raise DocdbError("NOT_FOUND", "project")
+                                project_id = proj_row[0]
+    
+                                now_ts = clock.now_iso()
+                                new_attrs_json = textnorm.canonical_json(new_attrs_obj)
+    
+                                if row is None:
+                                    self.x(
+                                        "INSERT INTO item (item_id, project_id, item_type, title, status, "
+                                        "defined_in, attrs, created_at, updated_at, digest, tok_est) "
+                                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                        (
+                                            item_id,
+                                            project_id,
+                                            item_type,
+                                            new_title,
+                                            new_status,
+                                            new_defined_in,
+                                            new_attrs_json,
+                                            now_ts,
+                                            now_ts,
+                                            digest,
+                                            token_est,
+                                        ),
+                                    )
+                                    history.append_change(
+                                        self.con,
+                                        "item",
+                                        item_id,
+                                        "insert",
+                                        None,
+                                        {
+                                            "title": new_title,
+                                            "status": new_status,
+                                            "attrs": new_attrs_obj,
+                                            "defined_in": new_defined_in,
+                                            "item_type": item_type,
+                                        },
+                                        self.actor.id,
+                                        self.work,
+                                        normalized_reason or field_reason,
+                                    )
+                                else:
+                                    self.x(
+                                        "UPDATE item SET title=?, status=?, defined_in=?, attrs=?, "
+                                        "updated_at=?, digest=?, tok_est=? WHERE item_id=?",
+                                        (
+                                            new_title,
+                                            new_status,
+                                            new_defined_in,
+                                            new_attrs_json,
+                                            now_ts,
+                                            digest,
+                                            token_est,
+                                            item_id,
+                                        ),
+                                    )
+                                    history.append_change(
+                                        self.con,
+                                        "item",
+                                        item_id,
+                                        "update",
+                                        {
+                                            "title": cur_title,
+                                            "status": cur_status,
+                                            "attrs": cur_attrs_obj,
+                                            "defined_in": cur_defined_in,
+                                        },
+                                        {
+                                            "title": new_title,
+                                            "status": new_status,
+                                            "attrs": new_attrs_obj,
+                                            "defined_in": new_defined_in,
+                                        },
+                                        self.actor.id,
+                                        self.work,
+                                        normalized_reason or field_reason,
+                                    )
+    
+                                results.append(f"OK {handle} dg={digest} tok={token_est}")
+                                successful += 1
+                                continue
+                            else:
+                                raise DocdbError("UNSUPPORTED_HANDLE")
                         except DocdbError as exc:
                             error = exc
                         except db.DatabaseError as exc:
