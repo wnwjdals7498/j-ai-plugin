@@ -412,6 +412,7 @@ def require_ai(actor: Actor) -> None: ...
 | 정책 차단 | `get`·`ctx`·`find`·`since` | 해당 줄 끝에 ` policy=local_only`, 본문·요약·발췌·diff 생략 |
 | 규칙 알림 | `put` 응답 | `NOTE R1 skip <item_id> defined_in=<doc_id>` |
 | 관계 목록 | `link review` | `rel=<id> <from_handle> -<rel>-> <to_handle> by=<actor> why=<q(why)>` |
+| 항목 digest | `get`의 `i:` 줄(모든 level) | 원본 줄 끝에 ` dg=<16>`(항목 `expect`용, T14). `ctx`·`trace` 등 다른 곳의 `i:` 줄은 원본 그대로 |
 
 ---
 
