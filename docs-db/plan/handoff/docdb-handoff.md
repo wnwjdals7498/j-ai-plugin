@@ -42,7 +42,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T05" 절, 01-contracts.md C-08, C-09, C-27. 결정: D21. 의존: T04(반입 완료 후 시작). 묶음 B05, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T05 8 tests/unit/test_t05_migrate.py && .venv/bin/python -m pytest -q` → `rows ok T05 8/8` 출력, pytest 실패 0
 
-- [ ] T06: 마이그레이션 0003~0008과 스키마 동작 테스트를 만든다
+- [x] T06: 마이그레이션 0003~0008과 스키마 동작 테스트를 만든다
   - 대상: `docdb/src/docdb/schema/0003_relation_status.sql`, `docdb/src/docdb/schema/0004_item_fts_ad.sql`, `docdb/src/docdb/schema/0005_import_segment.sql`, `docdb/src/docdb/schema/0006_catalogue_ext.sql`, `docdb/src/docdb/schema/0007_id_formats.sql`, `docdb/src/docdb/schema/0008_call_log_session.sql`, `docdb/tests/helpers.py`, `docdb/tests/unit/test_t06_schema.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T06" 절, 01-contracts.md C-09, C-10. 결정: D6, D7, D10, D17, D18. 의존: T05(반입 완료 후 시작). 묶음 B06, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T06 17 tests/unit/test_t06_schema.py && .venv/bin/python -m pytest -q` → `rows ok T06 17/17` 출력, pytest 실패 0
