@@ -78,7 +78,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T12" 절, 01-contracts.md C-12, C-13, C-14, C-15, C-16, C-24. 결정: D8, D18, D19, D23. 의존: T11(반입 완료 후 시작). 묶음 B11, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T12 37 tests/legacy/test_token_port.py tests/unit/test_t12_llm.py && .venv/bin/python -m pytest -q` → `rows ok T12 37/37` 출력, pytest 실패 0
 
-- [ ] T13: 원본 시나리오 33건과 매핑 검수를 pytest로 옮긴다
+- [x] T13: 원본 시나리오 33건과 매핑 검수를 pytest로 옮긴다
   - 대상: `docdb/tests/legacy/test_scenarios_port.py`, `docdb/tests/legacy/test_audit_port.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T13" 절, 01-contracts.md C-27. 결정: —. 의존: T12(반입 완료 후 시작). 묶음 B12, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T13 34 tests/legacy/test_scenarios_port.py tests/legacy/test_audit_port.py && .venv/bin/python -m pytest -q` → `rows ok T13 34/34` 출력, pytest 실패 0
