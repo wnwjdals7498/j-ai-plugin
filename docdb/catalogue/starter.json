@@ -1,0 +1,707 @@
+{
+  "standard_version": "starter-1",
+  "schema_version": "1",
+  "groups": {
+    "A": {
+      "directory": "a-area",
+      "title_ko": "A 관리",
+      "title_en": "Governance",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "B": {
+      "directory": "b-area",
+      "title_ko": "B 계획",
+      "title_en": "Planning",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "D": {
+      "directory": "d-area",
+      "title_ko": "D 요구사항",
+      "title_en": "Requirements",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "F": {
+      "directory": "f-area",
+      "title_ko": "F 개발",
+      "title_en": "Development",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "G": {
+      "directory": "g-area",
+      "title_ko": "G 환경",
+      "title_en": "Environment",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "K": {
+      "directory": "k-area",
+      "title_ko": "K 인프라",
+      "title_en": "Infrastructure",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "L": {
+      "directory": "l-area",
+      "title_ko": "L 검증",
+      "title_en": "Verification",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "P": {
+      "directory": "p-area",
+      "title_ko": "P 운영",
+      "title_en": "Operations",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "R": {
+      "directory": "r-area",
+      "title_ko": "R 복구",
+      "title_en": "Recovery",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "S": {
+      "directory": "s-area",
+      "title_ko": "S 자산",
+      "title_en": "Assets",
+      "default_owner_role": "owner",
+      "review_days": 90
+    }
+  },
+  "facts": {
+    "cap": {
+      "production": "운영 환경을 대상으로 하는지 나타냅니다."
+    },
+    "evt": {}
+  },
+  "document_types": [
+    {
+      "kind_id": "A01",
+      "abbreviation": "A01",
+      "title_ko": "문서 마스터 목록",
+      "title_en": "Document Master List",
+      "category": "A",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {},
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "문서 마스터 목록"
+      ]
+    },
+    {
+      "kind_id": "A04",
+      "abbreviation": "A04",
+      "title_ko": "용어",
+      "title_en": "Glossary",
+      "category": "A",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "term_id": "용어 항목의 ID와 표기 이름입니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "용어"
+      ]
+    },
+    {
+      "kind_id": "B03",
+      "abbreviation": "B03",
+      "title_ko": "역할·책임(RACI)",
+      "title_en": "Roles and Responsibilities",
+      "category": "B",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "roles": "역할별 책임을 정리합니다.",
+        "accountable": "최종 책임자를 지정합니다.",
+        "overview": "문서의 목적과 핵심 내용을 요약합니다. [설계 판단]",
+        "owners": "문서의 담당자와 책임자를 기록합니다. [설계 판단]"
+      },
+      "optional_fields": {
+        "notes": "추가로 남길 참고 정보를 기록합니다. [설계 판단]"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "역할·책임(RACI)"
+      ]
+    },
+    {
+      "kind_id": "B04",
+      "abbreviation": "B04",
+      "title_ko": "RAID(위험·이슈·가정·의존성)",
+      "title_en": "Risks, Issues, Assumptions, Dependencies",
+      "category": "B",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "items": "위험·이슈·가정·의존성 항목을 기록합니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [
+        "D01"
+      ],
+      "covered_names": [
+        "RAID(위험·이슈·가정·의존성)"
+      ]
+    },
+    {
+      "kind_id": "D01",
+      "abbreviation": "D01",
+      "title_ko": "요구사항",
+      "title_en": "Requirements",
+      "category": "D",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "requirement_ids": "요구사항 ID 목록입니다.",
+        "behavior": "요구사항이 나타내는 동작을 설명합니다.",
+        "acceptance": "요구사항의 완료 판정 조건입니다.",
+        "scope": "요구사항에 포함되거나 제외되는 범위입니다.",
+        "owners": "요구사항을 맡은 담당자와 책임자입니다.",
+        "overview": "문서의 목적과 핵심 내용을 요약합니다. [설계 판단]"
+      },
+      "optional_fields": {
+        "notes": "추가로 남길 참고 정보를 기록합니다. [설계 판단]"
+      },
+      "required_link_kinds": [
+        "L02"
+      ],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "요구사항"
+      ]
+    },
+    {
+      "kind_id": "D08",
+      "abbreviation": "D08",
+      "title_ko": "RTM(요구사항 추적표)",
+      "title_en": "Requirements Traceability Matrix",
+      "category": "D",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "edges": "요구사항과 추적 대상 사이의 연결입니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "RTM(요구사항 추적표)"
+      ]
+    },
+    {
+      "kind_id": "F06",
+      "abbreviation": "F06",
+      "title_ko": "의존성·결정 색인",
+      "title_en": "Dependency and Decision Index",
+      "category": "F",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {},
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "의존성·결정 색인"
+      ]
+    },
+    {
+      "kind_id": "F07",
+      "abbreviation": "F07",
+      "title_ko": "기술 부채",
+      "title_en": "Technical Debt",
+      "category": "F",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "debt_id": "기술 부채 항목의 ID입니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [
+        "D01"
+      ],
+      "covered_names": [
+        "기술 부채"
+      ]
+    },
+    {
+      "kind_id": "G01",
+      "abbreviation": "G01",
+      "title_ko": "작업 환경",
+      "title_en": "Work Environment",
+      "category": "G",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "문서의 목적과 핵심 내용을 요약합니다. [설계 판단]",
+        "owners": "문서의 담당자와 책임자를 기록합니다. [설계 판단]"
+      },
+      "optional_fields": {
+        "notes": "추가로 남길 참고 정보를 기록합니다. [설계 판단]"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "작업 환경"
+      ]
+    },
+    {
+      "kind_id": "K01",
+      "abbreviation": "K01",
+      "title_ko": "환경",
+      "title_en": "Environments",
+      "category": "K",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "environment_ids": "환경 ID 목록입니다.",
+        "overview": "문서의 목적과 핵심 내용을 요약합니다. [설계 판단]",
+        "owners": "문서의 담당자와 책임자를 기록합니다. [설계 판단]"
+      },
+      "optional_fields": {
+        "notes": "추가로 남길 참고 정보를 기록합니다. [설계 판단]"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "환경"
+      ]
+    },
+    {
+      "kind_id": "K02",
+      "abbreviation": "K02",
+      "title_ko": "서버 목록",
+      "title_en": "Server Inventory",
+      "category": "K",
+      "lifecycle": "living",
+      "mode": "conditional",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "fact": "cap.production"
+      },
+      "applies_when": {
+        "fact": "cap.production"
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "resources": "서버·클러스터·하드웨어 자원 목록입니다.",
+        "topology": "자원 간 연결과 배치 관계입니다.",
+        "owners": "자원 담당자와 책임자입니다.",
+        "overview": "문서의 목적과 핵심 내용을 요약합니다. [설계 판단]"
+      },
+      "optional_fields": {
+        "notes": "추가로 남길 참고 정보를 기록합니다. [설계 판단]"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [
+        "K01",
+        "S03"
+      ],
+      "covered_names": [
+        "서버 목록"
+      ]
+    },
+    {
+      "kind_id": "K07",
+      "abbreviation": "K07",
+      "title_ko": "드리프트(기대값과 실제 상태의 차이) 점검",
+      "title_en": "Drift Check",
+      "category": "K",
+      "lifecycle": "work",
+      "mode": "conditional",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "fact": "cap.production"
+      },
+      "applies_when": {
+        "fact": "cap.production"
+      },
+      "content_files": [
+        "meta.yaml",
+        "run.json"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {},
+      "optional_fields": {},
+      "required_link_kinds": [
+        "K02"
+      ],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "드리프트(기대값과 실제 상태의 차이) 점검"
+      ]
+    },
+    {
+      "kind_id": "L02",
+      "abbreviation": "L02",
+      "title_ko": "테스트 케이스",
+      "title_en": "Test Cases",
+      "category": "L",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "test_ids": {
+          "description": "테스트 케이스 ID 목록. 한 줄에 TC ID와 검증하는 REQ ID",
+          "extract_rel": {
+            "rel": "verified_by",
+            "from_prefix": "REQ-",
+            "to_prefix": "TC-"
+          }
+        },
+        "overview": "문서의 목적과 핵심 내용을 요약합니다. [설계 판단]",
+        "owners": "문서의 담당자와 책임자를 기록합니다. [설계 판단]"
+      },
+      "optional_fields": {
+        "notes": "추가로 남길 참고 정보를 기록합니다. [설계 판단]"
+      },
+      "required_link_kinds": [
+        "D01"
+      ],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "테스트 케이스"
+      ]
+    },
+    {
+      "kind_id": "L03",
+      "abbreviation": "L03",
+      "title_ko": "테스트 결과",
+      "title_en": "Test Results",
+      "category": "L",
+      "lifecycle": "work",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "run.json"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "execution": "테스트 실행의 결과를 기록합니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [
+        "L02"
+      ],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "테스트 결과"
+      ]
+    },
+    {
+      "kind_id": "L07",
+      "abbreviation": "L07",
+      "title_ko": "결함",
+      "title_en": "Defects",
+      "category": "L",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "defects": "결함 항목 목록입니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [
+        "L02"
+      ],
+      "covered_names": [
+        "결함"
+      ]
+    },
+    {
+      "kind_id": "P06",
+      "abbreviation": "P06",
+      "title_ko": "Runbook(운영 절차서)",
+      "title_en": "Operations Runbook",
+      "category": "P",
+      "lifecycle": "living",
+      "mode": "conditional",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "fact": "cap.production"
+      },
+      "applies_when": {
+        "fact": "cap.production"
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "steps": "운영 절차의 실행 단계입니다.",
+        "rollback": "절차가 실패했을 때 복구하는 방법입니다.",
+        "owners": "절차의 담당자와 책임자입니다.",
+        "overview": "문서의 목적과 핵심 내용을 요약합니다. [설계 판단]"
+      },
+      "optional_fields": {
+        "notes": "추가로 남길 참고 정보를 기록합니다. [설계 판단]"
+      },
+      "required_link_kinds": [
+        "K02"
+      ],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "Runbook(운영 절차서)"
+      ]
+    },
+    {
+      "kind_id": "R04",
+      "abbreviation": "R04",
+      "title_ko": "백업 증거",
+      "title_en": "Backup Evidence",
+      "category": "R",
+      "lifecycle": "work",
+      "mode": "conditional",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "fact": "cap.production"
+      },
+      "applies_when": {
+        "fact": "cap.production"
+      },
+      "content_files": [
+        "meta.yaml",
+        "run.json"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "verification": "백업 실행과 복구 가능성을 입증하는 결과입니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [
+        "K02"
+      ],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "백업 증거"
+      ]
+    },
+    {
+      "kind_id": "S03",
+      "abbreviation": "S03",
+      "title_ko": "자산",
+      "title_en": "Assets",
+      "category": "S",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "assets": "구성 또는 자산 항목 목록입니다."
+      },
+      "optional_fields": {},
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "자산"
+      ]
+    }
+  ]
+}

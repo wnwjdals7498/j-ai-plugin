@@ -31,3 +31,21 @@ def schema_con(tmp_path: Path) -> Iterator[object]:
         yield con
     finally:
         con.close()
+
+
+@pytest.fixture
+def starter_paths(plugin_root: Path) -> tuple[Path, Path]:
+    """시작 카탈로그와 항목 종류 파일 경로를 돌려준다."""
+    return (
+        plugin_root / "catalogue" / "starter.json",
+        plugin_root / "catalogue" / "item_types.json",
+    )
+
+
+@pytest.fixture
+def mini_paths(plugin_root: Path) -> tuple[Path, Path]:
+    """미니 카탈로그 픽스처와 항목 종류 파일 경로를 돌려준다."""
+    return (
+        plugin_root / "tests" / "fixtures" / "mini_catalogue.json",
+        plugin_root / "catalogue" / "item_types.json",
+    )
