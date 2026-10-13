@@ -3,7 +3,7 @@ import difflib
 import json
 import re
 
-from docdb import clock, db, history, ids, policy, relations, textnorm, workflow
+from docdb import clock, db, history, ids, policy, relations, summaries, textnorm, workflow
 from docdb.actors import Actor
 from docdb.db import Connection
 from docdb.errors import DocdbError
@@ -193,17 +193,18 @@ class DocDB:
         if level == 0:
             return f"{handle} {meta}"
         if level == 1:
-            summary = self.x(
-                "SELECT summary, source_digest FROM entity_summary WHERE handle=?", (handle,)
-            ).fetchone()
-            if summary and summary[1] == digest:
-                return f"{handle} {meta} sum={textnorm.q(summary[0])}"
+            tmpl = summaries.template(self.con, handle)
+            if tmpl is not None:
+                return f"{handle} {meta} sum={textnorm.q(tmpl)}"
+            status, sum_text = summaries.lookup(self.con, handle, digest)
+            if status == "fresh" and sum_text is not None:
+                return f"{handle} {meta} sum={textnorm.q(sum_text)}"
             if not head:
-                return f"{handle} {meta} {'sum=stale' if summary else 'sum=none'}"
+                return f"{handle} {meta} sum={status}"
             excerpt = body[:SNIP]
             remaining = len(body) - len(excerpt)
             return (
-                f"{handle} {meta} {'sum=stale' if summary else 'sum=none'} "
+                f"{handle} {meta} sum={status} "
                 f"head={textnorm.q(excerpt)}"
                 + (f" +{remaining}ch" if remaining > 0 else "")
             )
@@ -739,8 +740,12 @@ class DocDB:
                                 new_value = textnorm.normalize_text(new_value)
                                 field_reason = textnorm.normalize_text(patch.get("why"))
                                 normalized_reason = textnorm.normalize_text(reason)
+                                if "sum" in patch and patch["sum"] is not None:
+                                    if not isinstance(patch["sum"], str) or not patch["sum"].strip():
+                                        raise DocdbError("BAD_OP", "sum은 비지 않은 문자열이어야 함")
+                                sum_text = textnorm.normalize_text(patch.get("sum"))
                                 policy.assert_no_secrets(
-                                    self.con, handle, [new_value, field_reason, normalized_reason]
+                                    self.con, handle, [new_value, field_reason, normalized_reason, sum_text]
                                 )
                                 digest = textnorm.digest16(new_value)
                                 token_est = textnorm.tok_est(new_value)
@@ -779,6 +784,9 @@ class DocDB:
                                     self.work,
                                     normalized_reason or field_reason,
                                 )
+                                if "sum" in patch and patch["sum"] is not None:
+                                    sum_val = textnorm.normalize_text(patch["sum"])
+                                    summaries.store(self.con, self.actor, handle, sum_val, digest)
                                 notes = relations.after_field_write(
                                     self.con,
                                     self.actor,

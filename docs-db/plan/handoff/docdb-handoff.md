@@ -128,7 +128,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T22" 절, 01-contracts.md C-21. 결정: D6, D8, D22. 의존: T21(반입 완료 후 시작). 묶음 B21, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T22 11 tests/integration/test_t22_import_label.py && .venv/bin/python -m pytest -q` → `rows ok T22 11/11` 출력, pytest 실패 0
 
-- [ ] T23: 템플릿 요약과 put의 sum을 만든다
+- [x] T23: 템플릿 요약과 put의 sum을 만든다
   - 대상: `docdb/src/docdb/summaries.py`, `docdb/src/docdb/llm.py`, `docdb/tests/integration/test_t23_summaries.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T23" 절, 01-contracts.md C-13, C-14, C-22. 결정: D16. 의존: T20(반입 완료 후 시작). 묶음 B20, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T23 7 tests/integration/test_t23_summaries.py && .venv/bin/python -m pytest -q` → `rows ok T23 7/7` 출력, pytest 실패 0
