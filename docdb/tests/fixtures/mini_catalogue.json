@@ -1,0 +1,1817 @@
+{
+  "standard_version": "mini-1",
+  "schema_version": "1",
+  "groups": {
+    "A": {
+      "directory": "a-area",
+      "title_ko": "A 영역",
+      "title_en": "A area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "B": {
+      "directory": "b-area",
+      "title_ko": "B 영역",
+      "title_en": "B area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "C": {
+      "directory": "c-area",
+      "title_ko": "C 영역",
+      "title_en": "C area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "D": {
+      "directory": "d-area",
+      "title_ko": "D 영역",
+      "title_en": "D area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "E": {
+      "directory": "e-area",
+      "title_ko": "E 영역",
+      "title_en": "E area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "F": {
+      "directory": "f-area",
+      "title_ko": "F 영역",
+      "title_en": "F area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "G": {
+      "directory": "g-area",
+      "title_ko": "G 영역",
+      "title_en": "G area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "H": {
+      "directory": "h-area",
+      "title_ko": "H 영역",
+      "title_en": "H area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "I": {
+      "directory": "i-area",
+      "title_ko": "I 영역",
+      "title_en": "I area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "J": {
+      "directory": "j-area",
+      "title_ko": "J 영역",
+      "title_en": "J area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "K": {
+      "directory": "k-area",
+      "title_ko": "K 영역",
+      "title_en": "K area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "L": {
+      "directory": "l-area",
+      "title_ko": "L 영역",
+      "title_en": "L area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "M": {
+      "directory": "m-area",
+      "title_ko": "M 영역",
+      "title_en": "M area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "N": {
+      "directory": "n-area",
+      "title_ko": "N 영역",
+      "title_en": "N area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "O": {
+      "directory": "o-area",
+      "title_ko": "O 영역",
+      "title_en": "O area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "P": {
+      "directory": "p-area",
+      "title_ko": "P 영역",
+      "title_en": "P area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "Q": {
+      "directory": "q-area",
+      "title_ko": "Q 영역",
+      "title_en": "Q area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "R": {
+      "directory": "r-area",
+      "title_ko": "R 영역",
+      "title_en": "R area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "S": {
+      "directory": "s-area",
+      "title_ko": "S 영역",
+      "title_en": "S area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "T": {
+      "directory": "t-area",
+      "title_ko": "T 영역",
+      "title_en": "T area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "U": {
+      "directory": "u-area",
+      "title_ko": "U 영역",
+      "title_en": "U area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "V": {
+      "directory": "v-area",
+      "title_ko": "V 영역",
+      "title_en": "V area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "W": {
+      "directory": "w-area",
+      "title_ko": "W 영역",
+      "title_en": "W area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "X": {
+      "directory": "x-area",
+      "title_ko": "X 영역",
+      "title_en": "X area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "Y": {
+      "directory": "y-area",
+      "title_ko": "Y 영역",
+      "title_en": "Y area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    },
+    "Z": {
+      "directory": "z-area",
+      "title_ko": "Z 영역",
+      "title_en": "Z area",
+      "default_owner_role": "owner",
+      "review_days": 90
+    }
+  },
+  "facts": {
+    "cap": {
+      "database": "DB",
+      "ui": "UI",
+      "production": "운영"
+    },
+    "evt": {
+      "release": "릴리스"
+    }
+  },
+  "document_types": [
+    {
+      "kind_id": "A04",
+      "abbreviation": "K-A04",
+      "title_ko": "A04 문서",
+      "title_en": "A04 doc",
+      "category": "A",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "A04 이름"
+      ]
+    },
+    {
+      "kind_id": "B02",
+      "abbreviation": "K-B02",
+      "title_ko": "B02 문서",
+      "title_en": "B02 doc",
+      "category": "B",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "B02 이름"
+      ]
+    },
+    {
+      "kind_id": "B03",
+      "abbreviation": "K-B03",
+      "title_ko": "B03 문서",
+      "title_en": "B03 doc",
+      "category": "B",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "B03 이름"
+      ]
+    },
+    {
+      "kind_id": "B04",
+      "abbreviation": "K-B04",
+      "title_ko": "B04 문서",
+      "title_en": "B04 doc",
+      "category": "B",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "B04 이름"
+      ]
+    },
+    {
+      "kind_id": "C04",
+      "abbreviation": "K-C04",
+      "title_ko": "C04 문서",
+      "title_en": "C04 doc",
+      "category": "C",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "C04 이름"
+      ]
+    },
+    {
+      "kind_id": "J08",
+      "abbreviation": "K-J08",
+      "title_ko": "J08 문서",
+      "title_en": "J08 doc",
+      "category": "J",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "J08 이름"
+      ]
+    },
+    {
+      "kind_id": "D01",
+      "abbreviation": "K-D01",
+      "title_ko": "D01 문서",
+      "title_en": "D01 doc",
+      "category": "D",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "requirement_ids": "requirement_ids 설명",
+        "behavior": "behavior 설명",
+        "acceptance": "acceptance 설명",
+        "scope": "scope 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "D01 이름"
+      ]
+    },
+    {
+      "kind_id": "D03",
+      "abbreviation": "K-D03",
+      "title_ko": "D03 문서",
+      "title_en": "D03 doc",
+      "category": "D",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "D03 이름"
+      ]
+    },
+    {
+      "kind_id": "D04",
+      "abbreviation": "K-D04",
+      "title_ko": "D04 문서",
+      "title_en": "D04 doc",
+      "category": "D",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "D04 이름"
+      ]
+    },
+    {
+      "kind_id": "D05",
+      "abbreviation": "K-D05",
+      "title_ko": "D05 문서",
+      "title_en": "D05 doc",
+      "category": "D",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "D05 이름"
+      ]
+    },
+    {
+      "kind_id": "D06",
+      "abbreviation": "K-D06",
+      "title_ko": "D06 문서",
+      "title_en": "D06 doc",
+      "category": "D",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "D06 이름"
+      ]
+    },
+    {
+      "kind_id": "E01",
+      "abbreviation": "K-E01",
+      "title_ko": "E01 문서",
+      "title_en": "E01 doc",
+      "category": "E",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "fact": "cap.ui"
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "E01 이름"
+      ]
+    },
+    {
+      "kind_id": "E04",
+      "abbreviation": "K-E04",
+      "title_ko": "E04 문서",
+      "title_en": "E04 doc",
+      "category": "E",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "E04 이름"
+      ]
+    },
+    {
+      "kind_id": "E05",
+      "abbreviation": "K-E05",
+      "title_ko": "E05 문서",
+      "title_en": "E05 doc",
+      "category": "E",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "E05 이름"
+      ]
+    },
+    {
+      "kind_id": "E06",
+      "abbreviation": "K-E06",
+      "title_ko": "E06 문서",
+      "title_en": "E06 doc",
+      "category": "E",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "E06 이름"
+      ]
+    },
+    {
+      "kind_id": "E08",
+      "abbreviation": "K-E08",
+      "title_ko": "E08 문서",
+      "title_en": "E08 doc",
+      "category": "E",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "E08 이름"
+      ]
+    },
+    {
+      "kind_id": "F02",
+      "abbreviation": "K-F02",
+      "title_ko": "F02 문서",
+      "title_en": "F02 doc",
+      "category": "F",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "F02 이름"
+      ]
+    },
+    {
+      "kind_id": "F03",
+      "abbreviation": "K-F03",
+      "title_ko": "F03 문서",
+      "title_en": "F03 doc",
+      "category": "F",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "F03 이름"
+      ]
+    },
+    {
+      "kind_id": "F07",
+      "abbreviation": "K-F07",
+      "title_ko": "F07 문서",
+      "title_en": "F07 doc",
+      "category": "F",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "F07 이름"
+      ]
+    },
+    {
+      "kind_id": "H01",
+      "abbreviation": "K-H01",
+      "title_ko": "H01 문서",
+      "title_en": "H01 doc",
+      "category": "H",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "H01 이름"
+      ]
+    },
+    {
+      "kind_id": "H05",
+      "abbreviation": "K-H05",
+      "title_ko": "H05 문서",
+      "title_en": "H05 doc",
+      "category": "H",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "H05 이름"
+      ]
+    },
+    {
+      "kind_id": "J01",
+      "abbreviation": "K-J01",
+      "title_ko": "J01 문서",
+      "title_en": "J01 doc",
+      "category": "J",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "J01 이름"
+      ]
+    },
+    {
+      "kind_id": "K01",
+      "abbreviation": "K-K01",
+      "title_ko": "K01 문서",
+      "title_en": "K01 doc",
+      "category": "K",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "K01 이름"
+      ]
+    },
+    {
+      "kind_id": "K02",
+      "abbreviation": "K-K02",
+      "title_ko": "K02 문서",
+      "title_en": "K02 doc",
+      "category": "K",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "resources": "resources 설명",
+        "topology": "topology 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "K02 이름"
+      ]
+    },
+    {
+      "kind_id": "S03",
+      "abbreviation": "K-S03",
+      "title_ko": "S03 문서",
+      "title_en": "S03 doc",
+      "category": "S",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "S03 이름"
+      ]
+    },
+    {
+      "kind_id": "L02",
+      "abbreviation": "K-L02",
+      "title_ko": "L02 문서",
+      "title_en": "L02 doc",
+      "category": "L",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "L02 이름"
+      ]
+    },
+    {
+      "kind_id": "L07",
+      "abbreviation": "K-L07",
+      "title_ko": "L07 문서",
+      "title_en": "L07 doc",
+      "category": "L",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "L07 이름"
+      ]
+    },
+    {
+      "kind_id": "M09",
+      "abbreviation": "K-M09",
+      "title_ko": "M09 문서",
+      "title_en": "M09 doc",
+      "category": "M",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "M09 이름"
+      ]
+    },
+    {
+      "kind_id": "O06",
+      "abbreviation": "K-O06",
+      "title_ko": "O06 문서",
+      "title_en": "O06 doc",
+      "category": "O",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "O06 이름"
+      ]
+    },
+    {
+      "kind_id": "P01",
+      "abbreviation": "K-P01",
+      "title_ko": "P01 문서",
+      "title_en": "P01 doc",
+      "category": "P",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "P01 이름"
+      ]
+    },
+    {
+      "kind_id": "P03",
+      "abbreviation": "K-P03",
+      "title_ko": "P03 문서",
+      "title_en": "P03 doc",
+      "category": "P",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "P03 이름"
+      ]
+    },
+    {
+      "kind_id": "P04",
+      "abbreviation": "K-P04",
+      "title_ko": "P04 문서",
+      "title_en": "P04 doc",
+      "category": "P",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "P04 이름"
+      ]
+    },
+    {
+      "kind_id": "P07",
+      "abbreviation": "K-P07",
+      "title_ko": "P07 문서",
+      "title_en": "P07 doc",
+      "category": "P",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "P07 이름"
+      ]
+    },
+    {
+      "kind_id": "Q03",
+      "abbreviation": "K-Q03",
+      "title_ko": "Q03 문서",
+      "title_en": "Q03 doc",
+      "category": "Q",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "Q03 이름"
+      ]
+    },
+    {
+      "kind_id": "T07",
+      "abbreviation": "K-T07",
+      "title_ko": "T07 문서",
+      "title_en": "T07 doc",
+      "category": "T",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "T07 이름"
+      ]
+    },
+    {
+      "kind_id": "U04",
+      "abbreviation": "K-U04",
+      "title_ko": "U04 문서",
+      "title_en": "U04 doc",
+      "category": "U",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "U04 이름"
+      ]
+    },
+    {
+      "kind_id": "V01",
+      "abbreviation": "K-V01",
+      "title_ko": "V01 문서",
+      "title_en": "V01 doc",
+      "category": "V",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "V01 이름"
+      ]
+    },
+    {
+      "kind_id": "I01",
+      "abbreviation": "K-I01",
+      "title_ko": "I01 문서",
+      "title_en": "I01 doc",
+      "category": "I",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "fact": "cap.database"
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "I01 이름"
+      ]
+    },
+    {
+      "kind_id": "F04",
+      "abbreviation": "K-F04",
+      "title_ko": "F04 문서",
+      "title_en": "F04 doc",
+      "category": "F",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "fact": "cap.production"
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "F04 이름"
+      ]
+    },
+    {
+      "kind_id": "P06",
+      "abbreviation": "K-P06",
+      "title_ko": "P06 문서",
+      "title_en": "P06 doc",
+      "category": "P",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "steps": "steps 설명",
+        "rollback": "rollback 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "P06 이름"
+      ]
+    },
+    {
+      "kind_id": "C06",
+      "abbreviation": "K-C06",
+      "title_ko": "C06 문서",
+      "title_en": "C06 doc",
+      "category": "C",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "C06 이름"
+      ]
+    },
+    {
+      "kind_id": "K07",
+      "abbreviation": "K-K07",
+      "title_ko": "K07 문서",
+      "title_en": "K07 doc",
+      "category": "K",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "K07 이름"
+      ]
+    },
+    {
+      "kind_id": "S04",
+      "abbreviation": "K-S04",
+      "title_ko": "S04 문서",
+      "title_en": "S04 doc",
+      "category": "S",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "S04 이름"
+      ]
+    },
+    {
+      "kind_id": "G01",
+      "abbreviation": "K-G01",
+      "title_ko": "G01 문서",
+      "title_en": "G01 doc",
+      "category": "G",
+      "lifecycle": "living",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "meta.yaml",
+        "detail.md"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "overview": "overview 설명",
+        "details": "details 설명",
+        "owners": "owners 설명"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": [
+        "G01 이름"
+      ]
+    },
+    {
+      "kind_id": "F05",
+      "abbreviation": "K-F05",
+      "title_ko": "A04 문서",
+      "title_en": "A04 doc",
+      "category": "F",
+      "lifecycle": "work",
+      "mode": "mandatory",
+      "owner_role": "owner",
+      "review_days": 90,
+      "trigger": null,
+      "required_when": {
+        "always": true
+      },
+      "applies_when": {
+        "always": true
+      },
+      "content_files": [
+        "run.json"
+      ],
+      "brief_must_preserve_keys": [],
+      "required_fields": {
+        "execution": "실행"
+      },
+      "optional_fields": {
+        "notes": "비고"
+      },
+      "required_link_kinds": [],
+      "optional_link_kinds": [],
+      "covered_names": []
+    }
+  ]
+}

@@ -62,7 +62,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T09" 절, 01-contracts.md C-16. 결정: D8, D23. 의존: T08(반입 완료 후 시작). 묶음 B09, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T09 15 tests/unit/test_t09_policy.py && .venv/bin/python -m pytest -q` → `rows ok T09 15/15` 출력, pytest 실패 0
 
-- [ ] T10: JSON 카탈로그 로더, 시작 카탈로그, 항목 종류, 미니 카탈로그 픽스처를 만든다
+- [x] T10: JSON 카탈로그 로더, 시작 카탈로그, 항목 종류, 미니 카탈로그 픽스처를 만든다
   - 대상: `docdb/src/docdb/catalogue.py`, `docdb/catalogue/starter.json`, `docdb/catalogue/item_types.json`, `docdb/tests/fixtures/mini_catalogue.json`, `docdb/tests/conftest.py`, `docdb/tests/unit/test_t10_catalogue.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T10" 절, 01-contracts.md C-23, C-27. 결정: D2, D11, D12. 의존: T08(반입 완료 후 시작). 묶음 B09, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T10 14 tests/unit/test_t10_catalogue.py && .venv/bin/python -m pytest -q` → `rows ok T10 14/14` 출력, pytest 실패 0
