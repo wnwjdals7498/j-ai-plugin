@@ -3,7 +3,7 @@ import difflib
 import json
 import re
 
-from docdb import clock, db, history, ids, policy, relations, textnorm
+from docdb import clock, db, history, ids, policy, relations, textnorm, workflow
 from docdb.actors import Actor
 from docdb.db import Connection
 from docdb.errors import DocdbError
@@ -622,7 +622,76 @@ class DocDB:
                                 results.append(result)
                                 successful += 1
                                 continue
+                            if patch_op in ("work", "handoff") and "h" not in patch:
+                                raise DocdbError("BAD_OP", f"{patch_op} 필수 키 누락: h")
                             kind, key = parse_handle(handle)
+                            workflow_reason = None
+                            if kind == "w" and patch_op in ("work", "handoff"):
+                                raw_why = patch.get("why")
+                                if raw_why is not None and not isinstance(raw_why, str):
+                                    raise DocdbError("BAD_OP", "why는 문자열이어야 함")
+                                if reason is not None and not isinstance(reason, str):
+                                    raise DocdbError("BAD_ARGS", "reason은 문자열이어야 함")
+                                normalized_why = textnorm.normalize_text(raw_why)
+                                normalized_reason = textnorm.normalize_text(reason)
+                                policy.assert_no_secrets(
+                                    self.con,
+                                    handle,
+                                    [normalized_why, normalized_reason],
+                                )
+                                workflow_reason = normalized_why or normalized_reason
+                            if kind == "w" and patch_op == "work":
+                                if key == ("new",):
+                                    required = ("title", "work_type", "owner", "base_refs")
+                                    if any(name not in patch for name in required):
+                                        raise DocdbError("BAD_OP", "새 작업에 필수 키가 필요함")
+                                    if set(patch) - {"why"} != {"h", "op", *required}:
+                                        raise DocdbError("BAD_OP", "작업 생성 키가 올바르지 않음")
+                                    work_id = workflow._create_work_with_reason(
+                                        self.con,
+                                        self.actor,
+                                        patch["title"],
+                                        patch["work_type"],
+                                        patch["owner"],
+                                        patch["base_refs"],
+                                        workflow_reason,
+                                    )
+                                    result = f"OK w:{work_id} created"
+                                else:
+                                    if (
+                                        "status" not in patch
+                                        or set(patch) - {"why"} != {"h", "op", "status"}
+                                    ):
+                                        raise DocdbError("BAD_OP", "작업 상태 키가 올바르지 않음")
+                                    result = workflow._set_status_with_reason(
+                                        self.con,
+                                        self.actor,
+                                        key[0],
+                                        patch["status"],
+                                        False,
+                                        workflow_reason,
+                                    )
+                                results.append(result)
+                                successful += 1
+                                continue
+                            if kind == "w" and patch_op == "handoff":
+                                required = ("from_role", "to_role", "payload")
+                                if any(name not in patch for name in required):
+                                    raise DocdbError("BAD_OP", "인계에 필수 키가 필요함")
+                                if set(patch) - {"why"} != {"h", "op", *required}:
+                                    raise DocdbError("BAD_OP", "인계 키가 올바르지 않음")
+                                result = workflow._create_handoff_with_reason(
+                                    self.con,
+                                    self.actor,
+                                    key[0],
+                                    patch["from_role"],
+                                    patch["to_role"],
+                                    patch["payload"],
+                                    workflow_reason,
+                                )
+                                results.append(result)
+                                successful += 1
+                                continue
                             if kind == "f":
                                 doc_id, kind_id, field_key = key
                                 if self.x(
