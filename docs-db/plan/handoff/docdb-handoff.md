@@ -68,7 +68,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T10" 절, 01-contracts.md C-23, C-27. 결정: D2, D11, D12. 의존: T08(반입 완료 후 시작). 묶음 B09, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T10 14 tests/unit/test_t10_catalogue.py && .venv/bin/python -m pytest -q` → `rows ok T10 14/14` 출력, pytest 실패 0
 
-- [ ] T11: 백업, CLI 골격, init 등 기반 명령과 통합 테스트 픽스처를 만든다
+- [x] T11: 백업, CLI 골격, init 등 기반 명령과 통합 테스트 픽스처를 만든다
   - 대상: `docdb/src/docdb/backup.py`, `docdb/src/docdb/cli.py`, `docdb/src/docdb/__main__.py`, `docdb/tests/conftest.py`, `docdb/tests/integration/test_t11_cli_init.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T11" 절, 01-contracts.md C-09, C-24, C-27. 결정: D5, D21, D22, D25. 의존: T09, T10(반입 완료 후 시작). 묶음 B10, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T11 16 tests/integration/test_t11_cli_init.py && .venv/bin/python -m pytest -q` → `rows ok T11 16/16` 출력, pytest 실패 0

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator
 
 import pytest
 
@@ -49,3 +49,114 @@ def mini_paths(plugin_root: Path) -> tuple[Path, Path]:
         plugin_root / "tests" / "fixtures" / "mini_catalogue.json",
         plugin_root / "catalogue" / "item_types.json",
     )
+
+
+@pytest.fixture
+def project_db(tmp_path: Path, run_cli: Callable) -> Path:
+    """표준 카탈로그를 적재한 임시 프로젝트 DB를 만든다."""
+    code, _out, err = run_cli(
+        [
+            "init",
+            "--project",
+            "t",
+            "--name",
+            "테스트",
+            "--owner",
+            "u-tester",
+            "--owner-name",
+            "Tester",
+            "--dir",
+            str(tmp_path),
+        ]
+    )
+    assert code == 0, err
+    return tmp_path / ".docdb" / "docdb.sqlite"
+
+
+@pytest.fixture
+def mini_db(tmp_path: Path, run_cli: Callable, mini_paths: tuple[Path, Path]) -> Path:
+    """미니 카탈로그를 적재한 임시 프로젝트 DB를 만든다."""
+    code, _out, err = run_cli(
+        [
+            "init",
+            "--project",
+            "t",
+            "--name",
+            "테스트",
+            "--owner",
+            "u-tester",
+            "--owner-name",
+            "Tester",
+            "--catalogue",
+            str(mini_paths[0]),
+            "--dir",
+            str(tmp_path),
+        ]
+    )
+    assert code == 0, err
+    return tmp_path / ".docdb" / "docdb.sqlite"
+
+
+@pytest.fixture
+def con(project_db: Path) -> Iterator[object]:
+    """임시 프로젝트 DB 연결을 제공하고 끝에 닫는다."""
+    import docdb.db as db
+
+    connection = db.connect(project_db)
+    try:
+        yield connection
+    finally:
+        connection.close()
+
+
+@pytest.fixture
+def human():
+    """사람 행위자를 돌려준다."""
+    from docdb.actors import Actor
+
+    return Actor("u-tester", "human")
+
+
+@pytest.fixture
+def agent():
+    """AI 행위자를 돌려준다."""
+    from docdb.actors import Actor
+
+    return Actor("ai-claude", "ai")
+
+
+@pytest.fixture
+def ci():
+    """팀 행위자를 돌려준다."""
+    from docdb.actors import Actor
+
+    return Actor("team-ci", "team")
+
+
+@pytest.fixture
+def run_cli(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture) -> Callable:
+    """CLI를 실행하고 종료 코드, stdout, stderr를 반환한다."""
+    def run(
+        args: list[str],
+        interactive: bool = False,
+        env: dict[str, str] | None = None,
+    ) -> tuple[int, str, str]:
+        from docdb.cli import main
+
+        for name in (
+            "DOCDB_HOME",
+            "DOCDB_PATH",
+            "DOCDB_START_DIR",
+            "DOCDB_ACTOR",
+            "DOCDB_WORK",
+            "DOCDB_SESSION",
+            "DOCDB_MODEL",
+        ):
+            monkeypatch.delenv(name, raising=False)
+        for name, value in (env or {}).items():
+            monkeypatch.setenv(name, value)
+        code = main(args, interactive=interactive)
+        captured = capsys.readouterr()
+        return code, captured.out, captured.err
+
+    return run
