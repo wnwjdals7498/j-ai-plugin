@@ -1,5 +1,8 @@
 """관계 제안, 사람 검토와 변경 이력을 관리한다."""
-from docdb import actors, clock, db, history, policy, textnorm
+import json
+import re
+
+from docdb import actors, clock, db, history, ids, policy, textnorm
 from docdb.actors import Actor
 from docdb.db import Connection
 from docdb.errors import DocdbError
@@ -366,3 +369,436 @@ def pending_count(con: Connection, work_id: str | None = None) -> int:
         args,
     ).fetchone()
     return int(row[0])
+
+
+_R1_TITLE_STRIP = re.compile(r"^[\s:|\-–—.)\]]+")
+
+
+def _item_types(con: Connection) -> list[tuple[str, str, str, str | None]]:
+    """카탈로그의 항목 종류·접두어·정의 필드 정보를 가져온다."""
+    return _execute(
+        con,
+        "SELECT item_type, id_prefix, defined_by_kind, defined_by_field "
+        "FROM cat_item_type ORDER BY length(id_prefix) DESC",
+    ).fetchall()
+
+
+def _id_pattern(item_types: list[tuple[str, str, str, str | None]]) -> re.Pattern | None:
+    """카탈로그 접두어로 계약의 항목 ID 정규식을 만든다."""
+    prefixes = sorted({row[1] for row in item_types}, key=len, reverse=True)
+    if not prefixes:
+        return None
+    choices = "|".join(re.escape(prefix) for prefix in prefixes)
+    return re.compile(r"\b(?:" + choices + r")[A-Z0-9]+(?:-[A-Z0-9]+)*\b", re.ASCII)
+
+
+def _item_type(item_id: str, item_types: list[tuple[str, str, str, str | None]]) -> str | None:
+    """가장 긴 일치 접두어의 항목 종류를 반환한다."""
+    for item_type, prefix, _kind_id, _field_key in item_types:
+        if item_id.startswith(prefix):
+            return item_type
+    return None
+
+
+def _matched_ids(
+    text: str | None,
+    pattern: re.Pattern | None,
+    known: set[str],
+) -> set[str]:
+    """본문에서 알려진 항목 ID만 추출한다."""
+    if not text or pattern is None:
+        return set()
+    return {match.group(0) for match in pattern.finditer(text) if match.group(0) in known}
+
+
+def _rule_relation(
+    con: Connection,
+    actor: Actor,
+    from_type: str,
+    from_id: str,
+    rel_type: str,
+    to_type: str,
+    to_id: str,
+    rule: str,
+    anchor: str,
+    work_id: str | None,
+) -> None:
+    """같은 끝점 관계가 없을 때 확정 규칙 관계와 삽입 이력을 기록한다."""
+    duplicate = _execute(
+        con,
+        "SELECT 1 FROM relation WHERE from_type=? AND from_id=? AND rel_type=? "
+        "AND to_type=? AND to_id=?",
+        (from_type, from_id, rel_type, to_type, to_id),
+    ).fetchone()
+    if duplicate is not None:
+        return
+
+    source = f"rule:{rule}"
+    created_at = clock.now_iso()
+    cursor = _execute(
+        con,
+        "INSERT INTO relation (from_type, from_id, rel_type, to_type, to_id, anchor, reason, "
+        "created_at, status, source, proposed_by) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, NULL)",
+        (
+            from_type,
+            from_id,
+            rel_type,
+            to_type,
+            to_id,
+            anchor,
+            source,
+            created_at,
+            source,
+        ),
+    )
+    rel_id = int(cursor.lastrowid)
+    after = {
+        "from_type": from_type,
+        "from_id": from_id,
+        "rel_type": rel_type,
+        "to_type": to_type,
+        "to_id": to_id,
+        "is_required": 0,
+        "target_revision_id": None,
+        "anchor": anchor,
+        "reason": source,
+        "created_at": created_at,
+        "status": "confirmed",
+        "source": source,
+        "proposed_by": None,
+        "decided_by": None,
+        "decided_at": None,
+    }
+    _record(con, rel_id, "insert", None, after, actor, source, work_id)
+
+
+def _sync_rule_relations(
+    con: Connection,
+    actor: Actor,
+    from_type: str,
+    from_id: str,
+    rel_type: str,
+    to_type: str,
+    desired: set[str],
+    rule: str,
+    anchor: str,
+    work_id: str | None,
+) -> None:
+    """규칙·anchor가 소유한 관계를 원하는 도착 ID 집합에 맞춘다."""
+    source = f"rule:{rule}"
+    rows = _execute(
+        con,
+        "SELECT rel_id, to_id FROM relation WHERE from_type=? AND from_id=? AND rel_type=? "
+        "AND to_type=? AND source=? AND anchor=?",
+        (from_type, from_id, rel_type, to_type, source, anchor),
+    ).fetchall()
+    existing = {to_id: rel_id for rel_id, to_id in rows}
+    for rel_id, to_id in rows:
+        if to_id in desired:
+            continue
+        before = _snapshot(con, rel_id)
+        if before is None:
+            continue
+        _execute(con, "DELETE FROM relation WHERE rel_id=?", (rel_id,))
+        _record(con, rel_id, "delete", before, None, actor, source)
+
+    for to_id in sorted(desired - set(existing)):
+        _rule_relation(
+            con,
+            actor,
+            from_type,
+            from_id,
+            rel_type,
+            to_type,
+            to_id,
+            rule,
+            anchor,
+            work_id,
+        )
+
+
+def _r1(
+    con: Connection,
+    actor: Actor,
+    doc_id: str,
+    kind_id: str,
+    field_key: str,
+    text: str | None,
+    work_id: str | None,
+    item_types: list[tuple[str, str, str, str | None]],
+) -> list[str]:
+    """정의 필드의 항목을 만들거나 제목을 갱신하고 건너뛴 ID를 알린다."""
+    targets = {
+        item_type: prefix
+        for item_type, prefix, defined_kind, defined_field in item_types
+        if defined_kind == kind_id and defined_field == field_key
+    }
+    if not targets or not text:
+        return []
+    pattern = _id_pattern(item_types)
+    if pattern is None:
+        return []
+
+    doc = _execute(con, "SELECT project_id FROM document WHERE doc_id=?", (doc_id,)).fetchone()
+    if doc is None:
+        raise DocdbError("NOT_FOUND", f"문서를 찾을 수 없음: {doc_id}")
+    notes: list[str] = []
+    for line in text.splitlines():
+        for match in pattern.finditer(line):
+            item_id = match.group(0)
+            item_type = _item_type(item_id, item_types)
+            if item_type not in targets:
+                continue
+            title = _R1_TITLE_STRIP.sub("", line[match.end() :]).strip()[:200] or item_id
+            title = textnorm.normalize_text(title) or item_id
+            current = _execute(
+                con,
+                "SELECT item_type, title, status, defined_in, attrs FROM item WHERE item_id=?",
+                (item_id,),
+            ).fetchone()
+            if current is not None and current[3] not in (None, doc_id):
+                notes.append(f"NOTE R1 skip {item_id} defined_in={current[3] or ''}")
+                continue
+
+            handle = f"i:{item_id}"
+            policy.assert_no_secrets(con, handle, [title])
+            attrs = json.loads(current[4]) if current is not None else {}
+            status = current[2] if current is not None else None
+            canon = textnorm.canonical_json(
+                {
+                    "title": title,
+                    "status": status,
+                    "attrs": attrs,
+                    "defined_in": f"d:{doc_id}",
+                }
+            )
+            digest = textnorm.digest16(canon)
+            token_est = textnorm.tok_est(canon)
+            now = clock.now_iso()
+            if current is None:
+                ids.validate("item", item_id)
+                ids.ensure_not_reused(con, "item", item_id)
+                _execute(
+                    con,
+                    "INSERT INTO item (item_id, project_id, item_type, title, status, defined_in, "
+                    "attrs, created_at, updated_at, digest, tok_est) "
+                    "VALUES (?, ?, ?, ?, NULL, ?, '{}', ?, ?, ?, ?)",
+                    (item_id, doc[0], item_type, title, doc_id, now, now, digest, token_est),
+                )
+                history.append_change(
+                    con,
+                    "item",
+                    item_id,
+                    "insert",
+                    None,
+                    {
+                        "title": title,
+                        "status": None,
+                        "attrs": {},
+                        "defined_in": doc_id,
+                        "item_type": item_type,
+                    },
+                    actor.id,
+                    work_id,
+                    "rule:R1",
+                )
+            elif current[1] != title or current[3] is None:
+                _execute(
+                    con,
+                    "UPDATE item SET title=?, defined_in=?, updated_at=?, digest=?, tok_est=? "
+                    "WHERE item_id=?",
+                    (title, doc_id, now, digest, token_est, item_id),
+                )
+                history.append_change(
+                    con,
+                    "item",
+                    item_id,
+                    "update",
+                    {
+                        "title": current[1],
+                        "status": status,
+                        "attrs": attrs,
+                        "defined_in": current[3],
+                    },
+                    {
+                        "title": title,
+                        "status": status,
+                        "attrs": attrs,
+                        "defined_in": doc_id,
+                    },
+                    actor.id,
+                    work_id,
+                    "rule:R1",
+                )
+    return notes
+
+
+def _r2(
+    con: Connection,
+    actor: Actor,
+    doc_id: str,
+    work_id: str | None,
+    item_types: list[tuple[str, str, str, str | None]],
+) -> None:
+    """문서의 모든 필드에 언급된 외부 정의 항목의 R2 관계를 맞춘다."""
+    rows = _execute(con, "SELECT item_id, defined_in FROM item").fetchall()
+    known = {item_id for item_id, _defined_in in rows}
+    defined_in = {item_id: owner for item_id, owner in rows}
+    pattern = _id_pattern(item_types)
+    desired: set[str] = set()
+    fields = _execute(
+        con,
+        "SELECT value_text FROM field_value WHERE doc_id=? AND value_text IS NOT NULL",
+        (doc_id,),
+    ).fetchall()
+    for (value,) in fields:
+        for item_id in _matched_ids(value, pattern, known):
+            if defined_in[item_id] != doc_id:
+                desired.add(item_id)
+    _sync_rule_relations(
+        con,
+        actor,
+        "document",
+        doc_id,
+        "references",
+        "item",
+        desired,
+        "R2",
+        f"d:{doc_id}",
+        work_id,
+    )
+
+
+def _r3(
+    con: Connection,
+    actor: Actor,
+    doc_id: str,
+    kind_id: str,
+    field_key: str,
+    text: str | None,
+    work_id: str | None,
+    item_types: list[tuple[str, str, str, str | None]],
+) -> None:
+    """추출 규칙이 지정한 같은 줄 항목 쌍의 R3 관계를 맞춘다."""
+    row = _execute(
+        con,
+        "SELECT extract_rel FROM cat_kind_field WHERE kind_id=? AND field_key=?",
+        (kind_id, field_key),
+    ).fetchone()
+    if row is None or row[0] is None:
+        return
+    spec = json.loads(row[0])
+    rel_type = spec.get("rel")
+    from_prefix = spec.get("from_prefix")
+    to_prefix = spec.get("to_prefix")
+    if (
+        rel_type not in REL_TYPES
+        or not isinstance(from_prefix, str)
+        or not isinstance(to_prefix, str)
+    ):
+        return
+    from_allowed, to_allowed = _ENDPOINTS[rel_type]
+    if "item" not in from_allowed or "item" not in to_allowed:
+        return
+
+    items = _execute(con, "SELECT item_id FROM item").fetchall()
+    known = {item_id for (item_id,) in items}
+    pattern = _id_pattern(item_types)
+    desired: set[tuple[str, str, str]] = set()
+    if text and pattern is not None:
+        for line in text.splitlines():
+            ids_on_line = _matched_ids(line, pattern, known)
+            from_ids = sorted(item_id for item_id in ids_on_line if item_id.startswith(from_prefix))
+            to_ids = sorted(item_id for item_id in ids_on_line if item_id.startswith(to_prefix))
+            for from_id in from_ids:
+                for to_id in to_ids:
+                    desired.add((from_id, rel_type, to_id))
+
+    rows = _execute(
+        con,
+        "SELECT rel_id, from_id, rel_type, to_id FROM relation WHERE from_type='item' "
+        "AND to_type='item' AND source='rule:R3' AND anchor=?",
+        (f"f:{doc_id}/{kind_id}/{field_key}",),
+    ).fetchall()
+    existing = {
+        (from_id, existing_rel, to_id): rel_id
+        for rel_id, from_id, existing_rel, to_id in rows
+    }
+    for relation_key, rel_id in existing.items():
+        if relation_key in desired:
+            continue
+        before = _snapshot(con, rel_id)
+        if before is None:
+            continue
+        _execute(con, "DELETE FROM relation WHERE rel_id=?", (rel_id,))
+        _record(con, rel_id, "delete", before, None, actor, "rule:R3")
+    for from_id, desired_rel, to_id in sorted(desired - set(existing)):
+        _rule_relation(
+            con,
+            actor,
+            "item",
+            from_id,
+            desired_rel,
+            "item",
+            to_id,
+            "R3",
+            f"f:{doc_id}/{kind_id}/{field_key}",
+            work_id,
+        )
+
+
+def after_field_write(
+    con: Connection,
+    actor: Actor,
+    doc_id: str,
+    kind_id: str,
+    field_key: str,
+    text: str | None,
+    work_id: str | None,
+) -> list[str]:
+    """필드 저장 뒤 R1·R2·R3·R5를 실행하고 안내 줄을 돌려준다."""
+    with db.write_tx(con):
+        item_types = _item_types(con)
+        notes = _r1(con, actor, doc_id, kind_id, field_key, text, work_id, item_types)
+        _r2(con, actor, doc_id, work_id, item_types)
+        _r3(con, actor, doc_id, kind_id, field_key, text, work_id, item_types)
+        if work_id:
+            _rule_relation(
+                con,
+                actor,
+                "work",
+                work_id,
+                "changes",
+                "document",
+                doc_id,
+                "R5",
+                f"w:{work_id}",
+                work_id,
+            )
+        return notes
+
+
+def after_item_write(
+    con: Connection,
+    actor: Actor,
+    item_id: str,
+    work_id: str | None,
+) -> list[str]:
+    """항목 저장 뒤 작업 문맥의 R5 변경 관계를 기록한다."""
+    if not work_id:
+        return []
+    with db.write_tx(con):
+        _rule_relation(
+            con,
+            actor,
+            "work",
+            work_id,
+            "changes",
+            "item",
+            item_id,
+            "R5",
+            f"w:{work_id}",
+            work_id,
+        )
+    return []

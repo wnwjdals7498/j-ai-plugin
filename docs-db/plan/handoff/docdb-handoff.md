@@ -93,7 +93,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T15" 절, 01-contracts.md C-13, C-14, C-17, C-24. 결정: D10, D11. 의존: T14(반입 완료 후 시작). 묶음 B14, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T15 17 tests/unit/test_t15_relations.py && .venv/bin/python -m pytest -q` → `rows ok T15 17/17` 출력, pytest 실패 0
 
-- [ ] T16: 규칙 추출 R1·R2·R3·R5를 쓰기 경로에 연결한다
+- [x] T16: 규칙 추출 R1·R2·R3·R5를 쓰기 경로에 연결한다
   - 대상: `docdb/src/docdb/relations.py`, `docdb/src/docdb/llm.py`, `docdb/tests/integration/test_t16_rules.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T16" 절, 01-contracts.md C-13, C-17. 결정: D10, D11, D12. 의존: T15(반입 완료 후 시작). 묶음 B15, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T16 11 tests/integration/test_t16_rules.py && .venv/bin/python -m pytest -q` → `rows ok T16 11/11` 출력, pytest 실패 0
