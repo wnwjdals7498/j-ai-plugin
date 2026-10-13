@@ -99,7 +99,7 @@
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T16 11 tests/integration/test_t16_rules.py && .venv/bin/python -m pytest -q` → `rows ok T16 11/11` 출력, pytest 실패 0
 
 - [ ] T17: ctx에 확정 대기·필수 연결 누락 줄을 추가하고 trace를 확정 관계로 제한한다
-  - 대상: `docdb/src/docdb/llm.py`, `docdb/tests/integration/test_t17_ctx.py`
+  - 대상: `docdb/src/docdb/relations.py`, `docdb/src/docdb/llm.py`, `docdb/tests/integration/test_t17_ctx.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T17" 절, 01-contracts.md C-13, C-17. 결정: D10. 의존: T16(반입 완료 후 시작). 묶음 B16, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T17 6 tests/integration/test_t17_ctx.py && .venv/bin/python -m pytest -q` → `rows ok T17 6/6` 출력, pytest 실패 0
 

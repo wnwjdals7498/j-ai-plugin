@@ -417,7 +417,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 ### T17 `ctx`·`trace` 확장
 
 - **선행**: T16. **계약**: C-13(새 줄), C-17(`pending_count`, `missing_links`). **결정**: D10.
-- **대상 파일**: `src/docdb/llm.py`, `tests/integration/test_t17_ctx.py`
+- **대상 파일**: `src/docdb/relations.py`(`missing_links` 추가 — 앞 작업 어디에도 없음, C-17), `src/docdb/llm.py`, `tests/integration/test_t17_ctx.py`
 - **규칙**: `ctx`의 `! pending_links=<n>`은 프로젝트 전체 수(작업 필터 없음), 강제 줄. `! missing_link`는 `ctx`가 고른 관련 문서만, 원본 P2 우선순위·예산 안.
 
 | # | 상황 | 기대 |
