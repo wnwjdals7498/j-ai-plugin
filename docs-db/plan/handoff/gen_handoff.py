@@ -111,7 +111,7 @@ T = [
      ["tests/integration/test_t23_summaries.py"], 7),
     ("T24", "표준 라이브러리 부트스트랩 docdb_launch.py를 만든다", "codex", "B22", "T22, T23",
      "C-04, C-05, C-24", "D3, D4, D13, D26",
-     ["src/docdb_launch.py", "tests/integration/test_t24_launch.py"], ["tests/integration/test_t24_launch.py"], 9),
+     ["src/docdb_launch.py", "tests/integration/test_t24_launch.py"], ["tests/integration/test_t24_launch.py"], 10),
     ("T25", "MCP 서버를 이식한다", "codex", "B23", "T24",
      "C-03, C-14, C-25", "D3, D18, O21 기본값",
      ["src/docdb/mcp_server.py", "tests/integration/test_t25_mcp.py"], ["tests/integration/test_t25_mcp.py"], 6),

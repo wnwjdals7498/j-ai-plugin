@@ -576,6 +576,7 @@ STD_SQLITE_IMPORT = r"^\s*(import|from)\s+sqlite3\b"
 | 7 | 패키지 없는 빈 venv(`uv venv`) + 맞는 스탬프 | 종료 2, `DEP_MISSING` |
 | 8 | #6 방식 venv, `DOCDB_START_DIR` 없음, `PWD=<tmp>/proj`, `mcp`(가짜 `docdb.mcp_server`를 `sys.modules`에 주입해 `main` 호출 시점의 환경을 기록) | 기록된 `DOCDB_START_DIR == "<tmp>/proj"` (C-24, D26) |
 | 9 | #8과 같고 `DOCDB_START_DIR=<tmp>/other` | 기록된 값이 `<tmp>/other` 그대로 |
+| 10 | #6 방식 venv + `PYTHONUSERBASE=<tmp>/ub`의 사용자 site-packages에 import 시 예외를 던지는 가짜 `typing_extensions.py`, `cli --db <DB> actor list` | 종료 0(venv 경로가 사용자 site-packages보다 앞, C-24) |
 
 ### T25 MCP 서버
 
