@@ -117,6 +117,7 @@ git -C $P worktree remove --force $W && git -C $P branch -D mh-t$N
 | worktree를 저장소 안에 두면 agy가 본체를 워크스페이스로 잡음 | `/tmp/model-handoff/` 아래에만 만든다(스킬 2026-08-03 실측) |
 | 실행자가 대상 밖을 수정 | 반입은 대상 경로만, 나머지는 버림 |
 | 병렬 묶음 반입 충돌 | 대상이 겹치지 않는 쌍만 묶음(생성 시 확인) |
+| Codex `~/.codex/hooks/danger_guard.py`가 `apply_patch` 본문의 `DROP TABLE`·`TRUNCATE` 등을 파괴적 명령으로 차단(2026-10-13 T04 `db.py` 2회 차단) | 훅은 유지(사용자 결정). 차단으로 실패한 태스크는 같은 프롬프트를 Sonnet 서브에이전트로 넘긴다(3.4 `unavailable`과 같은 방식) |
 | **Antigravity 약관** | 저장소 README: Antigravity 공식 FAQ는 소비자 요금제에서 agy를 다른 코딩 에이전트 안에서 감싸 쓰는 것을 지원하지 않으며 **계정 정지 사유가 될 수 있다**고 안내. 사용 여부는 사용자 판단. 쓰지 않으려면 agy 9건을 codex로 바꿔 다시 생성(`gen_handoff.py`의 표에서 실행자 값 변경) |
 
 ## 5. 실행 전 승인 (2026-10-13 승인 완료)
