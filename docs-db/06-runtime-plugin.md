@@ -18,7 +18,8 @@
 | Linux x86_64(glibc 2.28 이상, musl) | 있음 |
 | macOS arm64(Apple Silicon) | 있음 |
 | Windows 32·64비트 | 있음 |
-| Linux aarch64, macOS Intel | **없음** → 소스 빌드 필요(실측 S5) |
+| Linux aarch64 | **없음** → 소스 빌드 성공. 단 내장 SQLite가 아니라 시스템 SQLite에 링크(Ubuntu 24.04: 3.45.1, 기능 검사 통과). 실측 S5(2026-10-14) |
+| macOS Intel | **없음** → 시스템 SQLite로 소스 빌드 실패(`sqlite3_load_extension` 없음). 지원하지 않음. 실측 S5(2026-10-14) |
 
 ## 2. 의존성
 

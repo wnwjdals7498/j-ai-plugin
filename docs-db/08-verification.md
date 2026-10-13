@@ -43,6 +43,15 @@ T00a(Claude Code 2.1.296, `claude --plugin-dir`)와 T00b(codex-cli 0.162.1, 로�
 
 반영: [06](06-runtime-plugin.md) 3절·6.3절, 계약 C-24(`mcp`의 `PWD` → `DOCDB_START_DIR`)·C-26 Codex 절, 결정 D26.
 
+T00c(2026-10-14, GitHub Actions run 38484842771, 임시 orphan 브랜치 `spike/docdb-t00c`, 확인 뒤 삭제):
+
+| # | 결과 |
+|---|---|
+| S4 | `windows-2025`: `py` 실행기 있음(3.10~3.14, 기본 3.14.7). `py -3 -m venv` + `pip install pysqlite3==0.6.1 mcp==2.3.0` 성공(휠). SDK stdio 클라이언트로 한글 문자열 왕복 성공(`KOREAN_ROUNDTRIP OK`). `py -3`에 venv site-packages를 C-24 방식(`scheme="nt"`, purelib=platlib=`v\Lib\site-packages`, 맨 앞 배치)으로 붙여 `pysqlite3`·`mcp` import와 기능 검사 통과(SQLite 3.53.4). 미측정: Claude Code·Codex가 Windows에서 MCP `command`로 `py`를 해석하는지 |
+| S5 | `ubuntu-24.04-arm`(Python 3.12.15): 소스 빌드 성공, 시스템 SQLite 3.45.1에 링크, 기능 검사 통과. `macos-15-intel`(Python 3.12.10): 소스 빌드 실패 — Apple 시스템 SQLite에 `sqlite3_load_extension`이 없어 컴파일 오류 2건. Intel Mac은 지원 범위 밖 |
+
+반영: [06](06-runtime-plugin.md) 1.1절 지원 범위 표, 저장소 README 지원 플랫폼(T26).
+
 ## 4. 완료 기준
 
 1. 로컬 매트릭스(Python 3.10~3.14) 전체 통과.
