@@ -323,7 +323,7 @@ def restore(db_path: Path, backup_file: Path) -> None: ...
 ```python
 PATTERNS: dict[str, str]
 PREFIXES: dict[str, str]   # {"work": "WORK", "run": "RUN", "handoff": "HO", "approval": "APR", "artifact": "ART", "exception": "PEX"}
-def validate(kind: str, value: str) -> None: ...      # 위반 시 DocdbError("ID_FORMAT")
+def validate(kind: str, value: str) -> None: ...      # 위반 시 DocdbError("ID_FORMAT"). 검사는 re.fullmatch(pattern, value, re.ASCII)
 def next_id(con: Connection, kind: str, year: int | None = None) -> str: ...
 def ensure_not_reused(con: Connection, entity_type: str, entity_id: str) -> None: ...
 ```
@@ -367,7 +367,7 @@ def require_ai(actor: Actor) -> None: ...
 | `ai` | `^ai-[a-z0-9][a-z0-9-]{0,62}$` | `ai-claude`, `ai-codex` |
 | `team` | `^team-[a-z0-9][a-z0-9-]{0,62}$` | `team-ci` |
 
-- `add_actor`: ID가 `actor_type`의 정규식에 맞지 않으면 `ID_FORMAT`. 이력(`actor` insert)을 남긴다.
+- `add_actor`: ID가 `actor_type`의 정규식에 맞지 않으면 `ID_FORMAT`(검사는 `re.fullmatch(pattern, value, re.ASCII)`, C-10과 같음). 이력(`actor` insert)을 남긴다.
 - `resolve_actor`: `explicit` → `DOCDB_ACTOR` 순. 둘 다 없으면 `BAD_ARGS`. 없거나 `active=0`이면 `NOT_FOUND`.
 - `require_human`: 행위자가 `human`이 아니거나 `interactive`가 거짓이면 `NEEDS_HUMAN`. CLI는 `sys.stdin.isatty() and sys.stdout.isatty()`로 `interactive`를 정해 넘긴다. 에이전트가 셸로 실행하는 명령에는 TTY가 없으므로 사람 전용 명령을 실행할 수 없다. **이것은 실수 방지 장치이며 보안 경계가 아니다.**
 - `require_ai`: 행위자가 `ai`가 아니면 `DocdbError("BAD_ARGS", "MCP 행위자는 ai여야 함")`.
