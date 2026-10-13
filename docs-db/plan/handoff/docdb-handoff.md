@@ -138,7 +138,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T24" 절, 01-contracts.md C-04, C-05, C-24. 결정: D3, D4, D13, D26. 의존: T22, T23(반입 완료 후 시작). 묶음 B22, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T24 10 tests/integration/test_t24_launch.py && .venv/bin/python -m pytest -q` → `rows ok T24 10/10` 출력, pytest 실패 0
 
-- [ ] T25: MCP 서버를 이식한다
+- [x] T25: MCP 서버를 이식한다
   - 대상: `docdb/src/docdb/mcp_server.py`, `docdb/tests/integration/test_t25_mcp.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T25" 절, 01-contracts.md C-03, C-14, C-25. 결정: D3, D18, O21 기본값. 의존: T24(반입 완료 후 시작). 묶음 B23, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T25 6 tests/integration/test_t25_mcp.py && .venv/bin/python -m pytest -q` → `rows ok T25 6/6` 출력, pytest 실패 0
