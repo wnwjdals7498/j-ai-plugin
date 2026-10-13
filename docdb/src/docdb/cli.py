@@ -161,6 +161,11 @@ def _parser() -> argparse.ArgumentParser:
         choices=("public", "approved_providers", "local_only"),
         default="approved_providers",
     )
+    import_next = import_commands.add_parser("next")
+    import_next.add_argument("--budget", type=int, default=1500)
+    import_label = import_commands.add_parser("label")
+    import_label.add_argument("labels", help="JSON 배열 또는 @파일")
+    import_commands.add_parser("report")
     return parser
 
 
@@ -492,13 +497,39 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
             return 0
 
         if args.command == "import":
-            actor = actors.resolve_actor(con, args.actor)
-            result = importer.scan(
-                con, actor, args.folder, args.owner, args.export_policy
-            )
-            if result:
+            if args.import_command == "scan":
+                actor = actors.resolve_actor(con, args.actor)
+                result = importer.scan(
+                    con, actor, args.folder, args.owner, args.export_policy
+                )
+                if result:
+                    sys.stdout.write(result + "\n")
+                    return 1
+                return 0
+            if args.import_command == "next":
+                result = importer.next_batch(con, args.budget)
                 sys.stdout.write(result + "\n")
-                return 1
+                return 0
+            if args.import_command == "label":
+                raw = args.labels
+                if raw.startswith("@"):
+                    try:
+                        raw = Path(raw[1:]).read_text(encoding="utf-8")
+                    except OSError as exc:
+                        raise DocdbError("BAD_ARGS", "label 파일을 읽을 수 없음") from exc
+                try:
+                    labels = json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    raise DocdbError("BAD_ARGS", "label 입력이 올바른 JSON이 아님") from exc
+                if not isinstance(labels, list):
+                    raise DocdbError("BAD_ARGS", "label 입력은 JSON 배열이어야 함")
+                result = importer.label(con, actors.resolve_actor(con, args.actor), labels)
+                if result:
+                    sys.stdout.write(result + "\n")
+                    return 1 if any(line.startswith("ERR ") for line in result.splitlines()) else 0
+                return 0
+            result = importer.report(con)
+            sys.stdout.write(result + "\n")
             return 0
 
         raise DocdbError("BAD_ARGS", "지원하지 않는 명령")
