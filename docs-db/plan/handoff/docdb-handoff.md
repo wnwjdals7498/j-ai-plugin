@@ -32,7 +32,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T03" 절, 01-contracts.md C-03, C-04. 결정: D5, D13. 의존: T02(반입 완료 후 시작). 묶음 B03, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T03 12 tests/unit/test_t03_paths.py && .venv/bin/python -m pytest -q` → `rows ok T03 12/12` 출력, pytest 실패 0
 
-- [ ] T04: pysqlite3 연결, 트랜잭션, 기능 검사, import 경계 테스트를 만든다
+- [x] T04: pysqlite3 연결, 트랜잭션, 기능 검사, import 경계 테스트를 만든다
   - 대상: `docdb/src/docdb/db.py`, `docdb/tests/unit/test_t04_db.py`, `docdb/tests/unit/test_import_guard.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T04" 절, 01-contracts.md C-01, C-08. 결정: D20. 의존: T03(반입 완료 후 시작). 묶음 B04, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T04 11 tests/unit/test_t04_db.py tests/unit/test_import_guard.py && .venv/bin/python -m pytest -q` → `rows ok T04 11/11` 출력, pytest 실패 0
