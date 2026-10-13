@@ -27,7 +27,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T02" 절, 01-contracts.md C-05, C-06, C-07. 결정: D19. 의존: T01(반입 완료 후 시작). 묶음 B02, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T02 14 tests/unit/test_t02_text.py && .venv/bin/python -m pytest -q` → `rows ok T02 14/14` 출력, pytest 실패 0
 
-- [ ] T03: 데이터 폴더, venv, DB 탐색 경로 모듈을 만든다
+- [x] T03: 데이터 폴더, venv, DB 탐색 경로 모듈을 만든다
   - 대상: `docdb/src/docdb/paths.py`, `docdb/tests/unit/test_t03_paths.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T03" 절, 01-contracts.md C-03, C-04. 결정: D5, D13. 의존: T02(반입 완료 후 시작). 묶음 B03, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T03 12 tests/unit/test_t03_paths.py && .venv/bin/python -m pytest -q` → `rows ok T03 12/12` 출력, pytest 실패 0
