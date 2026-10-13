@@ -1,5 +1,5 @@
 다음 실행자 규약에 따라 /tmp/model-handoff/j-ai-plugin/t17/docs-db/plan/handoff/docdb-handoff.md의 T17을 수행하라.
-작업 범위는 docdb/src/docdb/llm.py, docdb/tests/integration/test_t17_ctx.py뿐이다. 그 외 파일·디렉토리는 절대 건드리지 마라.
+작업 범위는 docdb/src/docdb/relations.py, docdb/src/docdb/llm.py, docdb/tests/integration/test_t17_ctx.py뿐이다. 그 외 파일·디렉토리는 절대 건드리지 마라.
 
 너는 실행자다. 계획 수립·범위 변경은 하지 않는다.
 

@@ -82,7 +82,7 @@ T = [
      ["tests/integration/test_t16_rules.py"], 11),
     ("T17", "ctx에 확정 대기·필수 연결 누락 줄을 추가하고 trace를 확정 관계로 제한한다", "codex", "B16", "T16",
      "C-13, C-17", "D10",
-     ["src/docdb/llm.py", "tests/integration/test_t17_ctx.py"], ["tests/integration/test_t17_ctx.py"], 6),
+     ["src/docdb/relations.py", "src/docdb/llm.py", "tests/integration/test_t17_ctx.py"], ["tests/integration/test_t17_ctx.py"], 6),
     ("T18", "작업 생성·상태 변경·인계 작성과 수신 확인을 만든다", "codex", "B17", "T17",
      "C-14, C-18, C-24", "D15, D24, D25",
      ["src/docdb/workflow.py", "src/docdb/llm.py", "src/docdb/cli.py", "tests/integration/test_t18_workflow.py"],
