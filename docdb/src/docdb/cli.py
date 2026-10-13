@@ -2,6 +2,8 @@
 import argparse
 import contextlib
 import io
+import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -9,6 +11,7 @@ from pathlib import Path
 from docdb import actors, backup, catalogue, db, history, migrate, paths, policy
 from docdb.actors import Actor
 from docdb.errors import DocdbError, format_error
+from docdb.llm import DocDB
 
 _PROJECT_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$", re.ASCII)
 
@@ -62,6 +65,33 @@ def _parser() -> argparse.ArgumentParser:
     allow_parser.add_argument("handle")
     allow_parser.add_argument("--reason", required=True)
     allow_parser.add_argument("--days", type=int, required=True)
+
+    ctx_parser = commands.add_parser("ctx")
+    ctx_parser.add_argument("work_id")
+    ctx_parser.add_argument("--budget", type=int, default=1500)
+
+    get_parser = commands.add_parser("get")
+    get_parser.add_argument("handles", nargs="+")
+    get_parser.add_argument("--level", type=int, default=1)
+    get_parser.add_argument("--known", default="{}", help='{"handle":"dg"} JSON')
+    get_parser.add_argument("--budget", type=int, default=2000)
+
+    find_parser = commands.add_parser("find")
+    find_parser.add_argument("query")
+    find_parser.add_argument("--limit", type=int, default=10)
+
+    trace_parser = commands.add_parser("trace")
+    trace_parser.add_argument("handle")
+    trace_parser.add_argument("--rel", nargs="*")
+    trace_parser.add_argument("--depth", type=int, default=1)
+
+    since_parser = commands.add_parser("since")
+    since_parser.add_argument("cursor", type=int)
+    since_parser.add_argument("--work-only", action="store_true")
+
+    put_parser = commands.add_parser("put")
+    put_parser.add_argument("patches", help="JSON 배열 또는 @파일")
+    put_parser.add_argument("--reason")
     return parser
 
 
@@ -102,6 +132,45 @@ def _human_actor(con: db.Connection, actor_id: str | None, interactive: bool) ->
     actor = actors.resolve_actor(con, actor_id)
     actors.require_human(actor, interactive)
     return actor
+
+
+def _llm_command(con: db.Connection, args: argparse.Namespace) -> int:
+    """LLM 조회·필드 쓰기 명령을 실행하고 응답을 stdout에 쓴다."""
+    actor = actors.resolve_actor(con, args.actor)
+    work = args.work or os.environ.get("DOCDB_WORK")
+    session = args.session or os.environ.get("DOCDB_SESSION")
+    model = args.model or os.environ.get("DOCDB_MODEL")
+    client = DocDB(con, actor, work, session, model)
+    if args.command == "ctx":
+        result = client.ctx(args.work_id, args.budget)
+    elif args.command == "get":
+        try:
+            known = json.loads(args.known)
+        except json.JSONDecodeError as exc:
+            raise DocdbError("BAD_ARGS", "known은 JSON 객체여야 함") from exc
+        if not isinstance(known, dict):
+            raise DocdbError("BAD_ARGS", "known은 JSON 객체여야 함")
+        result = client.get(args.handles, args.level, known, args.budget)
+    elif args.command == "find":
+        result = client.find(args.query, args.limit)
+    elif args.command == "trace":
+        result = client.trace(args.handle, args.rel, args.depth)
+    elif args.command == "since":
+        result = client.since(args.cursor, work if args.work_only else None)
+    else:
+        raw = args.patches
+        if raw.startswith("@"):
+            try:
+                raw = Path(raw[1:]).read_text(encoding="utf-8")
+            except OSError as exc:
+                raise DocdbError("BAD_ARGS", "put 파일을 읽을 수 없음") from exc
+        try:
+            patches = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise DocdbError("BAD_ARGS", "put 입력이 올바른 JSON이 아님") from exc
+        result = client.put(patches, args.reason)
+    sys.stdout.write(result + "\n")
+    return 0
 
 
 def _init(args: argparse.Namespace) -> int:
@@ -201,6 +270,9 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
 
     con = db.open_project_db(db_path=db_path)
     try:
+        if args.command in {"ctx", "get", "find", "trace", "since", "put"}:
+            return _llm_command(con, args)
+
         if args.command == "backup":
             backup.backup(con, _project_id(con), args.reason)
             return 0
