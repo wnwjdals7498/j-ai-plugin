@@ -7,6 +7,7 @@ from typing import Any, ContextManager, Iterator
 from pysqlite3 import dbapi2
 
 from docdb.errors import DocdbError
+from docdb import paths
 
 DatabaseError = dbapi2.DatabaseError
 IntegrityError = dbapi2.IntegrityError
@@ -94,3 +95,18 @@ def _write_tx(con: Connection) -> Iterator[None]:
 def write_tx(con: Connection) -> ContextManager[None]:
     """쓰기 트랜잭션 컨텍스트. 이미 트랜잭션 안이면 SAVEPOINT를 쓴다."""
     return _write_tx(con)
+
+
+def open_project_db(start: Path | None = None, db_path: Path | None = None) -> Connection:
+    """프로젝트 DB를 열고 SQLite 기능과 스키마 버전을 확인한다."""
+    selected_path = db_path if db_path is not None else paths.find_db(start)
+    con = connect(Path(selected_path))
+    try:
+        check_capabilities(con)
+        from docdb import migrate
+
+        migrate.ensure_current(con)
+    except BaseException:
+        con.close()
+        raise
+    return con

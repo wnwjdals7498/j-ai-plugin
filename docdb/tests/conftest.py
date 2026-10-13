@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Iterator
 
 import pytest
 
@@ -16,3 +17,17 @@ def frozen_now(monkeypatch: pytest.MonkeyPatch) -> None:
 def plugin_root() -> Path:
     """플러그인 루트 경로를 돌려준다."""
     return Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture
+def schema_con(tmp_path: Path) -> Iterator[object]:
+    """임시 DB에 현재 스키마를 적용한 연결을 제공한다."""
+    import docdb.db as db
+    import docdb.migrate as migrate
+
+    con = db.connect(tmp_path / "s.sqlite", create=True)
+    try:
+        migrate.apply_pending(con)
+        yield con
+    finally:
+        con.close()

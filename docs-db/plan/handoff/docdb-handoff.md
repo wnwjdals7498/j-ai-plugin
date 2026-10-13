@@ -37,7 +37,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T04" 절, 01-contracts.md C-01, C-08. 결정: D20. 의존: T03(반입 완료 후 시작). 묶음 B04, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T04 11 tests/unit/test_t04_db.py tests/unit/test_import_guard.py && .venv/bin/python -m pytest -q` → `rows ok T04 11/11` 출력, pytest 실패 0
 
-- [ ] T05: 마이그레이션 실행기와 원본 스키마 0001·0002를 만든다
+- [x] T05: 마이그레이션 실행기와 원본 스키마 0001·0002를 만든다
   - 대상: `docdb/src/docdb/migrate.py`, `docdb/src/docdb/schema/0001_base.sql`, `docdb/src/docdb/schema/0002_token_ext.sql`, `docdb/src/docdb/db.py`, `docdb/tests/conftest.py`, `docdb/tests/unit/test_t05_migrate.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T05" 절, 01-contracts.md C-08, C-09, C-27. 결정: D21. 의존: T04(반입 완료 후 시작). 묶음 B05, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T05 8 tests/unit/test_t05_migrate.py && .venv/bin/python -m pytest -q` → `rows ok T05 8/8` 출력, pytest 실패 0
