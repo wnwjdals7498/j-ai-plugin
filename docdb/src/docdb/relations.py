@@ -817,3 +817,28 @@ def after_item_write(
             work_id,
         )
     return []
+
+
+def apply_run_coverage(
+    con: Connection,
+    actor: Actor,
+    run_id: str,
+    item_ids: list[str],
+) -> None:
+    """실행 결과의 covers 항목에 대해 R4 evidence_for 규칙 관계를 기록한다."""
+    row = _execute(con, "SELECT work_id FROM run WHERE run_id=?", (run_id,)).fetchone()
+    work_id = row[0] if row is not None else None
+    with db.write_tx(con):
+        for item_id in sorted(item_ids):
+            _rule_relation(
+                con,
+                actor,
+                "run",
+                run_id,
+                "evidence_for",
+                "item",
+                item_id,
+                "R4",
+                f"r:{run_id}",
+                work_id,
+            )
