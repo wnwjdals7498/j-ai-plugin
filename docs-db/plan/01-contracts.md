@@ -768,8 +768,8 @@ def lookup(con, handle: str, current_digest: str) -> tuple[str, str | None]: ...
 | 실행 `r:` | `f"{run_id} {run_type} {result}"` |
 | 서술 필드(`format='md'`) | `entity_summary`에 저장된 에이전트 요약. digest가 같으면 `fresh`, 다르면 `stale`, 없으면 `none` |
 
-- `put`의 `sum`: 필드 쓰기가 성공한 뒤 `tok_est(sum) > 60`이면 `SUMMARY_TOO_LONG`(전체 취소). 민감 정보 검사 후 `entity_summary`에 `INSERT OR REPLACE`(`author_type='llm'`, `source_digest`=새 dg).
-- `ctx`·`get level=1`은 구조 값은 `template`, 서술 필드는 `lookup` 결과를 원본 형식(`sum=…`, `sum=none`, `sum=stale`)으로 쓴다.
+- `put`의 `sum`: 문자열이 아니거나 공백뿐이면 `BAD_OP`(전체 취소). 필드 쓰기가 성공한 뒤 `tok_est(sum) > 60`이면 `SUMMARY_TOO_LONG`(전체 취소). 민감 정보 검사 후 `entity_summary`에 `INSERT OR REPLACE`(`author_type='llm'`, `source_digest`=새 dg).
+- `get level=1`은 구조 값(JSON 필드)은 `template`, 서술 필드는 `lookup` 결과를 원본 형식(`sum=…`, `sum=none`, `sum=stale`)으로 쓴다. `ctx`의 항목·실행 줄은 원본 형식 그대로 둔다(C-13·전역 제약 우선, `template`을 쓰지 않는다).
 
 ---
 
