@@ -828,6 +828,7 @@ python docdb_launch.py cli <docctl 인자...>
 - 외부 명령은 모듈 수준 함수 `_run(cmd: list) -> None`(내부 `subprocess.run(cmd, check=True)`)으로만 실행한다(테스트가 바꿔 끼움).
 - `setup`: `python -m venv <venv_dir>` → `<venv_python> -m pip install -c constraints.txt pysqlite3 mcp` → 스탬프 쓰기. `--remove`는 venv 폴더 삭제(백업 폴더는 지우지 않음).
 - `mcp`·`cli`: 스탬프 없으면 `NO_VENV`, 버전 불일치면 `VENV_MISMATCH` → `sysconfig.get_paths(scheme=<"nt" if os.name == "nt" else "posix_prefix">, vars={"base": venv, "platbase": venv})`의 `purelib`·`platlib`를 `site.addsitedir`(scheme을 명시하는 이유: Debian 계열 Python은 기본 scheme이 `posix_local`이라 venv 경로가 틀어짐. RHEL은 `platlib`가 `lib64`이며 venv의 `lib64` 링크로 해결됨 — 2026-10-13 개발 서버에서 확인) → `src`를 `sys.path` 앞에 추가 → `import pysqlite3`, `import mcp`(실패 시 `DEP_MISSING`) → `docdb.mcp_server.main()` 또는 `docdb.cli.main(argv)`.
+- `mcp`만: 서버를 시작하기 전에 `DOCDB_START_DIR`가 없거나 빈 값이고 `PWD`가 비어 있지 않으면 `os.environ["DOCDB_START_DIR"] = os.environ["PWD"]`로 둔다. 이미 있으면 덮어쓰지 않는다. `cli`에는 적용하지 않는다. 이유: Codex는 MCP 서버를 플러그인 루트에서 실행하고 환경 변수 치환이 없어 프로젝트 폴더는 `env_vars`로 전달한 `PWD`로만 알 수 있다(T00b 실측, D26).
 - 오류는 stderr에 `format_error` 형식, 종료 코드는 C-05.
 
 ---
@@ -859,7 +860,40 @@ def main() -> None: ...
 
 ### `.codex-plugin/plugin.json`, `codex.mcp.json`
 
-T00b 실측 결과로 오케스트레이터가 이 절을 채운 뒤 T26을 시작한다. 그 전에는 만들지 않는다. 고정 사항: Codex 쪽 `DOCDB_ACTOR`는 `"ai-codex"`.
+T00b 실측(2026-10-13, codex-cli 0.162.1, [../08-verification.md](../08-verification.md) 3.1절)으로 채웠다. Windows 명령은 T00c 결과로 보완한다.
+
+`.codex-plugin/plugin.json`:
+
+```json
+{
+  "name": "docdb",
+  "version": "0.1.0",
+  "description": "Project document DB with token-minimal MCP tools.",
+  "author": { "name": "PMT" },
+  "skills": "./skills/",
+  "mcpServers": "./codex.mcp.json"
+}
+```
+
+`codex.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "docdb": {
+      "command": "python3",
+      "args": ["./src/docdb_launch.py", "mcp"],
+      "cwd": ".",
+      "env_vars": ["PWD", "DOCDB_HOME", "XDG_DATA_HOME"],
+      "env": { "DOCDB_ACTOR": "ai-codex" }
+    }
+  }
+}
+```
+
+- `"cwd": "."`는 설치된 플러그인 루트로 풀린다. 이것이 없으면 작업 폴더가 프로젝트 폴더가 되어 상대 경로 `args`가 실패한다. `args`·`env` 안의 `${PLUGIN_ROOT}`는 치환되지 않는다(문자 그대로 전달).
+- Codex는 MCP 서버에 `HOME`, `LANG`, `LOGNAME`, `PATH`, `SHELL`, `TERM`, `USER`만 넘긴다. 그 밖의 변수는 `env_vars`에 적어야 전달된다. 프로젝트 폴더는 `PWD`로 받아 부트스트랩이 `DOCDB_START_DIR`로 옮긴다(C-24).
+- `version`은 `__version__`과 같게 한다. `DOCDB_ACTOR`는 `"ai-codex"`.
 
 ### `bin/docctl`
 

@@ -56,7 +56,7 @@ venv 실행 파일을 직접 띄우지 않고 현재 프로세스에 site-packag
 | 도구 | 설정 위치 | 기본값 |
 |---|---|---|
 | Claude Code | `userConfig.python_path` → MCP `command`에 `${user_config.python_path}` | `python3`. Windows는 `py` 또는 절대 경로 지정 |
-| Codex | `codex.mcp.json`의 `command` | `python3`(Windows 처리는 실측 S2) |
+| Codex | `codex.mcp.json`의 `command` | `python3`. `"cwd": "."`로 플러그인 루트에서 실행(S2 실측). Windows 처리는 S4 |
 
 ## 4. 데이터 폴더 (D4 구체화, 확정 D13)
 
@@ -148,7 +148,7 @@ CLI 명령: `setup [--remove]`, `init`, `catalogue load <json>`, `ctx|get|find|t
 
 ### 6.3 Codex 설정
 
-`.codex-plugin/plugin.json`에 `skills: "./skills/"`, `mcpServers: "./codex.mcp.json"`. MCP 설정 안의 경로·작업 폴더·환경 변수·Windows 명령 해석은 공식 문서에 없어 실측 S2 결과로 확정한다.
+`.codex-plugin/plugin.json`에 `skills: "./skills/"`, `mcpServers: "./codex.mcp.json"`. MCP 설정 안의 경로·작업 폴더·환경 변수 해석은 공식 문서에 없어 실측 S2([08](08-verification.md) 3.1절)로 확정했다: `"cwd": "."` + 상대 `args`, 프로젝트 폴더는 `env_vars`의 `PWD`로 받아 부트스트랩이 `DOCDB_START_DIR`로 옮긴다(D26). 정확한 JSON은 구현 계획 계약 C-26. Windows 명령은 S4로 확정한다.
 
 ### 6.4 스킬 (U-11)
 

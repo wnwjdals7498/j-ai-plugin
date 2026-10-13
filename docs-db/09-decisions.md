@@ -81,6 +81,14 @@
 | D24 | O23 | AI는 planned·active·blocked·review까지, verified·closed·cancelled는 사람 |
 | D25 | O26 | 에이전트 작업 진행은 PMT, 문서 변경 묶음 `work`는 docdb. `work.base_refs`에 PMT Item ID, `project_id`는 PMT slug |
 
+### 2.2 2026-10-13 3차 결정 — 실측 반영
+
+T00b 실측([08](08-verification.md) 3.1절) 뒤 사용자가 선택했다.
+
+| # | 원 번호 | 결정 |
+|---|---|---|
+| D26 | O7(S2) | Codex MCP 서버는 `"cwd": "."`(플러그인 루트)와 상대 `args`로 실행하고, 프로젝트 폴더는 `env_vars`로 받은 `PWD`를 `docdb_launch.py mcp`가 `DOCDB_START_DIR`가 없을 때만 옮겨 쓴다. `paths.find_db`는 바꾸지 않는다. 대안(`find_db`에 `PWD` 추가, Codex 호출 메타의 workspaces 사용)은 채택하지 않음. 한계: `PWD`는 Codex를 띄운 셸의 폴더라 `codex -C`·데스크톱 앱에서는 다를 수 있고 그때는 `NO_DB`로 드러난다 |
+
 ## 3. 원 설계와 달라진 점
 
 | 원 설계 | 지금 | 이유 |

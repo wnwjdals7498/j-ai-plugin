@@ -31,6 +31,18 @@
 | S4 | Windows: `py` 실행, venv site-packages 붙이기, 한글 stdio | [06](06-runtime-plugin.md) 3절 |
 | S5 | 휠 없는 플랫폼(Linux aarch64, Intel Mac)에서 `pysqlite3` 소스 빌드 | [06](06-runtime-plugin.md) 1.1절 지원 범위 표기 |
 
+### 3.1 실측 결과 (2026-10-13, 개발 서버 Linux x86_64, `mcp` 2.3.0 SDK 서버)
+
+T00a(Claude Code 2.1.296, `claude --plugin-dir`)와 T00b(codex-cli 0.162.1, 로컬 마켓플레이스 설치 후 `codex exec`). 도구 `ping` 하나를 노출하는 시험 서버로 작업 폴더·환경 변수·원시 JSON-RPC 요청을 기록했다.
+
+| # | 결과 |
+|---|---|
+| S1 | 둘 다 연결·도구 호출 성공. Claude Code 첫 요청은 `server/discover`(`_meta` 프로토콜 `2026-07-28`, 이어서 `subscriptions/listen`), Codex 첫 요청은 `initialize`(`protocolVersion` `2025-06-18`). `mcp` 2.3.0이 두 세대를 모두 처리한다 |
+| S2 | `args`의 상대 경로(`./x.py`)와 `${PLUGIN_ROOT}`는 실패(서버 미시작, `${PLUGIN_ROOT}`는 치환 없이 문자 그대로). 절대 경로는 성공. `"cwd": "."`를 주면 작업 폴더가 설치된 플러그인 루트(`$CODEX_HOME/plugins/cache/<마켓>/<플러그인>/<버전>`)가 되어 상대 경로가 성공. `cwd`가 없으면 작업 폴더는 Codex 작업 폴더(프로젝트). 서버 환경은 `HOME LANG LOGNAME PATH SHELL TERM USER`만 전달되고 `env_vars`에 적은 변수(`PWD` 등, 미설정 변수가 있어도 무방)와 `env`의 고정값이 추가된다. MCP roots는 미지원(빈 목록). 상대 `command`(`./x.sh`)는 `cwd` 없이 실패. Windows는 S4(T00c) |
+| S3 | `env`의 `${CLAUDE_PLUGIN_ROOT}`·`${CLAUDE_PROJECT_DIR}`·`${CLAUDE_PLUGIN_DATA}` 모두 치환됨(`CLAUDE_PLUGIN_DATA` = `~/.claude/plugins/data/<플러그인>-<마켓>`). MCP 서버 작업 폴더는 Claude Code를 시작한 프로젝트 폴더 |
+
+반영: [06](06-runtime-plugin.md) 3절·6.3절, 계약 C-24(`mcp`의 `PWD` → `DOCDB_START_DIR`)·C-26 Codex 절, 결정 D26.
+
 ## 4. 완료 기준
 
 1. 로컬 매트릭스(Python 3.10~3.14) 전체 통과.
