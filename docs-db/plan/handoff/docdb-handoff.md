@@ -22,7 +22,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T01" 절, 01-contracts.md C-01, C-02, C-27. 결정: D3, D14. 의존: 없음(반입 완료 후 시작). 묶음 B01, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T01 5 tests/unit/test_t01_skeleton.py && .venv/bin/python -m pytest -q` → `rows ok T01 5/5` 출력, pytest 실패 0
 
-- [ ] T02: 오류 모델, 시간, 텍스트 정규화 모듈을 만든다
+- [x] T02: 오류 모델, 시간, 텍스트 정규화 모듈을 만든다
   - 대상: `docdb/src/docdb/errors.py`, `docdb/src/docdb/clock.py`, `docdb/src/docdb/textnorm.py`, `docdb/tests/conftest.py`, `docdb/tests/unit/test_t02_text.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T02" 절, 01-contracts.md C-05, C-06, C-07. 결정: D19. 의존: T01(반입 완료 후 시작). 묶음 B02, 지정 실행자 agy.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T02 14 tests/unit/test_t02_text.py && .venv/bin/python -m pytest -q` → `rows ok T02 14/14` 출력, pytest 실패 0
