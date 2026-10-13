@@ -1,0 +1,2 @@
+# import 시험 픽스처는 바이트 그대로 보존한다(CRLF·BOM·비 UTF-8 검사용). core.autocrlf=input이어도 변환하지 않는다.
+* -text
