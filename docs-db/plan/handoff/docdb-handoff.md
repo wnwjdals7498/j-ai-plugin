@@ -17,7 +17,7 @@
 
 ## 태스크
 
-- [ ] T01: docdb 패키지 골격, 개발 venv, 고정 버전 파일, pytest 설정을 만든다
+- [x] T01: docdb 패키지 골격, 개발 venv, 고정 버전 파일, pytest 설정을 만든다
   - 대상: `docdb/src/docdb/__init__.py`, `docdb/pytest.ini`, `docdb/constraints.txt`, `docdb/constraints-dev.txt`, `docdb/tests/conftest.py`, `docdb/tests/unit/test_t01_skeleton.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T01" 절, 01-contracts.md C-01, C-02, C-27. 결정: D3, D14. 의존: 없음(반입 완료 후 시작). 묶음 B01, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T01 5 tests/unit/test_t01_skeleton.py && .venv/bin/python -m pytest -q` → `rows ok T01 5/5` 출력, pytest 실패 0
