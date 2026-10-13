@@ -399,9 +399,20 @@ class DocDB:
     ) -> str:
         """변경 커서 뒤의 엔터티별 변경과 짧은 본문 diff를 반환한다."""
         out = Out(budget)
+        # 규칙 관계는 원인인 문서·항목 변경으로 이미 보고하므로 별도 집계하지 않는다.
         sql = (
             "SELECT entity_type, entity_id, max(change_id), count(*), "
-            "group_concat(DISTINCT actor_id) FROM change_log WHERE change_id > ?"
+            "group_concat(DISTINCT actor_id) FROM change_log WHERE change_id > ? "
+            "AND NOT (entity_type='relation' AND substr(CASE "
+            "WHEN op='delete' THEN json_extract(before_json, '$.source') "
+            "WHEN op='insert' THEN json_extract(after_json, '$.source') "
+            "ELSE coalesce(json_extract(after_json, '$.source'), "
+            "(SELECT json_extract(c2.after_json, '$.source') FROM change_log c2 "
+            "WHERE c2.entity_type='relation' AND c2.entity_id=change_log.entity_id "
+            "AND c2.op='insert' AND c2.change_id<=change_log.change_id "
+            "ORDER BY c2.change_id DESC LIMIT 1), "
+            "(SELECT source FROM relation r "
+            "WHERE CAST(r.rel_id AS TEXT)=change_log.entity_id)) END, 1, 5)='rule:')"
         )
         args: list = [cursor]
         if work:
@@ -693,7 +704,17 @@ class DocDB:
                                     self.work,
                                     normalized_reason or field_reason,
                                 )
+                                notes = relations.after_field_write(
+                                    self.con,
+                                    self.actor,
+                                    doc_id,
+                                    kind_id,
+                                    field_key,
+                                    new_value,
+                                    self.work,
+                                )
                                 results.append(f"OK {handle} dg={digest} tok={token_est}")
+                                results.extend(notes)
                                 successful += 1
                                 continue
                             elif kind == "i":
@@ -888,6 +909,10 @@ class DocDB:
                                         self.work,
                                         normalized_reason or field_reason,
                                     )
+
+                                relations.after_item_write(
+                                    self.con, self.actor, item_id, self.work
+                                )
     
                                 results.append(f"OK {handle} dg={digest} tok={token_est}")
                                 successful += 1
