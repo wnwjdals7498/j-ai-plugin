@@ -8,7 +8,7 @@ import re
 import sys
 from pathlib import Path
 
-from docdb import actors, backup, catalogue, db, history, migrate, paths, policy
+from docdb import actors, backup, catalogue, db, history, migrate, paths, policy, relations
 from docdb.actors import Actor
 from docdb.errors import DocdbError, format_error
 from docdb.llm import DocDB
@@ -92,6 +92,19 @@ def _parser() -> argparse.ArgumentParser:
     put_parser = commands.add_parser("put")
     put_parser.add_argument("patches", help="JSON 배열 또는 @파일")
     put_parser.add_argument("--reason")
+
+    link_parser = commands.add_parser("link")
+    link_commands = link_parser.add_subparsers(dest="link_command", required=True)
+    link_review = link_commands.add_parser("review")
+    link_review.add_argument("--work", dest="link_work")
+    link_confirm = link_commands.add_parser("confirm")
+    link_confirm.add_argument("rel_ids", nargs="+", type=int)
+    link_reject = link_commands.add_parser("reject")
+    link_reject.add_argument("rel_id", type=int)
+    link_reject.add_argument("--why", required=True)
+    link_remove = link_commands.add_parser("remove")
+    link_remove.add_argument("rel_id", type=int)
+    link_remove.add_argument("--why", required=True)
     return parser
 
 
@@ -272,6 +285,25 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
     try:
         if args.command in {"ctx", "get", "find", "trace", "since", "put"}:
             return _llm_command(con, args)
+
+        if args.command == "link":
+            if args.link_command == "review":
+                work_id = args.link_work or args.work
+                for line in relations.review(con, work_id):
+                    sys.stdout.write(line + "\n")
+                return 0
+            actor = _human_actor(con, args.actor, interactive)
+            if args.link_command == "confirm":
+                lines = relations.confirm(con, actor, args.rel_ids, interactive)
+                for line in lines:
+                    sys.stdout.write(line + "\n")
+                return 1 if any(line.startswith("ERR ") for line in lines) else 0
+            if args.link_command == "reject":
+                result = relations.reject(con, actor, args.rel_id, args.why, interactive)
+            else:
+                result = relations.remove(con, actor, args.rel_id, args.why, interactive)
+            sys.stdout.write(result + "\n")
+            return 0
 
         if args.command == "backup":
             backup.backup(con, _project_id(con), args.reason)
