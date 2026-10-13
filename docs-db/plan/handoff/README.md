@@ -81,6 +81,8 @@ handoff run --only $EX --cwd $W --prompt-file $W.prompt --log $W.log    # Bash r
 
 stdout은 JSON, 종료 코드 `0` 완료 · `1` 실행자 실패 · `3` 모든 실행자 사용 불가.
 
+T01은 대상 파일에 `docdb/.venv`가 없어 실행자가 venv를 만들지 않고 멈춘다(2026-10-13 실측). 메인이 02-tasks T01 규칙대로 venv를 만들고, `constraints.txt`를 빈 venv의 `uv pip freeze` 결과와 대조한 뒤 검증한다.
+
 ### 3.3 판정과 반입
 
 센티널(`TASK_DONE`/`TASK_FAIL`)은 참고값이다. 판정은 메인이 직접 한다.
