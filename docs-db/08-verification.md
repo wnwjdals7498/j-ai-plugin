@@ -56,6 +56,19 @@ T00c(2026-10-14, GitHub Actions run 38484842771, 임시 orphan 브랜치 `spike/
 
 `docdb/tools/matrix.sh`(uv, `UV_PYTHON_DOWNLOADS=never`, `PYTHONNOUSERSITE=1`) 결과: `py3.10 PASS`, `py3.11 PASS`, `py3.12 PASS`, `py3.13 PASS`, `py3.14 SKIP(인터프리터 없음)` — 종료 코드 0, 버전마다 전체 pytest. 3.14는 GitHub Actions 매트릭스(T28)에서 확인한다. 이 실행 전 두 결함을 고쳤다: 3.12에서 뽑은 `constraints.txt`가 3.10 설치를 막음(범용 해석으로 교체), T24 테스트가 `docdb/.venv`에 묶여 다른 인터프리터에서 실패함(실행 중 venv 사용).
 
+
+### 3.3 실사용 확인 (T29, 2026-10-14, 개발 서버, 격리된 `DOCDB_HOME`·프로젝트 폴더)
+
+| 단계 | 결과 |
+|---|---|
+| `python3 src/docdb_launch.py setup` | 데이터 폴더에 venv 생성·의존성 설치 13초(범용 `constraints.txt`가 pip에서도 동작), 스탬프 기록 |
+| `docctl init` | `.docdb/docdb.sqlite`·`.gitignore`, 행위자 4명 |
+| `put` 작업 생성 → `import scan docs` | `WORK-2026-0001`, `요구사항.md`가 `DOC-D01-IMP-0001`로 적용(scan마다 `run(run_type='import')`, artifact `access_policy_ref='r:RUN-…'`) |
+| Claude Code(`claude --plugin-dir docdb -p`) | MCP `docdb_ctx`→`docdb_get`(level 1, `sum=none`)→`docdb_put`(필드 append·항목 upsert·`link` 한 번에 `APPLIED ok=3`, 관계 `proposed`)→`docdb_since`(규칙 관계 제외) 성공. `DOCDB_HOME` 상속, `${CLAUDE_PROJECT_DIR}` 치환 확인 |
+| 사람 `link confirm` | 비대화형 `ERROR NEEDS_HUMAN`(종료 1), TTY(`script`)에서 `OK rel=3 confirmed`, `since`에 확정 기록 |
+| Codex(격리 `CODEX_HOME`, 저장소 마켓플레이스 설치) | `docdb_ctx`가 `PWD` 매핑(D26)으로 프로젝트 DB를 찾음, `docdb_get i:`의 `dg=`, `docdb_trace` 확정 관계 정상. `docdb_put`은 처음 `ERR ? BAD_HANDLE` — 에이전트가 `h` 대신 `handle` 키를 보냄. 도구 설명에 패치 키를 명시(C-25 보정)한 뒤 `APPLIED ok=1`, 행위자 `ai-codex` |
+
+참고: 작업 트리에서 로컬 설치하면 Codex가 미추적 개발 venv까지 복사한다(67MB). GitHub 설치에는 해당 없음.
 ## 4. 완료 기준
 
 1. 로컬 매트릭스(Python 3.10~3.14) 전체 통과.
