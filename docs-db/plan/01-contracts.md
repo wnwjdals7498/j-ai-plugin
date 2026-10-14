@@ -484,7 +484,7 @@ class DocDB:
 
 ### 공통
 
-- 패치 값 타입(최종 리뷰 M3): `text`·`why`·`anchor`·`sum`·`title`·`status`·`state`·`expect`·`defined_in`·`from`·`to`·`rel`은 있으면 문자열이어야 하며 아니면 `BAD_OP`. `attrs`·`attrs_patch`·`payload`는 객체. `pysqlite3.dbapi2.Error` 전체(InterfaceError 포함)는 `DB`로 바꾼다.
+- 패치 값 타입(최종 리뷰 M3): `text`·`why`·`anchor`·`sum`·`title`·`status`·`state`·`expect`·`defined_in`·`from`·`to`·`rel`은 있으면 문자열이어야 하며 아니면 `BAD_OP`. 값이 `null`인 키도 `BAD_OP`다(키를 빼야 한다). 이 타입 검사는 처리 순서의 맨 앞(핸들 파싱 전)에 한다. `attrs`·`attrs_patch`·`payload`는 객체. `pysqlite3.dbapi2.Error` 전체(InterfaceError 포함)는 `DB`로 바꾼다.
 
 - `reason` 인자는 이력의 `reason`에 저장한다. 패치별 `why`가 있으면 그것을 우선한다.
 - 규칙 R5에 쓰는 작업 ID는 `DocDB(work=…)` 생성 인자(CLI `--work` 또는 `DOCDB_WORK`)다.
@@ -548,7 +548,7 @@ SECRET_PATTERNS = [
 - `assert_no_secrets`: 걸린 패턴이 있고 유효한 예외가 없으면 `DocdbError("SECRET_DETECTED", "<패턴 이름 목록>")`. 비밀 값 자체는 어디에도 출력·기록하지 않는다.
 - 유효한 예외: `policy_exception`에서 `scope = "secret:" + handle`이고 `expires_at > now_iso()`이며 `approved_by`가 `human`인 행.
 - `allow_secret`은 사람 전용(`require_human`), `exception_id = next_id("exception")`, `kind_id=NULL`, 이력 기록.
-- 검사 대상: `field_value` 본문(텍스트·JSON 직렬화), 항목 제목·`attrs`, 관계 `why`, `sum`, 인계 `payload`·`from_role`·`to_role`, 작업 제목, 모든 패치 `why`와 `put`·CLI의 `reason`, 실행 적재(C-20) 입력의 모든 문자열 값(`findings[].message/evidence`, `limitations`, `target_ref`, `runner`, `raw_log.uri`, `command_argv`·`env_snapshot`·`target_versions`의 JSON 직렬화 등, 키 이름 제외), import 적용 본문. 요약: 사람이나 에이전트가 넣어 DB에 남는 모든 자유 텍스트(전역 제약)이며, 이 목록은 그 예시를 빠짐없이 적은 것이다. 추가(최종 리뷰 M1·L11): 항목 `status`, 실행 적재 입력은 중첩까지 포함한 모든 문자열 값(재귀, 키 이름 제외), 사람 경로의 `init --name`, `policy allow-secret --reason`, 카탈로그 JSON의 문자열 값.
+- 검사 대상: `field_value` 본문(텍스트·JSON 직렬화), 항목 제목·`attrs`, 관계 `why`, `sum`, 인계 `payload`·`from_role`·`to_role`, 작업 제목, 모든 패치 `why`와 `put`·CLI의 `reason`, 실행 적재(C-20) 입력의 모든 문자열 값(`findings[].message/evidence`, `limitations`, `target_ref`, `runner`, `raw_log.uri`, `command_argv`·`env_snapshot`·`target_versions`의 JSON 직렬화 등, 키 이름 제외), import 적용 본문. 요약: 사람이나 에이전트가 넣어 DB에 남는 모든 자유 텍스트(전역 제약)이며, 이 목록은 그 예시를 빠짐없이 적은 것이다. 추가(최종 리뷰 M1·L11, 후속 검증 N1·N3): 항목 `status`, 실행 적재 입력은 중첩까지 포함한 모든 문자열 값(재귀, 고정 스키마 키 이름 제외)과 자유 형식 객체 `env_snapshot`·`target_versions`의 키, 사람 경로의 `init --name`·`--owner-name`, `policy allow-secret --reason`(이미 있는 예외로 통과되지 않게 예외 대상과 다른 고정 범위로 검사), 카탈로그 JSON의 문자열 값.
 - `can_export`: `document.export_policy != 'local_only'`. `classification`은 보지 않는다(O20 미결). 적용 위치는 C-13의 "정책 차단" 줄.
 
 ---
@@ -599,7 +599,7 @@ ID 추출 정규식(공통): 알려진 접두어 목록 P(`cat_item_type.id_pref
 |---|---|---|---|
 | R1 정의 | `f:` 쓰기, `(kind_id, field_key)`가 어떤 `cat_item_type`의 `(defined_by_kind, defined_by_field)`와 같음 | 그 필드의 각 줄에서 해당 접두어 ID 추출. 제목 = 줄에서 ID 뒤 텍스트의 앞쪽을 아래 `R1_TITLE_STRIP` 정규식으로 걷어 낸 값(최대 200자, 비면 ID). 항목이 없으면 생성(`defined_in`=문서), 같은 문서에 정의되어 있고 제목이 다르면 제목 갱신, 다른 문서에 정의되어 있으면 건드리지 않고 `NOTE R1 skip …`. 기존 항목의 `defined_in`이 NULL(`i:` upsert로 정의 없이 만든 항목)이면 이 문서를 정의 문서로 채택해 `defined_in`과 제목을 갱신하고(update 이력) `NOTE`를 내지 않는다. 필드에서 사라진 ID의 항목은 삭제하지 않는다 | — |
 | R2 언급 | 모든 `f:` 쓰기 | 문서의 모든 필드 본문에서 **이미 있는** 항목 ID 중 `defined_in`이 이 문서가 아닌 것의 집합 M을 구한다. `relation(document → item, references, rule:R2, anchor='d:<doc>')`을 M과 같게 맞춘다(없으면 추가, M에 없는 기존 R2 관계는 삭제) | `d:<doc>` |
-| R3 필드 규칙 | `f:` 쓰기, 필드에 `extract_rel`이 있음 | 각 줄에서 `from_prefix` ID들과 `to_prefix` ID들(둘 다 이미 있는 항목)을 찾아 모든 쌍에 `relation(item → item, <rel>, rule:R3)`. 이 필드 anchor의 기존 R3 관계를 새 집합과 같게 맞춘다. 결정성(최종 리뷰 M2): 지울 관계를 같은 `extract_rel`을 가진 다른 필드의 현재 값이 여전히 만들어 내면 지우지 않고 그 필드로 `anchor`를 옮긴다(이력 update) | `f:<doc>/<kind>/<field>` |
+| R3 필드 규칙 | `f:` 쓰기, 필드에 `extract_rel`이 있음 | 각 줄에서 `from_prefix` ID들과 `to_prefix` ID들(둘 다 이미 있는 항목)을 찾아 모든 쌍에 `relation(item → item, <rel>, rule:R3)`. 결정성(최종 리뷰 M2, 후속 검증 N2로 확정): 같은 `(kind_id, field_key)`의 모든 문서 필드의 현재 값으로 R3 관계 집합을 다시 계산한다. 각 관계의 `anchor`는 그 관계를 만들어 내는 필드 핸들 중 사전순 최솟값이고(바뀌면 이력 update), 어느 필드도 만들지 않는 R3 관계만 지운다. 결과는 쓰기 순서와 무관하다 | `f:<doc>/<kind>/<field>` |
 | R4 실행 | `run ingest`의 `covers` | 각 항목에 `relation(run → item, evidence_for, rule:R4)` | `r:<run>` |
 | R5 작업 변경 | 작업 ID가 있는 상태의 `f:`·`i:` 쓰기 | `relation(work → document 또는 item, changes, rule:R5)`. 이미 있으면 그대로 | `w:<work>` |
 
