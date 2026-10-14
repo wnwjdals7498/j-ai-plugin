@@ -119,7 +119,8 @@ def test_t25_1_tools_keep_original_definitions(tmp_path: Path) -> None:
         "docdb_trace": "관계 추적(ID만). rel 예: verified_by, implements, depends_on.",
         "docdb_since": "커서(c:N) 이후 바뀐 것만, 짧은 diff로.",
         "docdb_put": (
-            "쓰기(원자적, 본문 미반환). 필드 f: set|append|replace_section(text, expect, "
+            "쓰기(원자적, 본문 미반환). 패치 키: op 필수, f:·i:·w: 대상은 h(핸들). "
+            "필드 f: set|append|replace_section(text, expect, "
             "anchor, state, why, sum). 항목 i: upsert. 관계 link(from, rel, to, why)·"
             "unlink(rel_id). 작업 w: work·handoff."
         ),
