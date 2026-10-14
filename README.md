@@ -32,6 +32,8 @@ claude plugin install model-handoff@j-ai-plugins
 - 설정·대기 상태: `~/.config/model-handoff/` (`MODEL_HANDOFF_HOME`으로 변경)
 - 승인 방식: 기본은 각 CLI의 자동 승인 모드입니다(Codex `--approve-for-me` + 샌드박스 네트워크 허용, Antigravity `--sandbox` + `toolPermission: proceed-in-sandbox`(`handoff setup agy`로 설정), Claude `--permission-mode auto`). 모든 검사를 끄는 `bypass`는 `handoff config set <실행자>.permission bypass`로 직접 지정해야 하며 격리된 환경에서만 사용합니다.
 - 개인 계정 분리: `handoff config set claude.config_dir <경로>`, `handoff config set codex.codex_home <경로>`
+- opencode(freellmapi) 헤드리스 핸드오프: PATH에 opencode가 있는 환경(WSL 전용 설치는 미지원)에서 `opencode run --auto --format json -m freellmapi/smart` 로 수동 디스패치합니다. [절차](model-handoff/skills/handoff/references/opencode-headless.md)
+- pi(freellmapi) 헤드리스 핸드오프: `pi -p --mode json --model freellmapi/auto:smart ... < /dev/null`로 수동 디스패치합니다. 종료 코드가 아니라 `stopReason`으로 판정합니다. [절차](model-handoff/skills/handoff/references/pi-headless.md)
 - 주의: Antigravity 공식 FAQ는 소비자 요금제에서 agy를 다른 코딩 에이전트 안에서 감싸 쓰는 것을 지원하지 않으며 계정 정지 사유가 될 수 있다고 안내합니다. `handoff config disable agy`로 끌 수 있습니다.
 
 ## 마켓플레이스 구조
