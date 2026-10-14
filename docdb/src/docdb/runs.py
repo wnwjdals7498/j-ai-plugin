@@ -18,6 +18,28 @@ _ALLOWED_DISPOSITIONS = frozenset(
 _ALLOWED_TRUST_SOURCES = frozenset({"ci", "runner", "manual", "ai_reported"})
 
 
+def _payload_strings(value: Any) -> list[str]:
+    """payload의 문자열 값을 키 이름 없이 재귀적으로 정규화해 모은다."""
+    if isinstance(value, str):
+        normalized = textnorm.normalize_text(value)
+        return [normalized] if normalized is not None else []
+    if isinstance(value, dict):
+        return [text for nested in value.values() for text in _payload_strings(nested)]
+    if isinstance(value, list):
+        return [text for nested in value for text in _payload_strings(nested)]
+    return []
+
+
+def _validate_id(kind: str, value: str) -> None:
+    """형식 오류에 입력값을 넣지 않고 ID를 검사한다."""
+    try:
+        ids.validate(kind, value)
+    except DocdbError as exc:
+        if exc.code == "ID_FORMAT":
+            raise DocdbError(exc.code, f"{kind} ID 형식이 올바르지 않음") from exc
+        raise
+
+
 def _execute(con: Connection, sql: str, args: tuple = ()) -> Any:
     """DB 오류를 계약 오류로 바꾸어 SQL을 실행한다."""
     try:
@@ -37,17 +59,18 @@ def ingest(con: Connection, actor: Actor, payload: dict) -> str:
             raise DocdbError("BAD_ARGS", f"필수 키 누락: {key}")
 
     result = payload["result"]
-    if result not in _ALLOWED_RESULTS:
-        raise DocdbError("BAD_ARGS", f"허용되지 않은 result: {result}")
+    if not isinstance(result, str) or result not in _ALLOWED_RESULTS:
+        raise DocdbError("BAD_ARGS", "허용되지 않은 값: result")
 
     work_id = payload.get("work_id")
     if work_id is not None:
-        ids.validate("work", work_id)
+        _validate_id("work", work_id)
         if _execute(con, "SELECT 1 FROM work WHERE work_id=?", (work_id,)).fetchone() is None:
             raise DocdbError("NOT_FOUND", f"작업을 찾을 수 없음: {work_id}")
 
     env_item_id = payload.get("env_item_id")
     if env_item_id is not None:
+        _validate_id("item", env_item_id)
         if _execute(con, "SELECT 1 FROM item WHERE item_id=?", (env_item_id,)).fetchone() is None:
             raise DocdbError("NOT_FOUND", f"환경 항목을 찾을 수 없음: {env_item_id}")
 
@@ -58,6 +81,7 @@ def ingest(con: Connection, actor: Actor, payload: dict) -> str:
         for item_id in covers:
             if not isinstance(item_id, str):
                 raise DocdbError("BAD_ARGS", "covers 요소는 문자열이어야 함")
+            _validate_id("item", item_id)
             if _execute(con, "SELECT 1 FROM item WHERE item_id=?", (item_id,)).fetchone() is None:
                 raise DocdbError("NOT_FOUND", f"항목을 찾을 수 없음: {item_id}")
 
@@ -71,13 +95,19 @@ def ingest(con: Connection, actor: Actor, payload: dict) -> str:
             for fk in ("code", "severity", "target_type", "target_id", "message"):
                 if fk not in finding or finding[fk] is None:
                     raise DocdbError("BAD_ARGS", f"finding 필수 키 누락: {fk}")
-            if finding["severity"] not in _ALLOWED_SEVERITIES:
-                raise DocdbError("BAD_ARGS", f"허용되지 않은 severity: {finding['severity']}")
-            if finding["target_type"] not in _ALLOWED_TARGET_TYPES:
-                raise DocdbError("BAD_ARGS", f"허용되지 않은 target_type: {finding['target_type']}")
+            if (
+                not isinstance(finding["severity"], str)
+                or finding["severity"] not in _ALLOWED_SEVERITIES
+            ):
+                raise DocdbError("BAD_ARGS", "허용되지 않은 값: severity")
+            if (
+                not isinstance(finding["target_type"], str)
+                or finding["target_type"] not in _ALLOWED_TARGET_TYPES
+            ):
+                raise DocdbError("BAD_ARGS", "허용되지 않은 값: target_type")
             disp = finding.get("disposition", "open")
-            if disp not in _ALLOWED_DISPOSITIONS:
-                raise DocdbError("BAD_ARGS", f"허용되지 않은 disposition: {disp}")
+            if not isinstance(disp, str) or disp not in _ALLOWED_DISPOSITIONS:
+                raise DocdbError("BAD_ARGS", "허용되지 않은 값: disposition")
 
     raw_log = payload.get("raw_log")
     if raw_log is not None:
@@ -85,8 +115,8 @@ def ingest(con: Connection, actor: Actor, payload: dict) -> str:
             raise DocdbError("BAD_ARGS", "raw_log uri 필수")
 
     trust_source = "ai_reported" if actor.type == "ai" else payload["trust_source"]
-    if trust_source not in _ALLOWED_TRUST_SOURCES:
-        raise DocdbError("BAD_ARGS", f"허용되지 않은 trust_source: {trust_source}")
+    if not isinstance(trust_source, str) or trust_source not in _ALLOWED_TRUST_SOURCES:
+        raise DocdbError("BAD_ARGS", "허용되지 않은 값: trust_source")
 
     with db.write_tx(con):
         run_id = ids.next_id(con, "run")
@@ -127,32 +157,7 @@ def ingest(con: Connection, actor: Actor, payload: dict) -> str:
         if attestation_ref is not None:
             attestation_ref = textnorm.normalize_text(attestation_ref) or attestation_ref
 
-        secret_texts: list[str | None] = [
-            target_ref,
-            runner,
-            target_versions_str,
-            env_snapshot_str,
-        ]
-        if limitations is not None:
-            secret_texts.append(limitations)
-        if raw_uri is not None:
-            secret_texts.append(raw_uri)
-        if command_argv_str is not None:
-            secret_texts.append(command_argv_str)
-        if attestation_ref is not None:
-            secret_texts.append(attestation_ref)
-
-        if findings:
-            for finding in findings:
-                norm_msg = textnorm.normalize_text(finding.get("message"))
-                if norm_msg is not None:
-                    secret_texts.append(norm_msg)
-                if finding.get("evidence") is not None:
-                    norm_ev = textnorm.normalize_text(finding.get("evidence"))
-                    if norm_ev is not None:
-                        secret_texts.append(norm_ev)
-
-        policy.assert_no_secrets(con, f"r:{run_id}", secret_texts)
+        policy.assert_no_secrets(con, f"r:{run_id}", _payload_strings(payload))
 
         raw_artifact_id = None
         if raw_log is not None:

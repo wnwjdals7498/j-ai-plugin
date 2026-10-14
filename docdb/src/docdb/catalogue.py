@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from docdb import clock, db, history
+from docdb import clock, db, history, policy, textnorm
 from docdb.actors import Actor
 from docdb.db import Connection
 from docdb.errors import DocdbError
@@ -62,6 +62,28 @@ def _read_json(path: Path) -> tuple[bytes, object]:
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DocdbError("BAD_ARGS", f"카탈로그 JSON을 읽을 수 없음: {path}") from exc
     return raw, data
+
+
+def _normalize_values(value: object) -> object:
+    """JSON 객체의 문자열 값만 정규화하고 키 이름은 유지한다."""
+    if isinstance(value, str):
+        return textnorm.normalize_text(value) or ""
+    if isinstance(value, list):
+        return [_normalize_values(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _normalize_values(item) for key, item in value.items()}
+    return value
+
+
+def _string_values(value: object) -> list[str]:
+    """JSON 객체에서 키를 제외한 모든 문자열 값을 재귀로 모은다."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [item for part in value for item in _string_values(part)]
+    if isinstance(value, dict):
+        return [item for part in value.values() for item in _string_values(part)]
+    return []
 
 
 def _field_parts(value: object) -> tuple[str, dict | None]:
@@ -163,6 +185,13 @@ def load(
     """JSON 카탈로그와 항목 종류를 검사해 cat_* 테이블에 적재한다."""
     catalogue_raw, catalogue = _read_json(catalogue_path)
     _item_types_raw, item_types_data = _read_json(item_types_path)
+    catalogue = _normalize_values(catalogue)
+    item_types_data = _normalize_values(item_types_data)
+    policy.assert_no_secrets(
+        con,
+        "catalogue",
+        _string_values(catalogue) + _string_values(item_types_data),
+    )
     if not isinstance(catalogue, dict) or not isinstance(item_types_data, list):
         raise DocdbError("BAD_ARGS", "카탈로그 최상위 형식이 올바르지 않음")
 

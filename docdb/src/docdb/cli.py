@@ -21,6 +21,7 @@ from docdb import (
     profile,
     relations,
     runs,
+    textnorm,
     workflow,
 )
 from docdb.actors import Actor
@@ -253,6 +254,7 @@ def _init(args: argparse.Namespace) -> int:
         raise DocdbError("BAD_ARGS", "프로젝트 ID 형식이 올바르지 않음")
     if not re.fullmatch(actors.ACTOR_PATTERNS["human"], args.owner, re.ASCII):
         raise DocdbError("ID_FORMAT", f"사람 행위자 ID 형식 위반: {args.owner}")
+    project_name = textnorm.normalize_text(args.name) or ""
 
     root = args.dir.resolve()
     project_dir = root / paths.DOT_DIR
@@ -287,9 +289,10 @@ def _init(args: argparse.Namespace) -> int:
             "SELECT catalogue_version FROM cat_version ORDER BY loaded_at DESC LIMIT 1"
         ).fetchone()[0]
         with db.write_tx(con):
+            policy.assert_no_secrets(con, f"project:{args.project}", [project_name])
             con.execute(
                 "INSERT INTO project (project_id, name, catalogue_version) VALUES (?, ?, ?)",
-                (args.project, args.name, version),
+                (args.project, project_name, version),
             )
             history.append_change(
                 con=con,
@@ -299,7 +302,7 @@ def _init(args: argparse.Namespace) -> int:
                 before=None,
                 after={
                     "project_id": args.project,
-                    "name": args.name,
+                    "name": project_name,
                     "catalogue_version": version,
                 },
                 actor_id=owner.id,
@@ -504,7 +507,7 @@ def _run(args: argparse.Namespace, interactive: bool) -> int:
                 )
                 if result:
                     sys.stdout.write(result + "\n")
-                    return 1
+                    return int(any(line.startswith("ERR ") for line in result.splitlines()))
                 return 0
             if args.import_command == "next":
                 result = importer.next_batch(con, args.budget)

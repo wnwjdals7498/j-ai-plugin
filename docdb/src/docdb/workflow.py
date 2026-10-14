@@ -37,21 +37,10 @@ def create_work(
     work_type: str,
     owner: str,
     base_refs: list[str],
+    *,
+    reason: str | None = None,
 ) -> str:
     """작업을 planned 상태로 만들고 발급한 ID를 반환한다."""
-    return _create_work_with_reason(con, actor, title, work_type, owner, base_refs, None)
-
-
-def _create_work_with_reason(
-    con: Connection,
-    actor: Actor,
-    title: str,
-    work_type: str,
-    owner: str,
-    base_refs: list[str],
-    reason: str | None,
-) -> str:
-    """이력 이유를 함께 저장해 작업을 만든다."""
     if not isinstance(title, str):
         raise DocdbError("BAD_ARGS", "작업 제목은 문자열이어야 함")
     normalized_title = textnorm.normalize_text(title)
@@ -70,6 +59,9 @@ def _create_work_with_reason(
         not isinstance(ref, str) or not _BASE_REF.fullmatch(ref) for ref in base_refs
     ):
         raise DocdbError("BAD_ARGS", "기준 참조 형식이 올바르지 않음")
+    if reason is not None and not isinstance(reason, str):
+        raise DocdbError("BAD_ARGS", "reason은 문자열이어야 함")
+    normalized_reason = textnorm.normalize_text(reason)
 
     with db.write_tx(con):
         owner_row = _execute(
@@ -84,7 +76,9 @@ def _create_work_with_reason(
         work_id = ids.next_id(con, "work")
         refs_json = textnorm.canonical_json(base_refs)
         policy.assert_no_secrets(
-            con, f"w:{work_id}", [normalized_title, work_type, owner, refs_json]
+            con,
+            f"w:{work_id}",
+            [normalized_title, work_type, owner, refs_json, normalized_reason],
         )
         opened_at = clock.now_iso()
         after = {
@@ -123,7 +117,7 @@ def _create_work_with_reason(
             after,
             actor.id,
             work_id,
-            reason,
+            normalized_reason,
         )
     return work_id
 
@@ -188,23 +182,10 @@ def create_handoff(
     from_role: str,
     to_role: str,
     payload: dict,
+    *,
+    reason: str | None = None,
 ) -> str:
     """작업에 인계 자료를 추가하고 발급한 인계 ID를 반환한다."""
-    return _create_handoff_with_reason(
-        con, actor, work_id, from_role, to_role, payload, None
-    )
-
-
-def _create_handoff_with_reason(
-    con: Connection,
-    actor: Actor,
-    work_id: str,
-    from_role: str,
-    to_role: str,
-    payload: dict,
-    reason: str | None,
-) -> str:
-    """이력 이유를 함께 저장해 인계 자료를 만든다."""
     ids.validate("work", work_id)
     if (
         not isinstance(from_role, str)
@@ -221,6 +202,9 @@ def _create_handoff_with_reason(
     normalized_to = textnorm.normalize_text(to_role)
     if not normalized_from.strip() or not normalized_to.strip():
         raise DocdbError("BAD_OP", "인계 역할이 비어 있음")
+    if reason is not None and not isinstance(reason, str):
+        raise DocdbError("BAD_ARGS", "reason은 문자열이어야 함")
+    normalized_reason = textnorm.normalize_text(reason)
     payload_json = textnorm.canonical_json(payload)
     with db.write_tx(con):
         work_row = _execute(
@@ -230,7 +214,9 @@ def _create_handoff_with_reason(
             raise DocdbError("NOT_FOUND", f"작업을 찾을 수 없음: {work_id}")
         handoff_id = ids.next_id(con, "handoff")
         policy.assert_no_secrets(
-            con, f"w:{work_id}", [normalized_from, normalized_to, payload_json]
+            con,
+            f"w:{work_id}",
+            [normalized_from, normalized_to, payload_json, normalized_reason],
         )
         created_at = clock.now_iso()
         payload_value = json.loads(payload_json)
@@ -262,7 +248,7 @@ def _create_handoff_with_reason(
             after,
             actor.id,
             work_id,
-            reason,
+            normalized_reason,
         )
     return f"OK handoff={handoff_id}"
 

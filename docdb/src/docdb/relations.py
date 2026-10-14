@@ -168,7 +168,7 @@ def _propose(
     if actor.type not in ("ai", "human"):
         raise DocdbError("BAD_ARGS", "관계 제안 행위자 종류가 올바르지 않음")
     if not isinstance(rel, str) or rel not in REL_TYPES:
-        raise DocdbError("BAD_OP", f"알 수 없는 관계 종류: {rel}")
+        raise DocdbError("BAD_OP", "허용되지 않은 값: rel")
     normalized_why = _why(con, str(from_h), why)
 
     with db.write_tx(con):
@@ -720,35 +720,64 @@ def _r3(
     items = _execute(con, "SELECT item_id FROM item").fetchall()
     known = {item_id for (item_id,) in items}
     pattern = _id_pattern(item_types)
-    desired: set[tuple[str, str, str]] = set()
-    if text and pattern is not None:
-        for line in text.splitlines():
+    current_anchor = f"f:{doc_id}/{kind_id}/{field_key}"
+    field_rows = _execute(
+        con,
+        "SELECT cf.extract_rel, fv.doc_id, fv.kind_id, fv.field_key, fv.value_text "
+        "FROM cat_kind_field cf JOIN field_value fv "
+        "ON fv.kind_id=cf.kind_id AND fv.field_key=cf.field_key "
+        "WHERE cf.extract_rel IS NOT NULL AND fv.value_text IS NOT NULL",
+    ).fetchall()
+    anchors = {current_anchor}
+    producers: dict[tuple[str, str, str], set[str]] = {}
+    for peer_spec, peer_doc, peer_kind, peer_field, peer_text in field_rows:
+        if json.loads(peer_spec) != spec:
+            continue
+        peer_anchor = f"f:{peer_doc}/{peer_kind}/{peer_field}"
+        anchors.add(peer_anchor)
+        if peer_anchor == current_anchor:
+            peer_text = text
+        if not peer_text or pattern is None:
+            continue
+        for line in peer_text.splitlines():
             ids_on_line = _matched_ids(line, pattern, known)
             from_ids = sorted(item_id for item_id in ids_on_line if item_id.startswith(from_prefix))
             to_ids = sorted(item_id for item_id in ids_on_line if item_id.startswith(to_prefix))
             for from_id in from_ids:
                 for to_id in to_ids:
-                    desired.add((from_id, rel_type, to_id))
+                    relation_key = (from_id, rel_type, to_id)
+                    producers.setdefault(relation_key, set()).add(peer_anchor)
 
     rows = _execute(
         con,
-        "SELECT rel_id, from_id, rel_type, to_id FROM relation WHERE from_type='item' "
-        "AND to_type='item' AND source='rule:R3' AND anchor=?",
-        (f"f:{doc_id}/{kind_id}/{field_key}",),
+        "SELECT rel_id, from_id, rel_type, to_id, anchor FROM relation "
+        "WHERE from_type='item' AND to_type='item' AND source='rule:R3'",
     ).fetchall()
-    existing = {
-        (from_id, existing_rel, to_id): rel_id
-        for rel_id, from_id, existing_rel, to_id in rows
-    }
-    for relation_key, rel_id in existing.items():
-        if relation_key in desired:
+    existing: set[tuple[str, str, str]] = set()
+    for rel_id, from_id, existing_rel, to_id, old_anchor in rows:
+        if old_anchor not in anchors:
             continue
+        relation_key = (from_id, existing_rel, to_id)
+        existing.add(relation_key)
+        next_anchors = producers.get(relation_key)
         before = _snapshot(con, rel_id)
         if before is None:
             continue
-        _execute(con, "DELETE FROM relation WHERE rel_id=?", (rel_id,))
-        _record(con, rel_id, "delete", before, None, actor, "rule:R3")
-    for from_id, desired_rel, to_id in sorted(desired - set(existing)):
+        if next_anchors:
+            next_anchor = min(next_anchors)
+            if old_anchor != next_anchor:
+                after = dict(before)
+                after["anchor"] = next_anchor
+                _execute(con, "UPDATE relation SET anchor=? WHERE rel_id=?", (next_anchor, rel_id))
+                _record(con, rel_id, "update", before, after, actor, "rule:R3")
+        else:
+            _execute(con, "DELETE FROM relation WHERE rel_id=?", (rel_id,))
+            _record(con, rel_id, "delete", before, None, actor, "rule:R3")
+
+    for relation_key, source_anchors in sorted(producers.items()):
+        if relation_key in existing:
+            continue
+        from_id, desired_rel, to_id = relation_key
         _rule_relation(
             con,
             actor,
@@ -758,7 +787,7 @@ def _r3(
             "item",
             to_id,
             "R3",
-            f"f:{doc_id}/{kind_id}/{field_key}",
+            min(source_anchors),
             work_id,
         )
 
