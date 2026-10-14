@@ -143,7 +143,7 @@
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T25" 절, 01-contracts.md C-03, C-14, C-25. 결정: D3, D18, O21 기본값. 의존: T24(반입 완료 후 시작). 묶음 B23, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T25 6 tests/integration/test_t25_mcp.py && .venv/bin/python -m pytest -q` → `rows ok T25 6/6` 출력, pytest 실패 0
 
-- [ ] T26: 플러그인 매니페스트, 실행 래퍼, 스킬, 마켓플레이스 항목을 만든다
+- [x] T26: 플러그인 매니페스트, 실행 래퍼, 스킬, 마켓플레이스 항목을 만든다
   - 대상: `docdb/.claude-plugin/plugin.json`, `docdb/.codex-plugin/plugin.json`, `docdb/codex.mcp.json`, `docdb/bin/docctl`, `docdb/skills/docdb/SKILL.md`, `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `README.md`, `docdb/tests/integration/test_t26_plugin.py`
   - 배경: 공통 규칙을 따른다. 읽을 것: 02-tasks.md "T26" 절, 01-contracts.md C-26. 결정: D1, D14, D18, D26. 의존: T25, T00b(메인 실측)(반입 완료 후 시작). 묶음 B24, 지정 실행자 codex.
   - 검증: `cd docdb && .venv/bin/python ../docs-db/plan/handoff/check_rows.py T26 7 tests/integration/test_t26_plugin.py && .venv/bin/python -m pytest -q && cd .. && claude plugin validate docdb` → `rows ok T26 7/7` 출력, pytest 실패 0, `Validation passed`

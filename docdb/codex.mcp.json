@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "docdb": {
+      "command": "python3",
+      "args": ["./src/docdb_launch.py", "mcp"],
+      "cwd": ".",
+      "env_vars": ["PWD", "DOCDB_HOME", "XDG_DATA_HOME"],
+      "env": { "DOCDB_ACTOR": "ai-codex" }
+    }
+  }
+}
