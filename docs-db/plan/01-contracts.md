@@ -849,7 +849,8 @@ def main() -> None: ...
 ```
 
 - 도구 이름·인자·기본값·설명은 원본 `docdb_mcp.py`와 같다(O21 미결, 기본값 = 원본). 예외는 `docdb_put` 설명 하나이며 아래 문자열로 바꾼다:
-  `"쓰기(원자적, 본문 미반환). 필드 f: set|append|replace_section(text, expect, anchor, state, why, sum). 항목 i: upsert. 관계 link(from, rel, to, why)·unlink(rel_id). 작업 w: work·handoff."`
+  `"쓰기(원자적, 본문 미반환). 패치 키: op 필수, f:·i:·w: 대상은 h(핸들). 필드 f: set|append|replace_section(text, expect, anchor, state, why, sum). 항목 i: upsert. 관계 link(from, rel, to, why)·unlink(rel_id). 작업 w: work·handoff."`
+  (2026-10-14 T29 실사용 보정: Codex가 `h` 대신 `handle` 키를 보내 `BAD_HANDLE`이 나서 패치 키를 설명에 넣었다.)
 - 원본처럼 `structured_output=False`로 등록하고 text 한 블록만 반환한다. mcp 1.x/2.x import 분기도 원본 그대로 둔다.
 - 각 도구 호출 시작에서 `DOCDB_ACTOR`로 `resolve_actor` → `require_ai`를 실행하고, 실패하면 그 호출은 `format_error` 문자열을 반환한다. DB가 없거나 마이그레이션이 필요해도 서버는 시작하고, 각 도구 호출이 `format_error` 문자열(예: `ERROR NO_DB docctl init 실행 필요`)을 반환한다.
 - 도구 호출마다 `open_project_db`로 연결하고 끝나면 닫는다(원본과 같음). `DOCDB_WORK`, `DOCDB_SESSION`, `DOCDB_MODEL`을 `DocDB`에 넘긴다.

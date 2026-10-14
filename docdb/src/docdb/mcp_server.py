@@ -19,7 +19,8 @@ INSTRUCTIONS = (
     "응답 첫 줄의 as_of=c:N 을 기억했다가 다음엔 docdb_since 로 변경분만 읽기."
 )
 _PUT_DESCRIPTION = (
-    "쓰기(원자적, 본문 미반환). 필드 f: set|append|replace_section(text, expect, anchor, state, why, sum). "
+    "쓰기(원자적, 본문 미반환). 패치 키: op 필수, f:·i:·w: 대상은 h(핸들). "
+    "필드 f: set|append|replace_section(text, expect, anchor, state, why, sum). "
     "항목 i: upsert. 관계 link(from, rel, to, why)·unlink(rel_id). 작업 w: work·handoff."
 )
 
