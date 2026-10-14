@@ -67,15 +67,15 @@ def _check_venv(DocdbError, stamp_path, venv_dir):
     """설치 스탬프와 실행 Python 버전을 확인한다."""
     stamp_file = stamp_path()
     if not venv_dir().is_dir() or not stamp_file.is_file():
-        raise DocdbError("NO_VENV", "docctl setup 실행 필요")
+        raise DocdbError("NO_VENV", "docdb_launch.py setup 실행 필요")
     try:
         stamp = json.loads(stamp_file.read_text(encoding="utf-8"))
         stamp_version = stamp["python"].split(".")
         stamped = (int(stamp_version[0]), int(stamp_version[1]))
     except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
-        raise DocdbError("NO_VENV", "docctl setup 실행 필요")
+        raise DocdbError("NO_VENV", "docdb_launch.py setup 실행 필요")
     if stamped != tuple(sys.version_info[:2]):
-        raise DocdbError("VENV_MISMATCH", "현재 Python으로 docctl setup 재실행 필요")
+        raise DocdbError("VENV_MISMATCH", "현재 Python으로 docdb_launch.py setup 재실행 필요")
 
 
 def _add_venv_paths(venv_dir):
@@ -108,7 +108,7 @@ def _load_runtime(DocdbError, venv_dir, source_dir):
         importlib.import_module("pysqlite3")
         importlib.import_module("mcp")
     except ImportError as exc:
-        raise DocdbError("DEP_MISSING", "docctl setup으로 의존성을 설치해야 함") from exc
+        raise DocdbError("DEP_MISSING", "docdb_launch.py setup으로 의존성을 설치해야 함") from exc
 
 
 def _dispatch(argv, DocdbError, stamp_path, venv_dir, venv_python, source_dir):
