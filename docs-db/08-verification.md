@@ -69,6 +69,14 @@ T00c(2026-10-14, GitHub Actions run 38484842771, 임시 orphan 브랜치 `spike/
 | Codex(격리 `CODEX_HOME`, 저장소 마켓플레이스 설치) | `docdb_ctx`가 `PWD` 매핑(D26)으로 프로젝트 DB를 찾음, `docdb_get i:`의 `dg=`, `docdb_trace` 확정 관계 정상. `docdb_put`은 처음 `ERR ? BAD_HANDLE` — 에이전트가 `h` 대신 `handle` 키를 보냄. 도구 설명에 패치 키를 명시(C-25 보정)한 뒤 `APPLIED ok=1`, 행위자 `ai-codex` |
 
 참고: 작업 트리에서 로컬 설치하면 Codex가 미추적 개발 venv까지 복사한다(67MB). GitHub 설치에는 해당 없음.
+
+### 3.4 GitHub Actions (T28, 2026-10-14, 브랜치 `feat/docdb`, `.github/workflows/docdb.yml`)
+
+| run | 결과 |
+|---|---|
+| 38489435966 (1차, 3.10·3.13) | 6잡 실패. Linux·macOS는 CI에 `claude` CLI가 없어 T26 #2만 실패(나머지 통과). Windows는 그 밖에 POSIX `bin/docctl` 실행(T26 #3·#4), 하위 프로세스 UTF-8 출력을 cp1252로 해석(T24 #7). 조사 중 실제 결함 발견: Windows 파이프의 표준 입출력이 cp1252라 CLI 한글 출력이 깨지거나 예외 — 부트스트랩이 stdout·stderr를 UTF-8로 재설정하도록 고침(C-24, 회귀 테스트는 `PYTHONIOENCODING=ascii`로 확인) |
+| 38490133755 (2차, 3.10·3.13) | 6잡 성공. Linux·macOS 342 통과·2 건너뜀(`python3.6`·`claude` 없음), Windows 340 통과·4 건너뜀(그 밖에 POSIX `docctl` 2건, C-27) |
+| 38490633416 (3차, 3.10·3.13·3.14) | 9잡 성공(ubuntu·macos·windows × 3.10·3.13·3.14). D9 지원 범위 전체 확인 |
 ## 4. 완료 기준
 
 1. 로컬 매트릭스(Python 3.10~3.14) 전체 통과.
