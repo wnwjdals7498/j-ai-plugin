@@ -2,7 +2,7 @@
 
 > **에이전트 실행자에게:** 이 계획은 superpowers:subagent-driven-development 방식(작업마다 새 Sonnet 구현자 + 새 리뷰어)으로 실행한다. 지시문은 [04-prompts.md](04-prompts.md)의 틀을 그대로 쓴다.
 
-**목표:** `docs-db/` 구상과 결정(D1~D25)대로 `j-ai-plugin/docdb/`에 Claude Code·Codex용 문서 DB 플러그인을 만들고, Python 3.10~3.14·Linux에서 전체 테스트가 통과하게 한다.
+**목표:** `docs-db/` 구상과 결정(D1~D27)대로 `j-ai-plugin/docdb/`에 Claude Code·Codex용 문서 DB 플러그인을 만들고, Python 3.10~3.14·Linux에서 전체 테스트가 통과하게 한다.
 
 **구조:** 원본 패키지(`docs-db/reference/docdb-package/`)의 스키마와 LLM 읽기·쓰기 코드를 그대로 이식하고, 그 위에 정규화·정책·이력·관계 규칙·작업 흐름·import·요약을 계약대로 더한다. DB는 `pysqlite3`로 OS SQLite와 무관하게 하고, 실행은 데이터 폴더 venv를 붙이는 표준 라이브러리 부트스트랩으로 시작한다. 에이전트 접근은 MCP 도구 6개와 같은 기능의 CLI다.
 

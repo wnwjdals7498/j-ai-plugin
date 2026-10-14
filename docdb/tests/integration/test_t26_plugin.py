@@ -75,11 +75,16 @@ def test_t26_1_manifests_are_valid_json_with_matching_versions_and_actors():
 
 
 @pytest.mark.skipif(shutil.which("claude") is None, reason="claude CLI 없음(C-27)")
-def test_t26_2_claude_plugin_validator_passes_without_warnings():
-    """행 2: 저장소 루트에서 Claude 플러그인 검증이 경고 없이 통과한다."""
+def test_t26_2_claude_plugin_validator_passes_without_warnings(tmp_path):
+    """행 2: 저장소 루트에서 Claude 플러그인 검증이 경고 없이 통과한다(사용자 HOME을 건드리지 않게 임시 HOME)."""
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path / "home")
+    env["USERPROFILE"] = env["HOME"]
+    Path(env["HOME"]).mkdir()
     result = subprocess.run(
         ["claude", "plugin", "validate", "docdb"],
         cwd=_repository_root(),
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
