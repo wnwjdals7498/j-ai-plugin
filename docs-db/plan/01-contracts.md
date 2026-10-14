@@ -91,6 +91,7 @@ docdb/
 | `DOCDB_HOME` | `paths.data_dir` | 데이터 폴더 덮어쓰기 |
 | `DOCDB_PATH` | `paths.find_db` | DB 파일 경로 덮어쓰기(탐색 생략) |
 | `DOCDB_START_DIR` | `paths.find_db` | DB 탐색 시작 폴더 |
+| `PWD` | `docdb_launch.py mcp`만 | `DOCDB_START_DIR`가 없을 때 그 값으로 옮긴다(C-24, D26) |
 | `DOCDB_ACTOR` | `actors.resolve_actor` | 기본 행위자 ID |
 | `DOCDB_WORK` | `cli`, `mcp_server` | 현재 작업 ID(이력의 `work_id`, 규칙 R5) |
 | `DOCDB_SESSION` | `cli`, `mcp_server` | 세션 표시(C-15 `session_ref`) |
@@ -186,7 +187,7 @@ def format_error(err: DocdbError) -> str: ...   # "ERROR <CODE> <detail>"
 
 - `ERROR_CODES`에 없는 `code`로 `DocdbError`를 만들면 `ValueError`를 던진다(오타 방지).
 - `detail`의 사람용 안내는 한국어 한 줄로 쓴다. 코드는 영어 대문자다.
-- 비밀 값, 파일 내용, 필드 본문을 `detail`에 넣지 않는다.
+- 비밀 값, 파일 내용, 필드 본문을 `detail`에 넣지 않는다. 사용자가 넣은 값을 그대로 되돌려 쓰지 않는다: 형식 검사를 통과한 ID·핸들·허용 목록 안의 값만 쓰고, 그 밖의 입력값은 키 이름이나 "허용되지 않은 값"으로만 가리킨다(2026-10-14 최종 리뷰 L2).
 - `put`·`import label`·`link`처럼 여러 건을 처리하는 명령은 건별 오류를 예외가 아니라 `ERR <대상> <CODE> <detail>` 줄로 반환한다(C-14).
 
 ---
@@ -409,7 +410,7 @@ def require_ai(actor: Actor) -> None: ...
 |---|---|---|
 | 확정 대기 관계 | `ctx` 차단 요인, 강제 줄 | `! pending_links=<n>` (n>0일 때만) |
 | 필수 연결 누락 | `ctx` 차단 요인(P2, 예산 안) | `! missing_link d:<doc_id> k:<kind_id>` |
-| 정책 차단 | `get`·`ctx`·`find`·`since` | 해당 줄 끝에 ` policy=local_only`, 본문·요약·발췌·diff 생략 |
+| 정책 차단 | `get`·`ctx`·`find`·`since` | 해당 줄 끝에 ` policy=local_only`, 본문·요약·발췌·diff 생략. `defined_in`이 `local_only` 문서인 항목(`i:`)도 같다: 항목 줄은 `i:<ID> <item_type> <status> policy=local_only`(제목·`attrs` 생략), `find`는 그 항목을 발췌 없이, `since`는 `new=`·`old=` 없이 ` policy=local_only`(최종 리뷰 H1) |
 | 규칙 알림 | `put` 응답 | `NOTE R1 skip <item_id> defined_in=<doc_id>` |
 | 관계 목록 | `link review` | `rel=<id> <from_handle> -<rel>-> <to_handle> by=<actor> why=<q(why)>` |
 | 항목 digest | `get`의 `i:` 줄(모든 level) | 원본 줄 끝에 ` dg=<16>`(항목 `expect`용, T14). `ctx`·`trace` 등 다른 곳의 `i:` 줄은 원본 그대로 |
@@ -483,6 +484,8 @@ class DocDB:
 
 ### 공통
 
+- 패치 값 타입(최종 리뷰 M3): `text`·`why`·`anchor`·`sum`·`title`·`status`·`state`·`expect`·`defined_in`·`from`·`to`·`rel`은 있으면 문자열이어야 하며 아니면 `BAD_OP`. `attrs`·`attrs_patch`·`payload`는 객체. `pysqlite3.dbapi2.Error` 전체(InterfaceError 포함)는 `DB`로 바꾼다.
+
 - `reason` 인자는 이력의 `reason`에 저장한다. 패치별 `why`가 있으면 그것을 우선한다.
 - 규칙 R5에 쓰는 작업 ID는 `DocDB(work=…)` 생성 인자(CLI `--work` 또는 `DOCDB_WORK`)다.
 
@@ -545,7 +548,7 @@ SECRET_PATTERNS = [
 - `assert_no_secrets`: 걸린 패턴이 있고 유효한 예외가 없으면 `DocdbError("SECRET_DETECTED", "<패턴 이름 목록>")`. 비밀 값 자체는 어디에도 출력·기록하지 않는다.
 - 유효한 예외: `policy_exception`에서 `scope = "secret:" + handle`이고 `expires_at > now_iso()`이며 `approved_by`가 `human`인 행.
 - `allow_secret`은 사람 전용(`require_human`), `exception_id = next_id("exception")`, `kind_id=NULL`, 이력 기록.
-- 검사 대상: `field_value` 본문(텍스트·JSON 직렬화), 항목 제목·`attrs`, 관계 `why`, `sum`, 인계 `payload`·`from_role`·`to_role`, 작업 제목, 모든 패치 `why`와 `put`·CLI의 `reason`, 실행 적재(C-20) 입력의 모든 문자열 값(`findings[].message/evidence`, `limitations`, `target_ref`, `runner`, `raw_log.uri`, `command_argv`·`env_snapshot`·`target_versions`의 JSON 직렬화 등, 키 이름 제외), import 적용 본문. 요약: 사람이나 에이전트가 넣어 DB에 남는 모든 자유 텍스트(전역 제약)이며, 이 목록은 그 예시를 빠짐없이 적은 것이다.
+- 검사 대상: `field_value` 본문(텍스트·JSON 직렬화), 항목 제목·`attrs`, 관계 `why`, `sum`, 인계 `payload`·`from_role`·`to_role`, 작업 제목, 모든 패치 `why`와 `put`·CLI의 `reason`, 실행 적재(C-20) 입력의 모든 문자열 값(`findings[].message/evidence`, `limitations`, `target_ref`, `runner`, `raw_log.uri`, `command_argv`·`env_snapshot`·`target_versions`의 JSON 직렬화 등, 키 이름 제외), import 적용 본문. 요약: 사람이나 에이전트가 넣어 DB에 남는 모든 자유 텍스트(전역 제약)이며, 이 목록은 그 예시를 빠짐없이 적은 것이다. 추가(최종 리뷰 M1·L11): 항목 `status`, 실행 적재 입력은 중첩까지 포함한 모든 문자열 값(재귀, 키 이름 제외), 사람 경로의 `init --name`, `policy allow-secret --reason`, 카탈로그 JSON의 문자열 값.
 - `can_export`: `document.export_policy != 'local_only'`. `classification`은 보지 않는다(O20 미결). 적용 위치는 C-13의 "정책 차단" 줄.
 
 ---
@@ -596,7 +599,7 @@ ID 추출 정규식(공통): 알려진 접두어 목록 P(`cat_item_type.id_pref
 |---|---|---|---|
 | R1 정의 | `f:` 쓰기, `(kind_id, field_key)`가 어떤 `cat_item_type`의 `(defined_by_kind, defined_by_field)`와 같음 | 그 필드의 각 줄에서 해당 접두어 ID 추출. 제목 = 줄에서 ID 뒤 텍스트의 앞쪽을 아래 `R1_TITLE_STRIP` 정규식으로 걷어 낸 값(최대 200자, 비면 ID). 항목이 없으면 생성(`defined_in`=문서), 같은 문서에 정의되어 있고 제목이 다르면 제목 갱신, 다른 문서에 정의되어 있으면 건드리지 않고 `NOTE R1 skip …`. 기존 항목의 `defined_in`이 NULL(`i:` upsert로 정의 없이 만든 항목)이면 이 문서를 정의 문서로 채택해 `defined_in`과 제목을 갱신하고(update 이력) `NOTE`를 내지 않는다. 필드에서 사라진 ID의 항목은 삭제하지 않는다 | — |
 | R2 언급 | 모든 `f:` 쓰기 | 문서의 모든 필드 본문에서 **이미 있는** 항목 ID 중 `defined_in`이 이 문서가 아닌 것의 집합 M을 구한다. `relation(document → item, references, rule:R2, anchor='d:<doc>')`을 M과 같게 맞춘다(없으면 추가, M에 없는 기존 R2 관계는 삭제) | `d:<doc>` |
-| R3 필드 규칙 | `f:` 쓰기, 필드에 `extract_rel`이 있음 | 각 줄에서 `from_prefix` ID들과 `to_prefix` ID들(둘 다 이미 있는 항목)을 찾아 모든 쌍에 `relation(item → item, <rel>, rule:R3)`. 이 필드 anchor의 기존 R3 관계를 새 집합과 같게 맞춘다 | `f:<doc>/<kind>/<field>` |
+| R3 필드 규칙 | `f:` 쓰기, 필드에 `extract_rel`이 있음 | 각 줄에서 `from_prefix` ID들과 `to_prefix` ID들(둘 다 이미 있는 항목)을 찾아 모든 쌍에 `relation(item → item, <rel>, rule:R3)`. 이 필드 anchor의 기존 R3 관계를 새 집합과 같게 맞춘다. 결정성(최종 리뷰 M2): 지울 관계를 같은 `extract_rel`을 가진 다른 필드의 현재 값이 여전히 만들어 내면 지우지 않고 그 필드로 `anchor`를 옮긴다(이력 update) | `f:<doc>/<kind>/<field>` |
 | R4 실행 | `run ingest`의 `covers` | 각 항목에 `relation(run → item, evidence_for, rule:R4)` | `r:<run>` |
 | R5 작업 변경 | 작업 ID가 있는 상태의 `f:`·`i:` 쓰기 | `relation(work → document 또는 item, changes, rule:R5)`. 이미 있으면 그대로 | `w:<work>` |
 
@@ -610,6 +613,7 @@ R1_TITLE_STRIP = r"^[\s:|\-–—.)\]]+"
 - R2·R3의 "맞춘다"는 `source`가 같은 규칙이고 `anchor`가 같은 관계만 대상으로 한다. 에이전트·사람 관계는 규칙이 삭제하지 않는다.
 - `confirm`·`reject`·`remove`는 사람 전용. `confirm`·`reject`는 `status='proposed'`만 대상, `decided_by`·`decided_at` 기록. `remove`는 어떤 상태든 삭제하되 `source LIKE 'rule:%'`는 거부(`BAD_OP`, "규칙 관계는 원본 본문을 고쳐서 바꿈").
 - `missing_links`는 0003의 `v_missing_required_links`를 읽는다.
+- `ctx`가 작업과 관련된 문서·항목을 고를 때 따라가는 관계는 `status='confirmed'`만이다(D10, 최종 리뷰 M4). `trace`와 같다.
 - `pending_count(con, work_id)`·`review(con, work_id)`의 작업 필터: 그 관계의 insert 이력(`change_log`, `entity_type='relation'`, `op='insert'`)의 `work_id`가 같은 것. `work_id=None`이면 전체. `ctx`는 `pending_count(con)`(전체)를 쓴다.
 
 ---
@@ -621,9 +625,9 @@ R1_TITLE_STRIP = r"^[\s:|\-–—.)\]]+"
 ```python
 TRANSITIONS: dict[str, tuple[str, ...]]
 AI_ALLOWED: frozenset[str]   # {"planned", "active", "blocked", "review"}
-def create_work(con, actor: Actor, title: str, work_type: str, owner: str, base_refs: list[str]) -> str: ...
+def create_work(con, actor: Actor, title: str, work_type: str, owner: str, base_refs: list[str], *, reason: str | None = None) -> str: ...
 def set_status(con, actor: Actor, work_id: str, status: str, interactive: bool) -> str: ...
-def create_handoff(con, actor: Actor, work_id: str, from_role: str, to_role: str, payload: dict) -> str: ...
+def create_handoff(con, actor: Actor, work_id: str, from_role: str, to_role: str, payload: dict, *, reason: str | None = None) -> str: ...
 def ack_handoff(con, actor: Actor, handoff_id: str, baseline: str, evidence: list[str], accept: bool, interactive: bool) -> str: ...
 ```
 
@@ -708,7 +712,8 @@ def split_segments(raw: bytes) -> list[dict]: ...   # {"seq","heading","start_of
 |---|---|
 | 대상 폴더 | 프로젝트 루트(`.docdb`의 부모) 안이어야 함(아니면 `BAD_ARGS`). 하위 폴더를 이름순으로 순회, 이름이 `.`으로 시작하는 폴더와 `.docdb`는 건너뜀 |
 | 파일 등록 | `artifact(uri=<프로젝트 루트 기준 POSIX 상대 경로>, digest="sha256:<원본 바이트 hex>", role='primary', source_mode='authored')`. 같은 `uri`와 `digest`가 이미 있으면 건너뜀 |
-| 지원 판정 | 확장자가 `SUPPORTED_SUFFIXES`이고 UTF-8(앞 BOM 허용)로 디코드되면 지원. 아니면 등록만 하고 구간을 만들지 않음 |
+| 지원 판정 | 확장자가 `SUPPORTED_SUFFIXES`이고 UTF-8(앞 BOM 허용)로 디코드되면 지원. 아니면 등록만 하고 구간을 만들지 않음. 상대 경로가 `artifact.uri` 규칙(절대 경로·`..`·역슬래시·드라이브 접두사 금지)에 맞지 않는 파일은 등록하지 않고 건너뛰며, 건너뛴 파일이 있으면 scan이 stdout에 `WARN skipped_paths=<n>` 한 줄을 쓴다(파일 이름은 쓰지 않음, scan 전체를 실패시키지 않음, 최종 리뷰 L3) |
+| `next` 발췌 | 발췌 전에 파일의 현재 sha256을 artifact digest와 비교하고, 다르거나 읽을 수 없으면 발췌 없이 ` stale`을 붙인다(최종 리뷰 L4). 핸들 해석은 `llm.parse_handle`만 쓴다(C-12, L6) |
 | 분할 | 줄 단위. ```` ``` ```` 또는 `~~~`로 시작하는 줄이 코드 블록을 열고 닫는다. 코드 블록 밖에서 `^(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$`에 맞는 줄이 구간 시작. 구간 = 제목 줄부터 다음 제목 줄 전까지(수준 무관 평면 분할). 첫 제목 앞 내용은 공백만이 아니면 `seq=0`, `heading=NULL` 구간 |
 | 오프셋 | 원본 바이트 기준 `[start_off, end_off)`. `text_digest = digest16(구간 텍스트)` |
 | 문서 종류 규칙 | 파일 이름(확장자 제외) 또는 첫 `#` 제목의 `norm_key`가 어떤 종류의 `title_ko` 또는 `is_primary=1` 별칭의 `norm_key`와 같으면 그 종류. 두 종류 이상 맞으면 미정 |
