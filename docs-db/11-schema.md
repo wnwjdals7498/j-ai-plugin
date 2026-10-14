@@ -1,15 +1,17 @@
 # 11. DB 스키마 참조
 
-원본 SQL을 SQLite에 실제로 적재한 뒤 `PRAGMA table_xinfo`, `PRAGMA foreign_key_list`, `sqlite_master`로 조회해 생성했다. 설명 열은 SQL 주석에서 가져왔다. 손으로 옮겨 적지 않았으므로 원본 SQL과 일치한다.
+`docdb`의 마이그레이션 0001~0008을 빈 DB에 `migrate.apply_pending`으로 적용한 뒤(`PRAGMA user_version` = 8) `PRAGMA table_xinfo`, `PRAGMA foreign_key_list`, `sqlite_master`로 조회한 결과와 대조해 갱신했다(2026-10-14, T30). 컬럼·타입·NULL·인덱스는 문서와 DB를 스크립트로 대조해 일치를 확인했다. 설명 열은 SQL 주석에서 가져왔다. 마이그레이션 0001·0002는 원본 SQL을 바이트 그대로 복사한 것이라 원본 주석이 그대로 남아 있고, 0003~0008이 7절의 변경을 적용한다.
 
 | 항목 | 값 |
 |---|---|
-| 원본 | `reference/docdb-package/docdb_schema.sql` (sha256 앞 16자리 `9e35773cdca5416c`), `docdb_schema_token_ext.sql` (`98011d2d803693e0`) |
-| 적재 검증 SQLite | 3.53.1 |
-| 테이블 | 40개 (기본 36, 토큰 확장 4, 가상 테이블 포함) |
-| 뷰 | 11개 |
-| 트리거 | 17개 |
-| 계획된 변경 | 7절(2026-10-13 결정 반영, 아직 SQL에 없음) |
+| 원본 | `reference/docdb-package/docdb_schema.sql` (sha256 앞 16자리 `9e35773cdca5416c`), `docdb_schema_token_ext.sql` (`98011d2d803693e0`). 마이그레이션 `0001_base.sql`·`0002_token_ext.sql`의 해시와 같다 |
+| 마이그레이션 | `docdb/src/docdb/schema/0001`~`0008`, `PRAGMA user_version` = 8 |
+| 적재 검증 SQLite | 3.53.4(`pysqlite3` 0.6.1 내장) |
+| 테이블 | 45개: 일반 테이블 40개(기본 36, 토큰 확장 3, `import_segment` 1), 가상 테이블 `fts_text` 1개, FTS5(전문 검색)가 자동으로 만드는 내부 테이블 4개(`fts_text_config` `fts_text_data` `fts_text_docsize` `fts_text_idx`) |
+| 뷰 | 12개 (기본 8, 토큰 확장 3, `v_missing_required_links` 1) |
+| 트리거 | 27개 (기본 12, 토큰 확장 5, 마이그레이션 추가 10) |
+| 인덱스 | 명시적 인덱스 9개(`ix_*`) + `ux_single_accountable`(`role_assignment`의 UNIQUE 부분 인덱스). 그 밖에 UNIQUE·PK가 만드는 자동 인덱스 42개 |
+| 변경 적용 | 7절(2026-10-13 결정 반영)은 모두 마이그레이션 0003~0008로 적용됨 |
 
 ## 1. 계층별 테이블
 
@@ -22,10 +24,13 @@
 | H 이력 | `change_log` `doc_revision` |
 | D 파생 기록 | `generation` |
 | T 토큰 확장(docdb_schema_token_ext.sql) | `entity_summary` `text_unit` `fts_text` `call_log` |
+| 가져오기(import) 확장(마이그레이션 0005) | `import_segment` |
+
+`fts_text`는 FTS5(전문 검색) 가상 테이블이며, 내부 보조 테이블 `fts_text_config` `fts_text_data` `fts_text_docsize` `fts_text_idx`가 함께 만들어진다. 이 4개는 직접 읽거나 쓰지 않는다. 컬럼은 PRAGMA 조회 기준으로 `fts_text_config`(k, v), `fts_text_data`(id, block), `fts_text_docsize`(id, sz), `fts_text_idx`(segid, term, pgno)다.
 
 ## 2. 외래 키(FK) 관계
 
-FK는 다른 테이블의 행을 가리키는 값이다. `PRAGMA foreign_keys=ON`인 연결에서는 존재하지 않는 대상을 가리키는 입력을 DB가 거부한다(SQLite는 연결마다 켜야 함).
+FK는 다른 테이블의 행을 가리키는 값이다. 복합 FK는 컬럼을 묶어 한 줄로 적었다. `PRAGMA foreign_keys=ON`인 연결에서는 존재하지 않는 대상을 가리키는 입력을 DB가 거부한다(SQLite는 연결마다 켜야 함).
 
 | 테이블.컬럼 | → 참조 대상 |
 |---|---|
@@ -74,8 +79,13 @@ FK는 다른 테이블의 행을 가리키는 값이다. `PRAGMA foreign_keys=ON
 | `doc_artifact`.(artifact_id) | `artifact`.(artifact_id) |
 | `doc_artifact`.(doc_id) | `document`.(doc_id) |
 | `relation`.(target_revision_id) | `doc_revision`.(revision_id) |
+| `relation`.(proposed_by) | `actor`.(actor_id) |
+| `relation`.(decided_by) | `actor`.(actor_id) |
 | `link_exemption`.(target_kind_id) | `cat_kind`.(kind_id) |
 | `link_exemption`.(doc_id) | `document`.(doc_id) |
+| `import_segment`.(artifact_id) | `artifact`.(artifact_id) |
+| `import_segment`.(doc_id) | `document`.(doc_id) |
+| `import_segment`.(kind_id, field_key) | `cat_kind_field`.(kind_id, field_key) |
 | `work_event`.(declared_by) | `actor`.(actor_id) |
 | `work_event`.(fact_key) | `cat_fact`.(fact_key) |
 | `work_event`.(work_id) | `work`.(work_id) |
@@ -105,6 +115,8 @@ FK는 다른 테이블의 행을 가리키는 값이다. `PRAGMA foreign_keys=ON
 | `call_log`.(actor_id) | `actor`.(actor_id) |
 
 ## 3. 테이블 상세
+
+설명 문구는 0001·0002(원본 SQL)의 주석을 그대로 옮겼으므로 원 카탈로그 194종 기준 수치(`cat_kind` 194개, `cat_kind_field` 필수 897 등)가 남아 있다. 시작 카탈로그는 18종(D2)이라 이 수치와 일치하지 않는다. 0003 이후에 추가된 컬럼·테이블은 설명 열에 마이그레이션 번호를 적었다.
 
 키·제약 열: `PK` 기본 키, `→` FK, 그 외 SQL에 적힌 제약(CHECK·UNIQUE·DEFAULT 등)을 그대로 옮겼다.
 
@@ -180,6 +192,7 @@ cap.* 38개 / evt.* 53개
 | `description` | TEXT | N |  |  |
 | `brief_preserve` | INTEGER | N | DEFAULT 0 CHECK (brief_preserve IN (0,1)) |  |
 | `sort_order` | INTEGER | N |  | 생성 문서의 절 순서 |
+| `extract_rel` | TEXT | Y | CHECK (extract_rel IS NULL OR json_valid(extract_rel)) | 0006 추가. 7.5절 |
 
 테이블 제약:
 
@@ -223,6 +236,7 @@ covered_names 768개: 검색·이관 매핑용
 | `id_prefix` | TEXT | N | UNIQUE | 'REQ-' |
 | `defined_by_kind` | TEXT | N | → cat_kind.kind_id | 이 항목의 대장(정의 문서) 종류 |
 | `description` | TEXT | N |  |  |
+| `defined_by_field` | TEXT | Y |  | 0006 추가. 7.9절 |
 
 ### P 프로젝트 프로필
 
@@ -368,7 +382,7 @@ selected_kinds / promoted_kinds
 - `ix_doc_work`: `CREATE INDEX ix_doc_work ON document(work_id)`
 - `ix_doc_origin`: `CREATE INDEX ix_doc_origin ON document(origin_work_id)`
 
-트리거: `document_legal_hold`
+트리거: `document_legal_hold`, `document_id_format`
 
 #### `doc_tag`
 
@@ -464,7 +478,7 @@ kind_ids (통합 문서는 여러 개)
 - `ix_item_type`: `CREATE INDEX ix_item_type ON item(project_id, item_type)`
 - `ix_item_defined`: `CREATE INDEX ix_item_defined ON item(defined_in)`
 
-트리거: `item_id_prefix`, `item_fts_ai`, `item_fts_au`
+트리거: `item_id_prefix`, `item_fts_ai`, `item_fts_au`, `item_fts_ad`, `item_id_format`
 
 #### `role_assignment`
 
@@ -520,6 +534,8 @@ Git 파일·외부 객체·원시 증거 (내용은 복제하지 않음)
 
 - `CHECK (uri LIKE '%://%' OR (uri NOT LIKE '/%' AND uri NOT LIKE '%..%' AND uri NOT LIKE '%\%' AND uri NOT LIKE '_:%'))` — 저장소 경로는 상대 POSIX만: 절대경로·../·역슬래시·드라이브 접두사 거부 (외부 URI는 scheme 필수)
 
+트리거: `artifact_id_format`
+
 #### `doc_artifact`
 
 files (5.1): 문서 ↔ 원본·구조·계약·증거 파일
@@ -551,6 +567,11 @@ files (5.1): 문서 ↔ 원본·구조·계약·증거 파일
 | `anchor` | TEXT | Y |  |  |
 | `reason` | TEXT | Y |  |  |
 | `created_at` | TEXT | N |  |  |
+| `status` | TEXT | N | DEFAULT 'confirmed' CHECK (status IN ('proposed','confirmed','rejected')) | 0003 추가. 7.1절 |
+| `source` | TEXT | N | DEFAULT 'human' | 0003 추가. `rule:<규칙 ID>` / `agent` / `human` |
+| `proposed_by` | TEXT | Y | → actor.actor_id | 0003 추가 |
+| `decided_by` | TEXT | Y | → actor.actor_id | 0003 추가 |
+| `decided_at` | TEXT | Y |  | 0003 추가 |
 
 테이블 제약:
 
@@ -560,6 +581,8 @@ files (5.1): 문서 ↔ 원본·구조·계약·증거 파일
 
 - `ix_relation_from`: `CREATE INDEX ix_relation_from ON relation(from_type, from_id)`
 - `ix_relation_to`: `CREATE INDEX ix_relation_to ON relation(to_type, to_id)`
+
+트리거: `relation_source_status`, `relation_decide_human_only`
 
 #### `link_exemption`
 
@@ -599,6 +622,8 @@ WORK-YYYY-NNNN
 테이블 제약:
 
 - `CHECK (status IN ('planned','active','blocked','review','verified','closed','cancelled'))`
+
+트리거: `work_id_format`
 
 #### `work_event`
 
@@ -646,7 +671,7 @@ evt.* 사실: 작업마다 선언
 
 - `ix_run_work`: `CREATE INDEX ix_run_work ON run(work_id, result)`
 
-트리거: `run_no_update`
+트리거: `run_no_update`, `run_id_format`
 
 #### `finding`
 
@@ -689,7 +714,7 @@ evt.* 사실: 작업마다 선언
 
 - `CHECK (revision_id IS NOT NULL OR work_id IS NOT NULL)`
 
-트리거: `approval_human_only`
+트리거: `approval_human_only`, `approval_id_format`
 
 #### `handoff`
 
@@ -712,6 +737,8 @@ evt.* 사실: 작업마다 선언
 테이블 제약:
 
 - `CHECK (ack_status = 'pending' OR (ack_by IS NOT NULL AND ack_checked_baseline IS NOT NULL))`
+
+트리거: `handoff_id_format`
 
 #### `context_read`
 
@@ -872,14 +899,42 @@ CREATE VIRTUAL TABLE fts_text USING fts5(body, content='v_text_unit', content_ro
 | `budget` | INTEGER | Y |  |  |
 | `omitted` | INTEGER | N | DEFAULT 0 | 예산 때문에 생략한 항목 수 |
 | `called_at` | TEXT | N |  |  |
+| `session_ref` | TEXT | Y |  | 0008 추가. 7.8절 |
+
+### 가져오기(import) 확장(마이그레이션 0005)
+
+#### `import_segment`
+
+원본 파일을 나눈 구간과 처리 상태. 7.4절
+
+| 컬럼 | 타입 | NULL | 키·제약 | 설명 |
+|---|---|---|---|---|
+| `seg_id` | INTEGER | N | PK |  |
+| `artifact_id` | TEXT | N | → artifact.artifact_id |  |
+| `seq` | INTEGER | N |  |  |
+| `heading` | TEXT | Y |  |  |
+| `start_off` | INTEGER | N |  |  |
+| `end_off` | INTEGER | N |  |  |
+| `text_digest` | TEXT | N |  |  |
+| `status` | TEXT | N | CHECK (status IN ('pending','ruled','labeled','skipped','applied','stale')) |  |
+| `kind_id` | TEXT | Y | → cat_kind_field.kind_id |  |
+| `field_key` | TEXT | Y | → cat_kind_field.field_key |  |
+| `doc_id` | TEXT | Y | → document.doc_id |  |
+| `rule` | TEXT | Y |  |  |
+| `why` | TEXT | Y |  |  |
+
+테이블 제약:
+
+- `UNIQUE (artifact_id, seq)`
+- `FOREIGN KEY (kind_id, field_key) REFERENCES cat_kind_field(kind_id, field_key)`
 
 ## 4. 뷰
 
-| 뷰 | 설명 | 읽는 테이블·뷰 | 원본 |
+| 뷰 | 설명 | 읽는 테이블·뷰 | 출처 |
 |---|---|---|---|
 | `v_document_register` | A01 문서 마스터 목록 | `document`, `document_kind` | schema |
 | `v_missing_required_fields` | 필수 필드 누락 (FIELD_MISSING) | `cat_kind`, `cat_kind_field`, `document_kind`, `field_value` | schema |
-| `v_rtm` | D08 요구사항 추적 (REQ → 구현·검증) | `item`, `relation` | schema |
+| `v_rtm` | D08 요구사항 추적 (REQ → 구현·검증). 0003에서 `status = 'confirmed'`인 관계만 보도록 다시 정의 | `item`, `relation` | schema, 0003 |
 | `v_doc_head` | 최신 문서 리비전 (head) | `doc_revision` | schema |
 | `v_recent_changes` | 최근 변경 (누가·무엇을·어느 작업에서) — 사람/AI 구분 | `actor`, `change_log` | schema |
 | `v_entity_head` | 엔터티별 최신 변경 (링크드 리스트의 head) | `change_log` | schema |
@@ -888,32 +943,43 @@ CREATE VIRTUAL TABLE fts_text USING fts5(body, content='v_text_unit', content_ro
 | `v_summary_stale` | 다시 요약해야 할 목록 (배치로 처리) | `entity_summary`, `field_value` | token_ext |
 | `v_text_unit` | 검색 색인의 본문 원천(FTS5 external content가 읽는 뷰) | `field_value`, `item`, `text_unit` | token_ext |
 | `v_l0_document` | LLM용 한 줄 표현(L0) — 문서 | `document`, `document_kind` | token_ext |
+| `v_missing_required_links` | 필수 연결 누락(7.2절) | `cat_kind_link`, `document`, `document_kind`, `item`, `link_exemption`, `relation` | 0003 |
 
 ## 5. 트리거
 
-| 트리거 | 대상 | 시점 | 규칙 | 오류 메시지 |
-|---|---|---|---|---|
-| `item_id_prefix` | `item` | BEFORE INSERT | 항목 ID는 종류 접두어로 시작 | item_id must start with the item_type prefix |
-| `context_read_no_update` | `context_read` | BEFORE UPDATE | AI 읽기 기록 수정 금지(append-only) | context_read is append-only |
-| `change_log_no_update` | `change_log` | BEFORE UPDATE | append-only 강제 | change_log is append-only; add a correct record |
-| `change_log_no_delete` | `change_log` | BEFORE DELETE | append-only 강제 | change_log is append-only |
-| `doc_revision_no_update` | `doc_revision` | BEFORE UPDATE | 기준선 불변 | doc_revision is immutable; create a new revision |
-| `doc_revision_no_delete` | `doc_revision` | BEFORE DELETE | 기준선 불변 | doc_revision is immutable |
-| `run_no_update` | `run` | BEFORE UPDATE | 실행 증거 불변(정정은 새 실행으로) | run evidence is immutable; record a new run |
-| `change_log_chain_check` | `change_log` | BEFORE INSERT | 링크는 같은 엔터티/문서 안에서만, 순번은 직전+1 | broken chain: prev must be same entity, seq-1, matching digest |
-| `doc_revision_chain_check` | `doc_revision` | BEFORE INSERT | 기준선 체인: 같은 문서, 직전 번호, digest 일치 | broken chain: prev must be same doc, revision_no-1, matching digest |
-| `document_kind_lifecycle` | `document_kind` | BEFORE INSERT | 한 문서에 living/work 종류 혼합 금지 (AT-29) | kind lifecycle must match document lifecycle |
-| `approval_human_only` | `approval` | BEFORE INSERT | 승인자는 사람만 | AI actor cannot approve |
-| `document_legal_hold` | `document` | BEFORE DELETE | legal_hold 문서 삭제 금지 | legal_hold document cannot be deleted |
-| `fv_fts_ai` | `field_value` | AFTER INSERT | 검색 색인(fts_text) 동기화 | — |
-| `fv_fts_au` | `field_value` | AFTER UPDATE | 검색 색인(fts_text) 동기화 | — |
-| `fv_fts_ad` | `field_value` | AFTER DELETE | 검색 색인(fts_text) 동기화 | — |
-| `item_fts_ai` | `item` | AFTER INSERT | 검색 색인(fts_text) 동기화 | — |
-| `item_fts_au` | `item` | AFTER UPDATE | 검색 색인(fts_text) 동기화 | — |
+| 트리거 | 대상 | 시점 | 규칙 | 오류 메시지 | 마이그레이션 |
+|---|---|---|---|---|---|
+| `item_id_prefix` | `item` | BEFORE INSERT | 항목 ID는 종류 접두어로 시작 | item_id must start with the item_type prefix | 0001 |
+| `context_read_no_update` | `context_read` | BEFORE UPDATE | AI 읽기 기록 수정 금지(append-only) | context_read is append-only | 0001 |
+| `change_log_no_update` | `change_log` | BEFORE UPDATE | append-only 강제 | change_log is append-only; add a correct record | 0001 |
+| `change_log_no_delete` | `change_log` | BEFORE DELETE | append-only 강제 | change_log is append-only | 0001 |
+| `doc_revision_no_update` | `doc_revision` | BEFORE UPDATE | 기준선 불변 | doc_revision is immutable; create a new revision | 0001 |
+| `doc_revision_no_delete` | `doc_revision` | BEFORE DELETE | 기준선 불변 | doc_revision is immutable | 0001 |
+| `run_no_update` | `run` | BEFORE UPDATE | 실행 증거 불변(정정은 새 실행으로) | run evidence is immutable; record a new run | 0001 |
+| `change_log_chain_check` | `change_log` | BEFORE INSERT | 링크는 같은 엔터티/문서 안에서만, 순번은 직전+1 | broken chain: prev must be same entity, seq-1, matching digest | 0001 |
+| `doc_revision_chain_check` | `doc_revision` | BEFORE INSERT | 기준선 체인: 같은 문서, 직전 번호, digest 일치 | broken chain: prev must be same doc, revision_no-1, matching digest | 0001 |
+| `document_kind_lifecycle` | `document_kind` | BEFORE INSERT | 한 문서에 living/work 종류 혼합 금지 (AT-29) | kind lifecycle must match document lifecycle | 0001 |
+| `approval_human_only` | `approval` | BEFORE INSERT | 승인자는 사람만 | AI actor cannot approve | 0001 |
+| `document_legal_hold` | `document` | BEFORE DELETE | legal_hold 문서 삭제 금지 | legal_hold document cannot be deleted | 0001 |
+| `fv_fts_ai` | `field_value` | AFTER INSERT | 검색 색인(fts_text) 동기화 | — | 0002 |
+| `fv_fts_au` | `field_value` | AFTER UPDATE | 검색 색인(fts_text) 동기화 | — | 0002 |
+| `fv_fts_ad` | `field_value` | AFTER DELETE | 검색 색인(fts_text) 동기화 | — | 0002 |
+| `item_fts_ai` | `item` | AFTER INSERT | 검색 색인(fts_text) 동기화 | — | 0002 |
+| `item_fts_au` | `item` | AFTER UPDATE | 검색 색인(fts_text) 동기화 | — | 0002 |
+| `relation_source_status` | `relation` | BEFORE INSERT | 출처·상태·제안자 조합 검사(7.1절) | relation source/status/proposer mismatch | 0003 |
+| `relation_decide_human_only` | `relation` | BEFORE UPDATE OF status | `proposed`에서만 전이, 결정자는 사람만(7.1절) | only a human can decide a proposed relation | 0003 |
+| `item_fts_ad` | `item` | AFTER DELETE | 검색 색인(fts_text) 동기화(7.3절) | — | 0004 |
+| `document_id_format` | `document` | BEFORE INSERT | `doc_id` 형식(7.6절) | doc_id format invalid | 0007 |
+| `item_id_format` | `item` | BEFORE INSERT | `item_id` 형식(7.6절) | item_id format invalid | 0007 |
+| `run_id_format` | `run` | BEFORE INSERT | `run_id` 형식(7.6절) | run_id format invalid | 0007 |
+| `handoff_id_format` | `handoff` | BEFORE INSERT | `handoff_id` 형식(7.6절) | handoff_id format invalid | 0007 |
+| `approval_id_format` | `approval` | BEFORE INSERT | `approval_id` 형식(7.6절) | approval_id format invalid | 0007 |
+| `artifact_id_format` | `artifact` | BEFORE INSERT | `artifact_id` 형식(7.6절) | artifact_id format invalid | 0007 |
+| `work_id_format` | `work` | BEFORE INSERT | `work_id` 형식(7.6절) | work_id format invalid | 0007 |
 
 ## 6. 시드 데이터
 
-`docdb_seed_item_types.sql`: 항목 종류(`cat_item_type`) 39행. 시작 카탈로그에 없는 종류를 참조하는 행은 적재하지 않는다([07](07-catalogue.md) 4절).
+시드 파일 `docdb/catalogue/item_types.json`: 항목 종류(`cat_item_type`) 39행(`known_error`를 뺀 38행에 `defined_by_field`가 있다). 시작 카탈로그에 없는 종류를 참조하는 행은 적재하지 않는다([07](07-catalogue.md) 4절).
 
 | item_type | 접두어 | 정의 문서 종류 | 설명 |
 |---|---|---|---|
@@ -957,13 +1023,13 @@ CREATE VIRTUAL TABLE fts_text USING fts5(body, content='v_text_unit', content_ro
 | `contract` | `CTR-` | U04 | 계약 (U04.contracts) |
 | `ai_model` | `AIM-` | V01 | AI 모델·에이전트 (V01.identity) |
 
-## 7. 계획된 변경 (2026-10-13 결정 반영)
+## 7. 적용된 변경 (2026-10-13 결정 반영, 마이그레이션 0003~0008)
 
-아래는 아직 SQL에 없는 변경이다. 구현 계획([plan/](plan/README.md))의 마이그레이션 파일로 추가하고, 구현 후 이 문서를 다시 생성한다. 모두 확정된 결정에서 나온 변경이다.
+아래 변경은 모두 마이그레이션 파일로 적용되어 있다(구현 계획 [plan/](plan/README.md)). 이 문서의 1~6절은 적용 결과를 실제 DB에서 읽어 생성했다. 모두 확정된 결정에서 나온 변경이다.
 
 ### 7.0 마이그레이션 번호
 
-`PRAGMA user_version`이 마지막으로 적용한 번호다(D21). 적용한 파일은 고치지 않고 새 번호로만 추가한다.
+`PRAGMA user_version`이 마지막으로 적용한 번호다(D21). 현재 값은 8이다. 적용한 파일은 고치지 않고 새 번호로만 추가한다.
 
 | 번호 | 파일 | 내용 | 결정 |
 |---|---|---|---|
@@ -976,7 +1042,9 @@ CREATE VIRTUAL TABLE fts_text USING fts5(body, content='v_text_unit', content_ro
 | 7 | `0007_id_formats.sql` | 7.6 | D17 |
 | 8 | `0008_call_log_session.sql` | 7.8 | D18 |
 
-### 7.1 `relation` 상태 컬럼과 트리거 — D10 확정
+표의 번호와 파일은 `docdb/src/docdb/schema/`의 실제 파일과 같다. 7.1~7.3은 0003·0004, 7.4는 0005, 7.5·7.9는 0006, 7.6은 0007, 7.8은 0008에 들어갔다. 7.10은 마이그레이션이 없다.
+
+### 7.1 `relation` 상태 컬럼과 트리거 — D10 확정, 적용됨(0003)
 
 | 추가 컬럼 | 타입 | 제약 | 설명 |
 |---|---|---|---|
@@ -997,7 +1065,7 @@ CREATE VIRTUAL TABLE fts_text USING fts5(body, content='v_text_unit', content_ro
 
 조회 변경: `v_rtm`과 `trace`·`ctx`의 관계 조회에 `status='confirmed'` 조건을 추가한다.
 
-### 7.2 필수 연결 검사 뷰 `v_missing_required_links` — D10 확정(B2)
+### 7.2 필수 연결 검사 뷰 `v_missing_required_links` — D10 확정(B2), 적용됨(0003)
 
 적용 대상 문서마다 `cat_kind_link(is_required=1)`의 대상 종류와 확정된 연결이 없고 `link_exemption`도 없는 행을 낸다. "종류 Y와 연결됨"은 확정된 `relation`의 상대가 (a) 종류 Y 문서이거나 (b) 종류 Y 문서에서 정의된 항목(`item.defined_in`)인 경우다.
 
@@ -1006,13 +1074,13 @@ CREATE VIRTUAL TABLE fts_text USING fts5(body, content='v_text_unit', content_ro
 | `doc_id`, `kind_id` | 검사 대상 문서와 종류 |
 | `target_kind_id` | 연결이 빠진 대상 종류 |
 
-### 7.3 `item` 검색 색인 삭제 트리거 — D7 확정(P4)
+### 7.3 `item` 검색 색인 삭제 트리거 — D7 확정(P4), 적용됨(0004)
 
 | 추가 트리거 | 시점 | 동작 |
 |---|---|---|
 | `item_fts_ad` | AFTER DELETE ON `item` | `fts_text` 색인 항목 삭제(`fv_fts_ad`와 같은 방식). `text_unit` 행은 남겨 같은 ID를 다시 만들 때 재사용 |
 
-### 7.4 `import_segment` 테이블 — D6 확정
+### 7.4 `import_segment` 테이블 — D6 확정, 적용됨(0005)
 
 | 컬럼 | 타입 | 제약 | 설명 |
 |---|---|---|---|
@@ -1030,13 +1098,13 @@ CREATE VIRTUAL TABLE fts_text USING fts5(body, content='v_text_unit', content_ro
 
 scan 1회는 기존 `run`에 `run_type='import'`로 남긴다.
 
-### 7.5 `cat_kind_field.extract_rel` — D10 확정(R3), 원 카탈로그에 없는 확장
+### 7.5 `cat_kind_field.extract_rel` — D10 확정(R3), 원 카탈로그에 없는 확장, 적용됨(0006)
 
 | 추가 컬럼 | 타입 | 설명 |
 |---|---|---|
 | `extract_rel` | TEXT CHECK(`extract_rel IS NULL OR json_valid(extract_rel)`) | 이 필드 본문의 **같은 줄**에 함께 나온 두 종류 ID 사이에 만들 관계. 형식: `{"rel":"verified_by","from_prefix":"REQ-","to_prefix":"TC-"}` — 한 줄에 `REQ-…`와 `TC-…`가 함께 있으면 `REQ verified_by TC`(규칙 R3) |
 
-### 7.6 ID 형식 트리거 — D17
+### 7.6 ID 형식 트리거 — D17, 적용됨(0007)
 
 | 대상 | 형식(Python 정규식, 트리거는 같은 조건을 GLOB으로 구현) | 발급 |
 |---|---|---|
@@ -1045,14 +1113,14 @@ scan 1회는 기존 `run`에 `run_type='import'`로 남긴다.
 | `handoff.handoff_id` | `^HO-\d{4}-\d{4,}$` | 연도별 순번 자동 |
 | `approval.approval_id` | `^APR-\d{4}-\d{4,}$` | 연도별 순번 자동 |
 | `artifact.artifact_id` | `^ART-\d{4}-\d{4,}$` | 연도별 순번 자동 |
-| `work.work_id` | 기존 CHECK `WORK-[0-9][0-9][0-9][0-9]-[0-9]*` 유지, 발급은 `^WORK-\d{4}-\d{4,}$` | 연도별 순번 자동 |
+| `work.work_id` | 기존 CHECK `WORK-[0-9][0-9][0-9][0-9]-[0-9]*`를 유지하고 `work_id_format` 트리거가 `^WORK-\d{4}-\d{4,}$`를 추가로 검사 | 연도별 순번 자동 |
 | `item.item_id` | 기존 `item_id_prefix` 트리거 + `^[A-Z0-9]+-[A-Z0-9]+(-[A-Z0-9]+)*$` | 의미 있는 이름 |
 
-트리거 이름: `<table>_id_format` (BEFORE INSERT). 오류 메시지: `<column> format invalid`.
+트리거 이름: `<table>_id_format` (BEFORE INSERT, 7개: `document` `item` `run` `handoff` `approval` `artifact` `work`). 오류 메시지: `<column> format invalid`. `item`은 기존 `item_id_prefix` 트리거도 함께 유지한다.
 
-### 7.7 시제품 SQL과 검증 결과
+### 7.7 시제품 SQL과 검증 결과 (0003·0004의 출발점)
 
-7.1~7.3의 변경을 원본 스키마(+토큰 확장, 미니 카탈로그)에 적용해 SQLite 3.53.1에서 확인했다(2026-10-13, 10/10 통과). 구현 시 이 SQL을 출발점으로 쓴다. `relation`의 NOT NULL 컬럼 추가는 기본값이 필요해 `source`에 `'human'` 기본값을 두었다(실제 마이그레이션은 기존 행을 `rule:legacy`로 채우는 재작성으로 바꿀 수 있다).
+7.1~7.3의 변경을 원본 스키마(+토큰 확장, 미니 카탈로그)에 적용해 SQLite 3.53.1에서 확인했다(2026-10-13, 10/10 통과). 이 SQL은 마이그레이션 0003·0004의 출발점으로 쓰였다. 아래 SQL은 시제품 그대로이며 `relation`의 NOT NULL 컬럼 추가는 기본값이 필요해 `source`에 `'human'` 기본값을 두었다. 적용된 0003도 `source`의 기본값이 `'human'`이다(`rule:legacy`로 채우는 재작성은 하지 않았다). 0003은 이 SQL에 `v_rtm`을 확정 관계만 보도록 다시 정의하는 `DROP VIEW`·`CREATE VIEW`를 더했다.
 
 | 검사 | 결과 |
 |---|---|
@@ -1118,19 +1186,19 @@ WHERE NOT EXISTS (SELECT 1 FROM link_exemption e WHERE e.doc_id = dk.doc_id AND 
                   WHERE k.doc_id = dk.doc_id AND dk2.kind_id = l.target_kind_id);
 ```
 
-### 7.8 `call_log.session_ref` — D18
+### 7.8 `call_log.session_ref` — D18, 적용됨(0008)
 
 | 추가 컬럼 | 타입 | 설명 |
 |---|---|---|
 | `session_ref` | TEXT | 에이전트 세션·모델 표시. `DOCDB_SESSION`과 `DOCDB_MODEL` 환경 변수를 `<session>/<model>` 형식으로 기록 |
 
-### 7.9 `cat_item_type.defined_by_field` — D10(R1)
+### 7.9 `cat_item_type.defined_by_field` — D10(R1), 적용됨(0006)
 
 | 추가 컬럼 | 타입 | 설명 |
 |---|---|---|
 | `defined_by_field` | TEXT | 이 항목 종류를 정의하는 필드 키(예: `requirement`는 D01의 `requirement_ids`). 규칙 R1은 이 필드에 쓴 ID만 항목으로 만든다 |
 
-### 7.10 변경 없음으로 처리하는 결정
+### 7.10 변경 없음으로 처리하는 결정(마이그레이션 없음)
 
 | 결정 | 이유 |
 |---|---|
@@ -1140,5 +1208,5 @@ WHERE NOT EXISTS (SELECT 1 FROM link_exemption e WHERE e.doc_id = dk.doc_id AND 
 
 ## 8. 이 문서의 재생성
 
-원본 SQL과 위 7절이 바뀌면 다시 생성한다. 생성 절차: SQL을 SQLite(3.34 이상, trigram 지원)에 적재 → `PRAGMA table_xinfo`·`foreign_key_list`·`sqlite_master` 조회 → SQL 주석을 설명 열로 사용. 구현 단계에서 생성 스크립트를 플러그인 `tests/` 또는 `tools/`에 둔다.
+마이그레이션 파일이 바뀌면 다시 생성한다. 생성 절차: 빈 DB에 `docdb.migrate.apply_pending`을 적용(SQLite 3.34 이상, trigram 지원) → `PRAGMA user_version`·`table_xinfo`·`foreign_key_list`·`sqlite_master` 조회 → SQL 주석을 설명 열로 사용. 2026-10-14 T30은 PRAGMA 조회 결과와 이 문서를 대조하는 임시 스크립트로 갱신했으며, 상시 생성 스크립트는 저장소에 없다.
 
