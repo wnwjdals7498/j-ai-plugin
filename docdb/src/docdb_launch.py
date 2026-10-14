@@ -146,6 +146,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         sys.stderr.write("ERROR PY_TOO_OLD Python 3.10 이상 필요\n")
         return 2
 
+    # Windows에서 파이프로 연결된 표준 입출력은 로캘 인코딩(cp1252 등)이라 한글 출력이 깨지거나
+    # UnicodeEncodeError가 난다. 버전 검사 뒤에는 reconfigure가 항상 있다(C-24).
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding="utf-8")
+
     source_dir = Path(__file__).resolve().parent
     (
         DocdbError,

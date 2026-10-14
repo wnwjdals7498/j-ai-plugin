@@ -70,6 +70,7 @@ def _run_script(args, env, python=None, python_args=None):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
+        encoding="utf-8",
         check=False,
     )
 
@@ -93,6 +94,26 @@ def test_t24_2_cli_without_venv_reports_no_venv(tmp_path):
     result = _run_script(["cli", "actor", "list"], _environment(home))
     assert result.returncode == 2
     assert "ERROR NO_VENV" in result.stderr
+
+
+def test_t24_2_error_output_is_utf8_even_with_ascii_io_encoding(tmp_path):
+    """행 2 보강: 표준 입출력 인코딩이 ASCII여도(Windows 파이프의 cp1252 대비) 오류 줄은 UTF-8 한글이다(C-24)."""
+    home = tmp_path / "home"
+    home.mkdir()
+    env = _environment(home)
+    env["PYTHONIOENCODING"] = "ascii"
+    result = subprocess.run(
+        [_base_python(), str(_plugin_root() / "src" / "docdb_launch.py"), "cli", "actor", "list"],
+        cwd=str(_plugin_root()),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert result.stderr.decode("utf-8").replace("\r\n", "\n") == (
+        "ERROR NO_VENV docdb_launch.py setup 실행 필요\n"
+    )
 
 
 def test_t24_3_python_version_mismatch_reports_error(tmp_path):
@@ -215,6 +236,7 @@ def test_t24_8_mcp_sets_start_dir_from_pwd(tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
+        encoding="utf-8",
         check=False,
     )
     assert result.returncode == 0, result.stderr
@@ -247,6 +269,7 @@ def test_t24_9_mcp_preserves_existing_start_dir(tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
+        encoding="utf-8",
         check=False,
     )
     assert result.returncode == 0, result.stderr
@@ -266,6 +289,7 @@ def test_t24_10_venv_paths_precede_user_site(tmp_path, project_db):
             [_base_python(), "-c", "import site; print(site.getusersitepackages())"],
             env=env,
             universal_newlines=True,
+        encoding="utf-8",
         ).strip()
     )
     user_site.mkdir(parents=True, exist_ok=True)
@@ -294,6 +318,7 @@ def test_t24_10_venv_paths_precede_user_site(tmp_path, project_db):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
+        encoding="utf-8",
         check=False,
     )
     assert result.returncode == 0, result.stderr
