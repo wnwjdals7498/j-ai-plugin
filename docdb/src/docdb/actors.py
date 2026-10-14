@@ -36,7 +36,7 @@ def add_actor(
     """
     pattern = ACTOR_PATTERNS.get(actor_type)
     if pattern is None or not re.fullmatch(pattern, actor_id, re.ASCII):
-        raise DocdbError("ID_FORMAT", f"행위자 ID 형식 위반: {actor_id} ({actor_type})")
+        raise DocdbError("ID_FORMAT", "행위자 ID 형식 위반")
 
     normalized_name = normalize_text(name) or name
     with db.write_tx(con):

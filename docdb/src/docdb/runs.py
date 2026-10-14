@@ -30,6 +30,22 @@ def _payload_strings(value: Any) -> list[str]:
     return []
 
 
+def _object_keys(value: Any) -> list[str]:
+    """자유 형식 객체의 키를 중첩까지 정규화해 모은다."""
+    if isinstance(value, dict):
+        keys = [
+            normalized
+            for key in value
+            if isinstance(key, str)
+            for normalized in [textnorm.normalize_text(key)]
+            if normalized is not None
+        ]
+        return keys + [text for nested in value.values() for text in _object_keys(nested)]
+    if isinstance(value, list):
+        return [text for nested in value for text in _object_keys(nested)]
+    return []
+
+
 def _validate_id(kind: str, value: str) -> None:
     """형식 오류에 입력값을 넣지 않고 ID를 검사한다."""
     try:
@@ -157,7 +173,10 @@ def ingest(con: Connection, actor: Actor, payload: dict) -> str:
         if attestation_ref is not None:
             attestation_ref = textnorm.normalize_text(attestation_ref) or attestation_ref
 
-        policy.assert_no_secrets(con, f"r:{run_id}", _payload_strings(payload))
+        policy_texts = _payload_strings(payload)
+        for key in ("env_snapshot", "target_versions"):
+            policy_texts.extend(_object_keys(payload.get(key, {})))
+        policy.assert_no_secrets(con, f"r:{run_id}", policy_texts)
 
         raw_artifact_id = None
         if raw_log is not None:

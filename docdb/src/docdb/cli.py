@@ -253,8 +253,9 @@ def _init(args: argparse.Namespace) -> int:
     if not _PROJECT_ID.fullmatch(args.project):
         raise DocdbError("BAD_ARGS", "프로젝트 ID 형식이 올바르지 않음")
     if not re.fullmatch(actors.ACTOR_PATTERNS["human"], args.owner, re.ASCII):
-        raise DocdbError("ID_FORMAT", f"사람 행위자 ID 형식 위반: {args.owner}")
+        raise DocdbError("ID_FORMAT", "사람 행위자 ID 형식 위반")
     project_name = textnorm.normalize_text(args.name) or ""
+    owner_name = textnorm.normalize_text(args.owner_name) or ""
 
     root = args.dir.resolve()
     project_dir = root / paths.DOT_DIR
@@ -275,8 +276,11 @@ def _init(args: argparse.Namespace) -> int:
     try:
         db.check_capabilities(con)
         migrate.apply_pending(con)
+        policy.assert_no_secrets(
+            con, f"project:{args.project}", [project_name, owner_name]
+        )
         base_actors = (
-            (args.owner, "human", args.owner_name),
+            (args.owner, "human", owner_name),
             ("ai-claude", "ai", "Claude Code"),
             ("ai-codex", "ai", "Codex"),
             ("team-ci", "team", "CI"),
@@ -289,7 +293,6 @@ def _init(args: argparse.Namespace) -> int:
             "SELECT catalogue_version FROM cat_version ORDER BY loaded_at DESC LIMIT 1"
         ).fetchone()[0]
         with db.write_tx(con):
-            policy.assert_no_secrets(con, f"project:{args.project}", [project_name])
             con.execute(
                 "INSERT INTO project (project_id, name, catalogue_version) VALUES (?, ?, ?)",
                 (args.project, project_name, version),

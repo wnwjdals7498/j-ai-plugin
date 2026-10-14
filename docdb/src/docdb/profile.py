@@ -100,7 +100,7 @@ def set_fact(
         (fact_key,),
     ).fetchone()
     if cat_row is None:
-        raise DocdbError("BAD_ARGS", f"카탈로그에 등록되지 않은 cap 사실 키: {fact_key}")
+        raise DocdbError("BAD_ARGS", "카탈로그에 등록되지 않은 cap 사실 키")
     if not isinstance(reason, str) or not reason.strip():
         raise DocdbError("BAD_ARGS", "사실 사유는 필수 문자열임")
 
