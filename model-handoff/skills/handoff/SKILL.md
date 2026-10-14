@@ -92,6 +92,16 @@ description: 작업을 하위 모델(Codex, Antigravity, 개인 Claude)에 우�
 판정과 반입은 위와 같다. 검증 실패 재시도도 서브에이전트로 1회만 한다.
 보고의 실행자 칸에는 `claude-subagent`로 적는다.
 
+### pi·opencode(freellmapi) 수동 디스패치
+
+로컬 freellmapi에 붙은 하위 모델로 넘기고 싶다는 요청이면 `handoff run` 대신 아래 절차로
+같은 worktree·프롬프트 파일을 디스패치한다. 판정·반입·재시도 규칙은 위와 같다.
+
+- pi: `references/pi-headless.md` (`pi -p --mode json ... < /dev/null`). 종료 코드가 아니라
+  마지막 메시지의 `stopReason`으로 성공을 판정한다.
+- opencode: `references/opencode-headless.md` (`opencode run --auto --format json`).
+  WSL 안에만 설치된 opencode는 지원하지 않는다.
+
 `attempts`에 `limit`이 있으면 어느 실행자가 언제까지 대기로 바뀌었는지 보고에 넣는다.
 
 ## 4. 정리와 보고
