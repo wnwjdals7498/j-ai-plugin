@@ -1,0 +1,21 @@
+#!/bin/sh
+
+plugin_root=$(CDPATH= cd "$(dirname "$0")/.." && pwd)
+
+if [ -n "${DOCDB_HOME:-}" ]; then
+    data_dir=$DOCDB_HOME
+elif [ "$(uname -s)" = "Darwin" ]; then
+    data_dir="$HOME/Library/Application Support/docdb"
+else
+    data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/docdb"
+fi
+
+python="$data_dir/venv/bin/python"
+if [ ! -x "$python" ]; then
+    printf '%s\n' "ERROR NO_VENV docdb_launch.py setup 실행 필요" >&2
+    exit 2
+fi
+
+PYTHONPATH="$plugin_root/src"
+export PYTHONPATH
+exec "$python" -m docdb "$@"

@@ -20,6 +20,14 @@
       "version": "0.1.1",
       "category": "Productivity",
       "strict": true
+    },
+    {
+      "name": "docdb",
+      "source": "./docdb",
+      "description": "Project document DB with token-minimal MCP tools.",
+      "version": "0.1.0",
+      "category": "Productivity",
+      "strict": true
     }
   ]
 }

@@ -1,0 +1,24 @@
+{
+  "name": "docdb",
+  "version": "0.1.0",
+  "description": "Project document DB with token-minimal MCP tools.",
+  "author": { "name": "PMT" },
+  "mcpServers": {
+    "docdb": {
+      "command": "${user_config.python_path}",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/src/docdb_launch.py", "mcp"],
+      "env": {
+        "DOCDB_START_DIR": "${CLAUDE_PROJECT_DIR}",
+        "DOCDB_ACTOR": "ai-claude"
+      }
+    }
+  },
+  "userConfig": {
+    "python_path": {
+      "type": "string",
+      "title": "Python 3.10+ executable",
+      "description": "Command or absolute path of a Python 3.10 or later interpreter. On Windows use py or an absolute path.",
+      "default": "python3"
+    }
+  }
+}

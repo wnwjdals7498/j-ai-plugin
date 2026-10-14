@@ -1,0 +1,8 @@
+{
+  "name": "docdb",
+  "version": "0.1.0",
+  "description": "Project document DB with token-minimal MCP tools.",
+  "author": { "name": "PMT" },
+  "skills": "./skills/",
+  "mcpServers": "./codex.mcp.json"
+}
