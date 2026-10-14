@@ -38,13 +38,15 @@ docctl init --project <PMT-slug> --name <프로젝트명> --owner u-<계정> --o
 
 관계를 제안할 때 `link`에 근거를 `why`로 적는다. 에이전트는 관계를 확정하지 않는다. `link confirm`과 `link reject`는 사람이 실행한다.
 
+에이전트는 `script`·`expect` 등으로 터미널(TTY)을 흉내 내 사람 전용 명령(`link confirm|reject|remove`, 작업 `verified`·`closed`·`cancelled`, `fact set`, `restore`, `actor add`, `catalogue load`, `policy allow-secret`)을 실행하지 않는다. 이 TTY 검사는 실수 방지 장치이며 보안 경계가 아니다(C-11). 사람 판단이 필요하면 사용자에게 요청한다.
+
 ## 작업·인계
 
 에이전트 작업의 진행 상태와 의사 결정은 PMT에서 관리한다. docdb `work`는 문서 변경 묶음이며 `project_id`에는 PMT 프로젝트 slug, `base_refs`에는 PMT Item ID를 기록한다. 필요한 경우 `handoff`를 작성하고 `as_of=c:N`을 포함한다. 수신 확인은 사람이 한다.
 
 ## import 절차
 
-1. `docctl import scan <폴더>`로 Markdown·텍스트 파일을 등록하고 제목 기준으로 나눈다.
+1. `docctl import scan <폴더> --owner u-<계정> [--export-policy approved_providers|local_only|public]`로 Markdown·텍스트 파일을 등록하고 제목 기준으로 나눈다.
 2. `docctl import next`에서 미분류 구간과 후보를 확인한다. `local_only` 구간은 본문을 요청하지 않는다.
 3. `docctl import label '<JSON 배열>'`에 종류·필드 라벨만 기록한다. 원문은 다시 쓰지 않는다.
 4. `docctl import report`로 결과를 확인한다. 큰 import는 새 세션이나 서브에이전트로 나눈다.
