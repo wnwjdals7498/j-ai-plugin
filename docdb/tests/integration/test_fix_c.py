@@ -1,5 +1,6 @@
 """묶음 FC 최종 리뷰 지적 회귀 테스트."""
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -39,9 +40,12 @@ def test_fix_l3_scan_skips_invalid_uri_paths_and_warns(
 ) -> None:
     """URI 규칙에 맞지 않는 이름은 건너뛰고 정상 파일을 등록한다."""
     folder = tmp_path
-    (folder / "v1..2.txt").write_text("# Bad\ntext\n", encoding="utf-8")
-    (folder / "bad\\path.txt").write_text("# Bad\ntext\n", encoding="utf-8")
-    (folder / "x:drive.txt").write_text("# Bad\ntext\n", encoding="utf-8")
+    # Windows는 역슬래시(경로 구분자)·콜론(대체 데이터 스트림)이 든 파일 이름을 만들 수 없다.
+    bad_names = ["v1..2.txt"]
+    if sys.platform != "win32":
+        bad_names += ["bad\\path.txt", "x:drive.txt"]
+    for name in bad_names:
+        (folder / name).write_text("# Bad\ntext\n", encoding="utf-8")
     (folder / "요구사항.md").write_text(
         "# 요구사항\n\n## behavior\n정상 파일 내용입니다.\n", encoding="utf-8"
     )
@@ -49,13 +53,13 @@ def test_fix_l3_scan_skips_invalid_uri_paths_and_warns(
     code, out, err = _scan_cli(run_cli, project_db, folder)
 
     assert code == 0, err
-    assert out == "WARN skipped_paths=3\n"
+    assert out == f"WARN skipped_paths={len(bad_names)}\n"
     assert "v1..2.txt" not in out
     con = db.connect(project_db)
     try:
         uris = {row[0] for row in con.execute("SELECT uri FROM artifact")}
         assert "요구사항.md" in uris
-        assert not {"v1..2.txt", "bad\\path.txt", "x:drive.txt"} & uris
+        assert not set(bad_names) & uris
         assert con.execute(
             "SELECT value_text FROM field_value WHERE kind_id='D01' AND field_key='behavior'"
         ).fetchone()[0] == "정상 파일 내용입니다."
