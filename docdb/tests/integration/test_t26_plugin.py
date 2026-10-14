@@ -11,6 +11,8 @@ import sysconfig
 import venv as venv_module
 from pathlib import Path
 
+import pytest
+
 
 def _plugin_root() -> Path:
     """플러그인 루트 경로를 반환한다."""
@@ -72,6 +74,7 @@ def test_t26_1_manifests_are_valid_json_with_matching_versions_and_actors():
     assert codex_mcp["mcpServers"]["docdb"]["env"]["DOCDB_ACTOR"] == "ai-codex"
 
 
+@pytest.mark.skipif(shutil.which("claude") is None, reason="claude CLI 없음(C-27)")
 def test_t26_2_claude_plugin_validator_passes_without_warnings():
     """행 2: 저장소 루트에서 Claude 플러그인 검증이 경고 없이 통과한다."""
     result = subprocess.run(
@@ -80,6 +83,7 @@ def test_t26_2_claude_plugin_validator_passes_without_warnings():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     output = result.stdout + result.stderr
@@ -88,6 +92,7 @@ def test_t26_2_claude_plugin_validator_passes_without_warnings():
     assert re.search(r"\bwarning\b", output, flags=re.IGNORECASE) is None
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="bin/docctl은 POSIX sh(C-26), Windows는 docdb_launch.py cli")
 def test_t26_3_docctl_runs_actor_list_with_configured_data_venv(tmp_path, project_db):
     """행 3: data venv를 설정하면 docctl actor list가 성공한다."""
     root = _plugin_root()
@@ -101,12 +106,14 @@ def test_t26_3_docctl_runs_actor_list_with_configured_data_venv(tmp_path, projec
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     assert result.returncode == 0, result.stderr
     assert "u-tester" in result.stdout
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="bin/docctl은 POSIX sh(C-26), Windows는 docdb_launch.py cli")
 def test_t26_4_docctl_without_data_venv_reports_no_venv(tmp_path):
     """행 4: venv가 없으면 docctl이 종료 코드 2와 NO_VENV를 출력한다."""
     home = tmp_path / "empty-home"
@@ -118,6 +125,7 @@ def test_t26_4_docctl_without_data_venv_reports_no_venv(tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     assert result.returncode == 2

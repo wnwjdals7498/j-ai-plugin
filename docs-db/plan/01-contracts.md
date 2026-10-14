@@ -833,6 +833,7 @@ python docdb_launch.py cli <docctl 인자...>
 - 외부 명령은 모듈 수준 함수 `_run(cmd: list) -> None`(내부 `subprocess.run(cmd, check=True)`)으로만 실행한다(테스트가 바꿔 끼움).
 - `setup`: `python -m venv <venv_dir>` → `<venv_python> -m pip install -c constraints.txt pysqlite3 mcp` → 스탬프 쓰기. `--remove`는 venv 폴더 삭제(백업 폴더는 지우지 않음).
 - `mcp`·`cli`: 스탬프 없으면 `NO_VENV`, 버전 불일치면 `VENV_MISMATCH` → `sysconfig.get_paths(scheme=<"nt" if os.name == "nt" else "posix_prefix">, vars={"base": venv, "platbase": venv})`의 `purelib`·`platlib`를 `site.addsitedir`(scheme을 명시하는 이유: Debian 계열 Python은 기본 scheme이 `posix_local`이라 venv 경로가 틀어짐. RHEL은 `platlib`가 `lib64`이며 venv의 `lib64` 링크로 해결됨 — 2026-10-13 개발 서버에서 확인) → `addsitedir`로 새로 더해진 경로를 원래 순서대로 `sys.path` 맨 앞으로 옮긴다(`addsitedir`는 뒤에 붙이므로 사용자·시스템 site-packages의 오래된 패키지가 venv 것을 가린다. 2026-10-13 개발 서버에서 `~/.local`의 `typing_extensions` 때문에 `import mcp`가 실패하는 것을 재현) → `src`를 `sys.path` 맨 앞에 추가 → `import pysqlite3`, `import mcp`(실패 시 `DEP_MISSING`) → `docdb.mcp_server.main()` 또는 `docdb.cli.main(argv)`.
+- 버전 검사 직후 `sys.stdout`·`sys.stderr`를 `reconfigure(encoding="utf-8")`한다. Windows에서 파이프로 연결된 표준 입출력은 로캘 인코딩(cp1252 등)이라 한글 출력이 `\u…`로 바뀌거나 `UnicodeEncodeError`가 난다(2026-10-14 CI에서 발견).
 - `mcp`만: 서버를 시작하기 전에 `DOCDB_START_DIR`가 없거나 빈 값이고 `PWD`가 비어 있지 않으면 `os.environ["DOCDB_START_DIR"] = os.environ["PWD"]`로 둔다. 이미 있으면 덮어쓰지 않는다. `cli`에는 적용하지 않는다. 이유: Codex는 MCP 서버를 플러그인 루트에서 실행하고 환경 변수 치환이 없어 프로젝트 폴더는 `env_vars`로 전달한 `PWD`로만 알 수 있다(T00b 실측, D26).
 - 오류는 stderr에 `format_error` 형식, 종료 코드는 C-05.
 
@@ -945,7 +946,7 @@ def run_cli(args: list[str], interactive: bool = False, env: dict[str, str] | No
 ```
 
 - `tests/helpers.py`(T06): `seed_min(con)` — T06 작업 절에 적힌 최소 카탈로그·프로젝트·행위자를 SQL로 넣는다. T07~T10 단위 테스트가 쓴다.
-- 테스트 건너뛰기는 두 경우만 허용한다: 필요한 인터프리터가 없음(예: `/usr/bin/python3.6`), 필요한 OS가 아님. `pytest.skip("<이유>")`로 이유를 적는다.
+- 테스트 건너뛰기는 세 경우만 허용한다: 필요한 인터프리터가 없음(예: `/usr/bin/python3.6`), 필요한 OS가 아님(예: Windows의 POSIX sh `bin/docctl`), 필요한 외부 실행 파일이 없음(예: `claude` CLI가 없는 CI의 T26 #2). `pytest.skip("<이유>")`로 이유를 적는다.
 - `tests/fixtures/mini_catalogue.json`: 원본 `test_token.py`의 `mini_catalogue()`가 만드는 데이터를 JSON으로 그대로 옮긴 것.
 - `tests/legacy/`: 원본 테스트 3종(`test_scenarios.py` 33건, `test_token.py` 28건, `audit.py` 94항목)을 pytest로 옮긴 것. 원본의 검사 조건과 기대 수치를 바꾸지 않는다. 바뀌는 것은 다음뿐이다: DB 생성은 `mini_db` 픽스처, SQL 직접 실행은 `con.execute`, ID 형식은 C-10(`RUN-0001` → `RUN-2026-0001` 등), 관계를 SQL로 직접 넣는 곳은 `source='human', proposed_by='u-jjm'` 추가(0003 트리거 때문), "194종 집계"는 "적재한 종류 수와 같음".
 - `tools/matrix.sh`: Python 3.10~3.14 각각에 대해 `uv venv` → 설치 → pytest를 실행하고 버전별 통과·실패 요약을 출력한다.
