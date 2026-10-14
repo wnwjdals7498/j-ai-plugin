@@ -8,7 +8,7 @@ from docdb import backup, clock, db, history, ids, paths, policy, runs, textnorm
 from docdb.actors import ACTOR_PATTERNS, Actor
 from docdb.db import Connection
 from docdb.errors import DocdbError
-from docdb.llm import DocDB
+from docdb.llm import DocDB, parse_handle
 
 SUPPORTED_SUFFIXES = (".md", ".markdown", ".txt")
 _HEADING = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$")
@@ -203,6 +203,16 @@ def _record_artifact(
         None,
     )
     return artifact_id
+
+
+def _valid_artifact_uri(uri: str) -> bool:
+    """artifact 상대 경로가 DB URI 제약을 만족하는지 확인한다."""
+    return not (
+        uri.startswith("/")
+        or ".." in uri
+        or "\\" in uri
+        or (len(uri) >= 2 and uri[1] == ":")
+    )
 
 
 def _new_doc_id(con: Connection, kind_id: str, path: Path, artifact_id: str) -> str:
@@ -517,15 +527,19 @@ def scan(con: Connection, actor: Actor, folder: Path, owner: str, export_policy:
     backup.backup(con, project_id, "pre-import-scan")
 
     errors: list[str] = []
+    skipped_paths = 0
     try:
         with db.write_tx(con):
             new_files: list[tuple[Path, bytes]] = []
             for path in _walk(target):
+                uri = path.relative_to(root).as_posix()
+                if not _valid_artifact_uri(uri):
+                    skipped_paths += 1
+                    continue
                 try:
                     raw = path.read_bytes()
                 except OSError as exc:
                     raise DocdbError("BAD_ARGS", "import 파일을 읽을 수 없음") from exc
-                uri = path.relative_to(root).as_posix()
                 digest = "sha256:" + textnorm.sha256_hex(raw)
                 existing = con.execute(
                     "SELECT 1 FROM artifact WHERE uri=? AND digest=?", (uri, digest)
@@ -569,7 +583,9 @@ def scan(con: Connection, actor: Actor, folder: Path, owner: str, export_policy:
                 )
     except db.DatabaseError as exc:
         raise DocdbError("DB", str(exc)[:80]) from exc
-    return "\n".join(errors)
+    output = [f"WARN skipped_paths={skipped_paths}"] if skipped_paths else []
+    output.extend(errors)
+    return "\n".join(output)
 
 
 def _artifact_options(con: Connection, artifact_id: str) -> tuple[str | None, str]:
@@ -697,7 +713,8 @@ def next_batch(con: Connection, budget: int = 1500) -> str:
 
     pending_rows = con.execute(
         "SELECT s.seg_id, s.heading, s.start_off, s.end_off, s.text_digest, s.kind_id, "
-        "s.artifact_id, s.rule, a.uri FROM import_segment s JOIN artifact a USING (artifact_id) "
+        "s.artifact_id, s.rule, a.uri, a.digest FROM import_segment s "
+        "JOIN artifact a USING (artifact_id) "
         "WHERE s.status='pending' ORDER BY s.seg_id"
     ).fetchall()
     pending_lines: list[str] = []
@@ -712,16 +729,25 @@ def next_batch(con: Connection, budget: int = 1500) -> str:
             "artifact_id": row[6],
             "rule": row[7],
         }
+        stale = True
+        excerpt = ""
         try:
             _uri, path = _artifact_path(con, str(row[6]))
-            excerpt = _segment_text(path, segment)
-        except (DocdbError, OSError, UnicodeDecodeError, ValueError):
+            raw = path.read_bytes()
+            if "sha256:" + textnorm.sha256_hex(raw) == row[9]:
+                start = int(segment["start_off"])
+                end = int(segment["end_off"])
+                if 0 <= start <= end <= len(raw):
+                    excerpt = raw[start:end].decode("utf-8")
+                    stale = False
+        except (DocdbError, OSError, UnicodeDecodeError, TypeError, ValueError):
+            stale = True
             excerpt = ""
         token_count = textnorm.tok_est(excerpt)
         line = f"s:{row[0]} {textnorm.q(row[1] or '')} tok={token_count}"
         if _segment_policy(con, segment) == "local_only":
             line += " | policy=local_only"
-        else:
+        elif not stale:
             snippet = textnorm.normalize_text(excerpt or "") or ""
             snippet = snippet[:200].replace("\n", " ⏎ ")
             line += f" | {snippet}"
@@ -730,6 +756,8 @@ def next_batch(con: Connection, budget: int = 1500) -> str:
             )
             if fields:
                 line += f" | cand={','.join(f'{row[5]}/{field}' for field in fields)}"
+        if stale:
+            line += " stale"
         pending_lines.append(line)
 
     pending_count = len(pending_rows)
@@ -884,10 +912,10 @@ def _plan_label(con: Connection, raw_label: object) -> tuple[dict | None, str, D
     if "doc" in keys:
         if keys != {"doc", "kind"}:
             return None, target, DocdbError("BAD_OP", "문서 라벨 키가 올바르지 않음")
-        match = re.fullmatch(r"d\?:(ART-[0-9]{4}-[0-9]{4,})", str(raw_label["doc"]), re.ASCII)
-        if match is None or not _kind_exists(con, raw_label["kind"]):
+        prefix, handle_keys = parse_handle(str(raw_label["doc"]))
+        if prefix != "d?" or not _kind_exists(con, raw_label["kind"]):
             return None, target, DocdbError("BAD_ARGS", "문서 또는 종류 형식이 올바르지 않음")
-        artifact_id = match.group(1)
+        artifact_id = handle_keys[0]
         rows = con.execute(
             "SELECT seg_id, kind_id FROM import_segment WHERE artifact_id=? ORDER BY seq",
             (artifact_id,),
@@ -898,10 +926,10 @@ def _plan_label(con: Connection, raw_label: object) -> tuple[dict | None, str, D
 
     if "seg" not in keys or not isinstance(raw_label["seg"], str):
         return None, target, DocdbError("BAD_OP", "구간 라벨에 seg가 필요함")
-    match = re.fullmatch(r"s:([0-9]+)", raw_label["seg"], re.ASCII)
-    if match is None:
+    prefix, handle_keys = parse_handle(raw_label["seg"])
+    if prefix != "s":
         return None, target, DocdbError("BAD_ARGS", "구간 ID 형식이 올바르지 않음")
-    segment = _segment_row(con, int(match.group(1)))
+    segment = _segment_row(con, int(handle_keys[0]))
     if segment is None:
         return None, target, DocdbError("BAD_ARGS", "구간을 찾을 수 없음")
     if segment["status"] in {"applied", "skipped"}:
@@ -1017,20 +1045,20 @@ def label(con: Connection, actor: Actor, labels: list[dict]) -> str:
     try:
         with db.write_tx(con):
             for raw_label in labels:
-                if isinstance(raw_label, dict) and isinstance(raw_label.get("seg"), str):
-                    match = re.fullmatch(r"s:([0-9]+)", raw_label["seg"], re.ASCII)
-                    if match is not None:
-                        seg_id = int(match.group(1))
-                        if seg_id in seen_segment_ids:
-                            errors.append(
-                                _label_error(
-                                    f"s:{seg_id}",
-                                    DocdbError("BAD_ARGS", "duplicate segment label"),
-                                )
-                            )
-                            continue
-                        seen_segment_ids.add(seg_id)
                 try:
+                    if isinstance(raw_label, dict) and isinstance(raw_label.get("seg"), str):
+                        prefix, handle_keys = parse_handle(raw_label["seg"])
+                        if prefix == "s":
+                            seg_id = int(handle_keys[0])
+                            if seg_id in seen_segment_ids:
+                                errors.append(
+                                    _label_error(
+                                        f"s:{seg_id}",
+                                        DocdbError("BAD_ARGS", "duplicate segment label"),
+                                    )
+                                )
+                                continue
+                            seen_segment_ids.add(seg_id)
                     action, target, error = _plan_label(con, raw_label)
                 except DocdbError as exc:
                     target = "?"

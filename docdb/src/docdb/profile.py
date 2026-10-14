@@ -66,7 +66,7 @@ def evaluate(rule: dict, facts: dict[str, int | None], selected: set[str]) -> bo
             return False
         return None
 
-    raise DocdbError("BAD_ARGS", f"알 수 없는 규칙 형태: {rule}")
+    raise DocdbError("BAD_ARGS", "규칙 형태가 올바르지 않음")
 
 
 def unknown_facts(con: Connection, project_id: str) -> list[str]:

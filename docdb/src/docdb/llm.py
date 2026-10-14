@@ -40,6 +40,17 @@ def parse_handle(h: str) -> tuple[str, tuple[str, ...]]:
     return prefix, tuple(match.groups())
 
 
+def _safe_handle(value: object) -> str:
+    """형식이 확인된 핸들만 오류 줄에 되돌린다."""
+    if not isinstance(value, str):
+        return "?"
+    try:
+        parse_handle(value)
+    except DocdbError:
+        return "?"
+    return value
+
+
 class Out:
     """예산을 넘는 줄을 세고 강제 줄은 항상 포함한다."""
 
@@ -239,11 +250,15 @@ class DocDB:
     def _item_line(self, item_id: str, level: int) -> str:
         """항목의 짧은 표현을 반환한다."""
         row = self.x(
-            "SELECT item_type, status, title, attrs FROM item WHERE item_id=?", (item_id,)
+            "SELECT item_type, status, title, attrs, defined_in FROM item WHERE item_id=?",
+            (item_id,),
         ).fetchone()
         if row is None:
             return f"i:{item_id} NOT_FOUND"
-        line = f"i:{item_id} {row[0]} {row[1] or '-'} {textnorm.q(row[2])}"
+        status = row[1] or "-"
+        if row[4] and self._is_local_only(row[4]):
+            return f"i:{item_id} {row[0]} {status} policy=local_only"
+        line = f"i:{item_id} {row[0]} {status} {textnorm.q(row[2])}"
         if level >= 1 and row[3] not in (None, "{}"):
             line += f" attrs={row[3]}"
         return line
@@ -339,6 +354,12 @@ class DocDB:
                     continue
             else:
                 handle = f"i:{unit[4]}"
+                item_row = self.x(
+                    "SELECT defined_in FROM item WHERE item_id=?", (unit[4],)
+                ).fetchone()
+                if item_row and item_row[0] and self._is_local_only(item_row[0]):
+                    out.add(f"{handle} policy=local_only")
+                    continue
             out.add(f"{handle} {textnorm.q(snippet)}")
         header = f"q={textnorm.q(query)} mode={mode} hits={len(rows)}"
         return self._finish("find", {"q": query, "limit": limit}, out, header)
@@ -463,6 +484,14 @@ class DocDB:
                         out.add(
                             f"  … +{len(differences) - diff_lines} lines (get {handle} level=2)"
                         )
+            elif entity_type == "item":
+                defined_in = (after or {}).get("defined_in") or (before or {}).get(
+                    "defined_in"
+                )
+                if defined_in and self._is_local_only(defined_in):
+                    out.add(line + " policy=local_only")
+                    continue
+                out.add(line + f" new={textnorm.q(json.dumps(after, ensure_ascii=False)[:120])}")
             else:
                 out.add(line + f" new={textnorm.q(json.dumps(after, ensure_ascii=False)[:120])}")
         return self._finish(
@@ -527,7 +556,7 @@ class DocDB:
             for row in self.x(
                 "SELECT doc_id FROM document WHERE work_id=?1 OR origin_work_id=?1 "
                 "UNION SELECT to_id FROM relation WHERE from_type='work' AND from_id=?1 "
-                "AND to_type='document' "
+                "AND to_type='document' AND status='confirmed' "
                 "UNION SELECT target_id FROM context_read WHERE work_id=?1 "
                 "AND target_type='document' ORDER BY 1",
                 (work_id,),
@@ -591,14 +620,40 @@ class DocDB:
                         handle = "?"
                         error = DocdbError("BAD_OP", "패치가 객체가 아님")
                     else:
-                        handle = str(patch.get("h", "?"))
+                        handle = _safe_handle(patch.get("h", "?"))
                         try:
+                            for name in (
+                                "text",
+                                "why",
+                                "anchor",
+                                "sum",
+                                "title",
+                                "status",
+                                "state",
+                                "expect",
+                                "defined_in",
+                                "from",
+                                "to",
+                                "rel",
+                            ):
+                                if name in patch and not isinstance(patch[name], str):
+                                    raise DocdbError("BAD_OP", f"{name}는 문자열이어야 함")
+                            for name in ("attrs", "attrs_patch", "payload"):
+                                if name in patch and not isinstance(patch[name], dict):
+                                    raise DocdbError("BAD_OP", f"{name}는 객체여야 함")
                             patch_op = patch.get("op")
                             if patch_op == "link":
-                                handle = str(patch.get("from", "?"))
+                                handle = _safe_handle(patch.get("from", "?"))
                                 for key in ("from", "rel", "to", "why"):
                                     if key not in patch:
                                         raise DocdbError("BAD_OP", f"link 필수 키 누락: {key}")
+                                try:
+                                    parse_handle(patch["from"])
+                                    parse_handle(patch["to"])
+                                except DocdbError as exc:
+                                    raise DocdbError("BAD_HANDLE") from exc
+                                if patch["rel"] not in relations.REL_TYPES:
+                                    raise DocdbError("BAD_OP", "관계 종류가 올바르지 않음")
                                 result = relations._propose(
                                     self.con,
                                     self.actor,
@@ -613,7 +668,12 @@ class DocDB:
                                 continue
                             if patch_op == "unlink":
                                 rel_id = patch.get("rel_id")
-                                handle = f"rel={rel_id}" if rel_id is not None else "rel=?"
+                                valid_rel_id = (
+                                    isinstance(rel_id, int)
+                                    and not isinstance(rel_id, bool)
+                                    and rel_id > 0
+                                )
+                                handle = f"rel={rel_id}" if valid_rel_id else "rel=?"
                                 for key in ("rel_id", "why"):
                                     if key not in patch:
                                         raise DocdbError("BAD_OP", f"unlink 필수 키 누락: {key}")
@@ -648,14 +708,14 @@ class DocDB:
                                         raise DocdbError("BAD_OP", "새 작업에 필수 키가 필요함")
                                     if set(patch) - {"why"} != {"h", "op", *required}:
                                         raise DocdbError("BAD_OP", "작업 생성 키가 올바르지 않음")
-                                    work_id = workflow._create_work_with_reason(
+                                    work_id = workflow.create_work(
                                         self.con,
                                         self.actor,
                                         patch["title"],
                                         patch["work_type"],
                                         patch["owner"],
                                         patch["base_refs"],
-                                        workflow_reason,
+                                        reason=workflow_reason,
                                     )
                                     result = f"OK w:{work_id} created"
                                 else:
@@ -664,6 +724,8 @@ class DocDB:
                                         or set(patch) - {"why"} != {"h", "op", "status"}
                                     ):
                                         raise DocdbError("BAD_OP", "작업 상태 키가 올바르지 않음")
+                                    if patch["status"] not in workflow.TRANSITIONS:
+                                        raise DocdbError("STATUS_FORBIDDEN", "허용되지 않는 상태")
                                     result = workflow._set_status_with_reason(
                                         self.con,
                                         self.actor,
@@ -681,14 +743,14 @@ class DocDB:
                                     raise DocdbError("BAD_OP", "인계에 필수 키가 필요함")
                                 if set(patch) - {"why"} != {"h", "op", *required}:
                                     raise DocdbError("BAD_OP", "인계 키가 올바르지 않음")
-                                result = workflow._create_handoff_with_reason(
+                                result = workflow.create_handoff(
                                     self.con,
                                     self.actor,
                                     key[0],
                                     patch["from_role"],
                                     patch["to_role"],
                                     patch["payload"],
-                                    workflow_reason,
+                                    reason=workflow_reason,
                                 )
                                 results.append(result)
                                 successful += 1
@@ -733,10 +795,10 @@ class DocDB:
                                     )
                                     if new_value is None:
                                         raise DocdbError(
-                                            "ANCHOR_NOT_FOUND", textnorm.q(patch["anchor"])
+                                            "ANCHOR_NOT_FOUND", "기준 제목을 찾을 수 없음"
                                         )
                                 else:
-                                    raise DocdbError("BAD_OP", str(op))
+                                    raise DocdbError("BAD_OP", "지원하지 않는 필드 연산")
                                 new_value = textnorm.normalize_text(new_value)
                                 field_reason = textnorm.normalize_text(patch.get("why"))
                                 normalized_reason = textnorm.normalize_text(reason)
@@ -804,7 +866,7 @@ class DocDB:
                                 item_id = key[0]
                                 op = patch.get("op", "upsert")
                                 if op != "upsert":
-                                    raise DocdbError("BAD_OP", f"지원하지 않는 항목 연산: {op}")
+                                    raise DocdbError("BAD_OP", "지원하지 않는 항목 연산")
     
                                 if "attrs" in patch and "attrs_patch" in patch:
                                     raise DocdbError("BAD_OP", "attrs와 attrs_patch를 함께 쓸 수 없음")
@@ -836,7 +898,7 @@ class DocDB:
                                         (it, pfx) for it, pfx in prefix_rows if item_id.startswith(pfx)
                                     ]
                                     if not matching:
-                                        raise DocdbError("ID_FORMAT", f"항목 ID에 일치하는 접두어 없음: {item_id}")
+                                        raise DocdbError("ID_FORMAT", "항목 ID에 일치하는 접두어 없음")
                                     matching.sort(key=lambda pair: len(pair[1]), reverse=True)
                                     item_type = matching[0][0]
     
@@ -869,13 +931,10 @@ class DocDB:
     
                                 if "defined_in" in patch:
                                     def_in_raw = patch["defined_in"]
-                                    if def_in_raw is None:
-                                        new_defined_in = None
-                                    elif isinstance(def_in_raw, str) and def_in_raw.startswith("d:"):
-                                        _, d_key = parse_handle(def_in_raw)
-                                        new_defined_in = d_key[0]
-                                    else:
-                                        new_defined_in = def_in_raw
+                                    if not def_in_raw.startswith("d:"):
+                                        raise DocdbError("BAD_HANDLE")
+                                    _, d_key = parse_handle(def_in_raw)
+                                    new_defined_in = d_key[0]
                                 else:
                                     new_defined_in = cur_defined_in
     
@@ -898,7 +957,13 @@ class DocDB:
                                 policy.assert_no_secrets(
                                     self.con,
                                     handle,
-                                    [new_title, attrs_str, field_reason, normalized_reason],
+                                    [
+                                        new_title,
+                                        new_status,
+                                        attrs_str,
+                                        field_reason,
+                                        normalized_reason,
+                                    ],
                                 )
     
                                 def_in_handle = f"d:{new_defined_in}" if new_defined_in else None
@@ -1004,7 +1069,7 @@ class DocDB:
                                 raise DocdbError("UNSUPPORTED_HANDLE")
                         except DocdbError as exc:
                             error = exc
-                        except db.DatabaseError as exc:
+                        except db.dbapi2.Error as exc:
                             error = DocdbError("DB", str(exc)[:80])
                     detail = textnorm.q(error.detail) if error.code == "DB" else error.detail
                     suffix = f" {detail}" if detail else ""
