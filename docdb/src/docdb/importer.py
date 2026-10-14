@@ -907,12 +907,14 @@ def _plan_label(con: Connection, raw_label: object) -> tuple[dict | None, str, D
     """라벨 입력을 검증하고 적용 계획 또는 출력 오류를 반환한다."""
     if not isinstance(raw_label, dict):
         return None, "?", DocdbError("BAD_OP", "라벨은 객체여야 함")
-    target = str(raw_label.get("seg", raw_label.get("doc", "?")))
+    target = "?"
     keys = set(raw_label)
     if "doc" in keys:
         if keys != {"doc", "kind"}:
             return None, target, DocdbError("BAD_OP", "문서 라벨 키가 올바르지 않음")
         prefix, handle_keys = parse_handle(str(raw_label["doc"]))
+        if isinstance(raw_label["doc"], str):
+            target = raw_label["doc"]
         if prefix != "d?" or not _kind_exists(con, raw_label["kind"]):
             return None, target, DocdbError("BAD_ARGS", "문서 또는 종류 형식이 올바르지 않음")
         artifact_id = handle_keys[0]
@@ -927,6 +929,7 @@ def _plan_label(con: Connection, raw_label: object) -> tuple[dict | None, str, D
     if "seg" not in keys or not isinstance(raw_label["seg"], str):
         return None, target, DocdbError("BAD_OP", "구간 라벨에 seg가 필요함")
     prefix, handle_keys = parse_handle(raw_label["seg"])
+    target = raw_label["seg"]
     if prefix != "s":
         return None, target, DocdbError("BAD_ARGS", "구간 ID 형식이 올바르지 않음")
     segment = _segment_row(con, int(handle_keys[0]))
@@ -1045,9 +1048,11 @@ def label(con: Connection, actor: Actor, labels: list[dict]) -> str:
     try:
         with db.write_tx(con):
             for raw_label in labels:
+                target = "?"
                 try:
                     if isinstance(raw_label, dict) and isinstance(raw_label.get("seg"), str):
                         prefix, handle_keys = parse_handle(raw_label["seg"])
+                        target = raw_label["seg"]
                         if prefix == "s":
                             seg_id = int(handle_keys[0])
                             if seg_id in seen_segment_ids:
@@ -1059,11 +1064,9 @@ def label(con: Connection, actor: Actor, labels: list[dict]) -> str:
                                 )
                                 continue
                             seen_segment_ids.add(seg_id)
-                    action, target, error = _plan_label(con, raw_label)
+                    action, planned_target, error = _plan_label(con, raw_label)
+                    target = planned_target
                 except DocdbError as exc:
-                    target = "?"
-                    if isinstance(raw_label, dict):
-                        target = str(raw_label.get("seg", raw_label.get("doc", "?")))
                     errors.append(_label_error(target, exc))
                     continue
                 if error is not None:

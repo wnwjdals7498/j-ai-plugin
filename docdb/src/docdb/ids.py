@@ -48,7 +48,7 @@ def validate(kind: str, value: str) -> None:
     if kind in ("doc", "item") and len(value) > 64:
         raise DocdbError("ID_FORMAT", f"{kind} ID 길이는 64자 이하이어야 함")
     if not re.fullmatch(pattern, value, re.ASCII):
-        raise DocdbError("ID_FORMAT", f"{kind} ID 형식이 올바르지 않음: {value}")
+        raise DocdbError("ID_FORMAT", f"{kind} ID 형식이 올바르지 않음")
 
 
 def next_id(con: Connection, kind: str, year: int | None = None) -> str:

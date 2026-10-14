@@ -151,7 +151,10 @@ def _set_status_with_reason(
             raise DocdbError("NOT_FOUND", f"작업을 찾을 수 없음: {work_id}")
         current, current_closed_at = row
         if status not in TRANSITIONS.get(current, ()):
-            raise DocdbError("STATUS_FORBIDDEN", f"허용되지 않는 상태 전이: {current} → {status}")
+            target = status if status in TRANSITIONS else "허용되지 않은 값"
+            raise DocdbError(
+                "STATUS_FORBIDDEN", f"허용되지 않는 상태 전이: {current} → {target}"
+            )
         if status not in AI_ALLOWED:
             require_human(actor, interactive)
 

@@ -98,7 +98,7 @@ def allow_secret(
     expires_at = expires_dt.isoformat(timespec="seconds")
 
     normalized_reason = normalize_text(reason) or ""
-    assert_no_secrets(con, handle, [normalized_reason])
+    assert_no_secrets(con, "policy-exception:reason", [normalized_reason])
     scope = f"secret:{handle}"
 
     with db.write_tx(con):
