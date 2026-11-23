@@ -19,6 +19,7 @@ from ledger.flows import (
     plan_get,
     plan_new,
     plan_put,
+    plane_project_name,
 )
 from ledger.history import parse_history
 from ledger.plane import PlaneAuthError, PlaneConflict, PlaneUnavailable
@@ -66,7 +67,7 @@ class FlowsTest(unittest.TestCase):
     def test_init_creates_skeleton_and_maintenance_project(self) -> None:
         cfg = init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
         self.assertTrue((self.repo.root / ".ledger/design/security.md").exists())
-        self.assertEqual([(p.key, p.title, p.default) for p in cfg.projects], [("SAMPM", "sample-app 유지보수", True)])
+        self.assertEqual([(p.key, p.title, p.default) for p in cfg.projects], [("SAMPM", "sample app 유지보수", True)])
         self.assertEqual(self.plane.item_names("SAMPM"), ["[계획서] 결정"])
         self.assertEqual(self.plane.labels("SAMPM"), ["계획서"])
         label_calls = [c for c in self.plane.calls if c[0] == "create_label"]
@@ -102,6 +103,34 @@ class FlowsTest(unittest.TestCase):
             [("decision", "APP", "단위 프로젝트 APP 시작"), ("decision", "NOTI", "단위 프로젝트 NOTI 시작")],
         )
         self.assertRegex(entries[0].detail, r"^plane:APP-\d+@")
+
+    def test_init_uses_plane_safe_name(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        create_calls = [c for c in self.plane.calls if c[0] == "create_project"]
+        self.assertEqual([(c[1], c[2]) for c in create_calls], [("sample app 유지보수", "SAMPM")])
+        cfg = load_config(self.repo.root / ".ledger/ledger.yml")
+        self.assertEqual(cfg.projects[0].title, "sample app 유지보수")
+
+    def test_plan_new_sanitizes_title(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        plan_new(self.repo, self.plane, "결제 v2.0 (시험)", "PAY", TEMPLATES, date(2026, 11, 23))
+        create_calls = [c for c in self.plane.calls if c[0] == "create_project"]
+        self.assertEqual(create_calls[-1][1], "결제 v2 0 시험")
+        cfg = load_config(self.repo.root / ".ledger/ledger.yml")
+        self.assertEqual(cfg.projects[-1].title, "결제 v2 0 시험")
+
+    def test_plan_new_rejects_title_without_usable_chars(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        calls = len(self.plane.calls)
+        with self.assertRaisesRegex(FlowError, "제목에 Plane 프로젝트 이름으로 쓸 수 있는 글자가 없습니다"):
+            plan_new(self.repo, self.plane, "---", "PAY", TEMPLATES, date(2026, 11, 23))
+        self.assertEqual(len(self.plane.calls), calls)
+
+    def test_plane_project_name(self) -> None:
+        for ch in "&+,:;$^}{*=?@#|'<>.()%!-":
+            self.assertEqual(plane_project_name(f"a{ch}b"), "a b", ch)
+        self.assertEqual(plane_project_name("  결제_v2   시험  "), "결제_v2 시험")
+        self.assertEqual(plane_project_name("---"), "")
 
     def test_plan_new_rejects_existing_key(self) -> None:
         init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))

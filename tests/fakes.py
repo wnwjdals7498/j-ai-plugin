@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -22,6 +23,10 @@ _PLANE_TEMPLATES = (
     / "templates"
     / "plane"
 )
+
+
+_FORBIDDEN_NAME_RE = re.compile(r"[&+,:;$^}{*=?@#|'<>.()%!-]")
+_FORBIDDEN_NAME_BODY = {"non_field_errors": ["Project name cannot contain special characters."]}
 
 
 class DictSource:
@@ -184,6 +189,12 @@ class FakePlaneServer:
                 if method == "POST":
                     seq = len(owner.requests)
                     if clean_path.endswith("/projects/"):
+                        if isinstance(parsed_json, dict) and (
+                            _FORBIDDEN_NAME_RE.search(str(parsed_json.get("name", "")))
+                            or _FORBIDDEN_NAME_RE.search(str(parsed_json.get("identifier", "")))
+                        ):
+                            self._send_json(400, _FORBIDDEN_NAME_BODY)
+                            return
                         proj_id = f"id-{seq}"
                         payload: dict[str, Any] = {
                             "id": proj_id,
@@ -371,6 +382,8 @@ class FakePlane:
 
     def create_project(self, name: str, identifier: str) -> dict[str, Any]:
         self._record_and_check("create_project", name, identifier)
+        if _FORBIDDEN_NAME_RE.search(name) or _FORBIDDEN_NAME_RE.search(identifier):
+            raise PlaneError("Plane 요청 오류: HTTP 400")
         project_id = self._next_id("proj")
         proj = _FakeProject(id=project_id, name=name, identifier=identifier)
         self._projects[project_id] = proj

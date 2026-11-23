@@ -31,6 +31,10 @@ class PlaneClientTest(unittest.TestCase):
         )
         self.client = PlaneClient(self.settings, sleep=lambda _: None)
 
+    def test_create_project_forbidden_name_is_400(self) -> None:
+        with self.assertRaisesRegex(PlaneError, "HTTP 400"):
+            self.client.create_project("sample-app 유지보수", "APP")
+
     def test_create_project_request(self) -> None:
         self.client.create_project("앱 첫 출시", "APP")
         req = self.server.requests[-1]

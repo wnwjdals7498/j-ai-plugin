@@ -37,10 +37,14 @@ UNIT_CONTAINERS = {
 sys.path[:] = [str(PLUGIN_ROOT), *(p for p in sys.path if p != str(PLUGIN_ROOT))]
 
 from ledger.config import load_config  # noqa: E402
+from ledger.flows import plane_project_name  # noqa: E402
 from ledger.history import parse_history  # noqa: E402
 from ledger.plane import PlaneClient, PlaneSettings  # noqa: E402
 from ledger.sections import split_html_sections  # noqa: E402
 from ledger.spec import UNIT_ITEMS  # noqa: E402
+
+PLANE_TITLE_A = plane_project_name(TITLE_A)
+PLANE_TITLE_B = plane_project_name(TITLE_B)
 
 
 class E2EFailure(Exception):
@@ -88,7 +92,7 @@ def _cleanup(
 ) -> list[str]:
     problems: list[str] = []
     if client is not None and before_ids is not None:
-        keys = {KEY_A: TITLE_A, KEY_B: TITLE_B}
+        keys = {KEY_A: PLANE_TITLE_A, KEY_B: PLANE_TITLE_B}
         cfg_path = repo / ".ledger" / "ledger.yml"
         try:
             cfg = load_config(cfg_path)
@@ -147,7 +151,7 @@ def _main() -> int:
         return 2
 
     repo = Path(tempfile.gettempdir()) / f"forge-e2e-{secrets.token_hex(4)}"
-    maint_title = f"{repo.name} 유지보수"
+    maint_title = plane_project_name(f"{repo.name} 유지보수")
     client: Optional[PlaneClient] = None
     before_ids: Optional[set[str]] = None
     try:

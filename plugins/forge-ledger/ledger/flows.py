@@ -22,6 +22,9 @@ _PLAN_LABEL_NAME = "계획서"
 _PLAN_LABEL_COLOR = "#6b7280"
 _PLAN_MODULE_NAME = "계획서"
 _PROTO_CYCLE_NAME = "프로토타입"
+# Plane v1.5.0 apps/api/plane/db/models/project.py:145 FORBIDDEN_IDENTIFIER_CHARS_PATTERN
+# (검사: apps/api/plane/api/serializers/project.py:111). 이름에 하나라도 있으면 HTTP 400.
+_PLANE_FORBIDDEN_CHARS_RE = re.compile(r"[&+,:;$^}{*=?@#|'<>.()%!-]")
 
 
 class FlowError(Exception):
@@ -66,6 +69,12 @@ class PlanNewResult:
     project_id: str
     item_ids: dict[str, str]
     decision_id: str
+
+
+def plane_project_name(text: str) -> str:
+    """Plane 프로젝트 이름에 쓸 수 없는 문자를 공백으로 바꾸고 공백을 정리한다."""
+    replaced = _PLANE_FORBIDDEN_CHARS_RE.sub(" ", text)
+    return re.sub(r"\s+", " ", replaced).strip()
 
 
 def maintenance_key(repo_name: str, taken: set[str]) -> str:
@@ -152,7 +161,7 @@ def init_repo(
     existing_projects = client.list_projects()
     taken = {str(p["identifier"]).upper() for p in existing_projects if p.get("identifier")}
     key = maintenance_key(repo.name, taken)
-    title = f"{repo.name} 유지보수"
+    title = plane_project_name(f"{repo.name} 유지보수")
 
     project = client.create_project(title, key)
     project_id = str(project["id"])
@@ -190,6 +199,9 @@ def plan_new(
     """단위 프로젝트를 Plane에 만들고 ledger.yml과 history.md에 기록한다."""
     if not _KEY_RE.match(key):
         raise FlowError(f"프로젝트 키 규칙 위반: {key}")
+    title = plane_project_name(title)
+    if not title:
+        raise FlowError("제목에 Plane 프로젝트 이름으로 쓸 수 있는 글자가 없습니다")
     cfg = _load_repo_config(repo)
     if any(p.key == key for p in cfg.projects):
         raise FlowError(f"이미 붙은 키: {key}")
