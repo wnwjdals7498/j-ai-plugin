@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import time
 import urllib.error
@@ -8,6 +9,8 @@ import urllib.request
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Optional, Protocol
+
+from ledger.secrets import find_secrets
 
 _ENV_URL = "FORGE_LEDGER_PLANE_URL"
 _ENV_WORKSPACE = "FORGE_LEDGER_PLANE_WORKSPACE"
@@ -109,13 +112,15 @@ class PlaneClient:
             raise ValueError("per_minute는 1 이상이어야 한다")
         self._settings = settings
         self._base_url = settings.base_url.rstrip("/")
+        parsed_url = urllib.parse.urlsplit(self._base_url)
+        if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+            raise PlaneError(f"설정 오류: {_ENV_URL}")
         self._workspace = _seg(settings.workspace)
         self._per_minute = per_minute
         self._clock = clock
         self._sleep = sleep
         self._timestamps: deque[float] = deque()
-        host = urllib.parse.urlsplit(self._base_url).hostname
-        if host in ("127.0.0.1", "localhost", "::1"):
+        if parsed_url.hostname in ("127.0.0.1", "localhost", "::1"):
             self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         else:
             self._opener = urllib.request.build_opener()
@@ -128,9 +133,10 @@ class PlaneClient:
 
     def _sanitize(self, text: str) -> str:
         token = self._settings.token
-        if token:
-            return text.replace(token, "[REDACTED]")
-        return text
+        cleaned = text.replace(token, "[REDACTED]") if token else text
+        if find_secrets(cleaned):
+            return ""
+        return cleaned.strip()
 
     def _wait_rate_limit(self) -> None:
         now = self._clock()
@@ -190,13 +196,14 @@ class PlaneClient:
                         continue
                     raise PlaneUnavailable(f"Plane 요청 실패: HTTP {status}") from None
                 raise PlaneError(f"Plane 요청 오류: HTTP {status}") from None
-            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError) as exc:
                 if attempt < len(_RETRY_DELAYS):
                     self._sleep(_RETRY_DELAYS[attempt])
                     continue
                 raw_reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
                 detail = self._sanitize(str(raw_reason))
-                raise PlaneUnavailable(f"Plane 연결 실패: {detail}") from None
+                message = f"Plane 연결 실패: {detail}" if detail else "Plane 연결 실패"
+                raise PlaneUnavailable(message) from None
 
         raise PlaneUnavailable("Plane 요청 실패")
 

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import http.client
 import socket
 import unittest
+import urllib.error
+from unittest import mock
 
 from ledger.plane import (
     PlaneAuthError,
@@ -233,3 +236,33 @@ class PlaneClientTest(unittest.TestCase):
             return client.list_projects()
 
         self.assertEqual(accepts(self.client), [])
+
+    def test_invalid_base_url_scheme_rejected(self) -> None:
+        private_ip = ".".join(("10", "20", "30", "40"))
+        for bad_url in (f"{private_ip}:8000", "ftp://127.0.0.1:8000", "http://"):
+            bad_settings = PlaneSettings(base_url=bad_url, workspace="forge", token=TEST_TOKEN)
+            with self.assertRaises(PlaneError) as ctx:
+                PlaneClient(bad_settings, sleep=lambda _: None)
+            self.assertEqual(str(ctx.exception), "설정 오류: FORGE_LEDGER_PLANE_URL")
+            self.assertNotIn(private_ip, str(ctx.exception))
+
+    def test_connection_error_hides_ipv4_address(self) -> None:
+        private_ip = ".".join(("10", "20", "30", "40"))
+        slept: list[float] = []
+        client = PlaneClient(self.settings, sleep=lambda s: slept.append(s))
+        err = urllib.error.URLError(f"connection failed to {private_ip}:8080")
+        with mock.patch.object(client._opener, "open", side_effect=err):
+            with self.assertRaises(PlaneUnavailable) as ctx:
+                client.list_projects()
+        self.assertEqual(slept, [1.0, 2.0, 4.0])
+        self.assertEqual(str(ctx.exception), "Plane 연결 실패")
+        self.assertNotIn(private_ip, str(ctx.exception))
+
+    def test_incomplete_read_retries_and_raises_unavailable(self) -> None:
+        for exc in (http.client.IncompleteRead(b"partial"), http.client.BadStatusLine("bad")):
+            slept: list[float] = []
+            client = PlaneClient(self.settings, sleep=lambda s: slept.append(s))
+            with mock.patch.object(client._opener, "open", side_effect=exc):
+                with self.assertRaises(PlaneUnavailable):
+                    client.list_projects()
+            self.assertEqual(slept, [1.0, 2.0, 4.0])
