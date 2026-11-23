@@ -1,0 +1,12 @@
+<h2>구현 2 기능 레퍼런스</h2>
+<table>
+  <thead>
+    <tr><th>스토리 ID</th><th>기능</th><th>입력</th><th>동작 규칙</th><th>결과</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>US-01</td><td>plan new</td><td>저장소 경로, 프로젝트 키</td><td>계획서 항목 생성 및 ledger.yml 등록</td><td>Plane 계획서 항목과 이력 한 줄</td></tr>
+    <tr><td>US-13</td><td>plan check</td><td>저장소 경로, 프로젝트 키 목록</td><td>18종 문서 상태·규칙·비밀값 검사</td><td>JSON 보고서와 종료 코드</td></tr>
+  </tbody>
+</table>
+<p><strong>API</strong>: GET /api/v1/summary, GET /api/v1/plans/{plane_key}, POST /hooks/{gitea|plane}</p>
+<p><strong>기능 흐름 프레임</strong>: 구현 3 와이어프레임 참조(2차에 Penpot 이관)</p>
