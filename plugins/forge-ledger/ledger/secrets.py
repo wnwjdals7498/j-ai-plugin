@@ -1,5 +1,7 @@
 """Secret pattern detection for forge-ledger."""
 
+from __future__ import annotations
+
 import re
 
 PATTERNS: dict[str, str] = {
