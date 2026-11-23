@@ -10,8 +10,10 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Optional
+from unittest.mock import patch
 
 from ledger.cli import main
+from ledger.plane import PlaneUnavailable
 from tests.fakes import FakePlaneServer
 
 _SCRIPT = Path(__file__).resolve().parent.parent / "plugins" / "forge-ledger" / "scripts" / "ledger.py"
@@ -151,3 +153,62 @@ class CliTest(unittest.TestCase):
         self.assertEqual(code, 0, stderr.getvalue())
         self.assertTrue((self.repo / ".ledger" / "ledger.yml").is_file())
         self.assertNotIn(self.token, stdout.getvalue() + stderr.getvalue())
+
+    def test_cli_init_twice_exit_1(self) -> None:
+        self.assertEqual(self.run_cli("init").returncode, 0)
+        req_before = len(self.server.requests)
+        r = self.run_cli("init")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("이미 초기화된 저장소입니다: .ledger/ledger.yml", r.stderr)
+        self.assertEqual(len(self.server.requests), req_before)
+
+    def test_cli_create_secret_exit_4(self) -> None:
+        bad_env = self._base_env()
+        bad_env["FORGE_LEDGER_PLANE_WORKSPACE"] = "ws-10.1.2.3"
+        r_ws = self.run_cli("init", env=bad_env)
+        self.assertEqual(r_ws.returncode, 4)
+        self.assertEqual(len(self.server.requests), 0)
+        self.assertNotIn("10.1.2.3", r_ws.stdout + r_ws.stderr)
+
+        self.assertEqual(self.run_cli("init").returncode, 0)
+        req_before = len(self.server.requests)
+        secret_title = "plane_api_" + "a" * 32
+        r_new = self.run_cli("plan", "new", secret_title, "--key", "APP")
+        self.assertEqual(r_new.returncode, 4)
+        self.assertEqual(len(self.server.requests), req_before)
+        self.assertNotIn(secret_title, r_new.stdout + r_new.stderr)
+
+    def test_cli_plan_check_fails_on_history_secret(self) -> None:
+        self.assertEqual(self.run_cli("init").returncode, 0)
+        self.assertEqual(self.run_cli("plan", "new", "앱 첫 출시", "--key", "APP").returncode, 0)
+        history_path = self.repo / ".ledger" / "history.md"
+        history_path.write_text(
+            history_path.read_text(encoding="utf-8") + "| 2026-11-23 | decision | D-261123-0001 | APP | 10.1.2.3 | d |\n",
+            encoding="utf-8",
+        )
+        r = self.run_cli("plan", "check", "--project", "APP", "--json")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("비밀값: ipv4", r.stdout)
+        self.assertNotIn("10.1.2.3", r.stdout + r.stderr)
+
+    def test_cli_plan_check_auth_and_unavailable_error(self) -> None:
+        self.assertEqual(self.run_cli("init").returncode, 0)
+        self.assertEqual(self.run_cli("plan", "new", "앱 첫 출시", "--key", "APP").returncode, 0)
+
+        self.server.force_status = 401
+        r_text = self.run_cli("plan", "check", "--project", "APP")
+        self.assertEqual(r_text.returncode, 2)
+        self.assertIn("Plane 토큰 확인 필요", r_text.stderr)
+
+        r_json = self.run_cli("plan", "check", "--project", "APP", "--json")
+        self.assertEqual(r_json.returncode, 2)
+        self.assertEqual(json.loads(r_json.stdout)["error"], "auth")
+
+        self.server.force_status = None
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with patch("ledger.plane.PlaneClient.list_projects", side_effect=PlaneUnavailable("down")):
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                code = main(["--repo", str(self.repo), "plan", "check", "--project", "APP", "--json"], env=self._base_env())
+        self.assertEqual(code, 2)
+        self.assertEqual(json.loads(stdout.getvalue())["error"], "unavailable")

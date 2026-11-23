@@ -116,7 +116,10 @@ def _run_plan_check(
     if as_json:
         print(report.to_json())
     elif report.exit_code == 2:
-        _emit_error("Plane 연결 또는 인증 실패", token)
+        if report.error == "auth":
+            _emit_error("Plane 토큰 확인 필요", token)
+        else:
+            _emit_error("Plane 연결 실패", token)
     else:
         print(_render_check_table(report))
     return report.exit_code
@@ -142,6 +145,9 @@ def main(
         repo_start = Path(args.repo) if args.repo else Path.cwd()
         repo = flows.Repo.discover(repo_start)
         settings = PlaneSettings.from_env(effective_env)
+        found_ws = find_secrets(settings.workspace)
+        if found_ws:
+            raise flows.SecretFound(f"비밀값 감지: {', '.join(found_ws)}")
         client = PlaneClient(settings)
         today = date.today()
 

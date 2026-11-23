@@ -185,6 +185,21 @@ class HooksTest(unittest.TestCase):
         r = run_hook("pre_tool_use.py", raw_stdin="not json")
         self.assertEqual(r.returncode, 0)
 
+    def test_block_ipv6_and_allow_non_ipv6(self) -> None:
+        p = {"tool_name": "Write", "tool_input": {"file_path": "/r/.ledger/design/data.md", "content": "2001:db8::42"}}
+        blocked = should_block(p)
+        self.assertIsNotNone(blocked)
+        assert blocked is not None
+        self.assertIn("ipv6", blocked)
+        self.assertIsNone(
+            should_block(
+                {
+                    "tool_name": "Write",
+                    "tool_input": {"file_path": "/r/.ledger/design/data.md", "content": "::1 10:30:00 std::vector"},
+                }
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

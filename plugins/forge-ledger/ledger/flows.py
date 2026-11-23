@@ -16,7 +16,7 @@ from ledger.secrets import find_secrets
 from ledger.sections import append_html_section, replace_html_section, split_html_sections, split_md_sections
 from ledger.spec import DOC_BY_CODE, METHOD_VERSION, TEMPLATE_FOR, UNIT_ITEMS
 
-_KEY_RE = re.compile(r"^[A-Z0-9]{1,12}$")
+_KEY_RE = re.compile(r"[A-Z0-9]{1,12}")
 _MAX_KEY_LEN = 12
 _PLAN_LABEL_NAME = "계획서"
 _PLAN_LABEL_COLOR = "#6b7280"
@@ -147,6 +147,28 @@ def _copy_ledger_templates(templates: Path, ledger_dir: Path) -> None:
             shutil.copyfile(src, dst)
 
 
+def _check_secrets(*texts: str) -> None:
+    found: set[str] = set()
+    for text in texts:
+        found.update(find_secrets(text))
+    if found:
+        raise SecretFound(f"비밀값 감지: {', '.join(sorted(found))}")
+
+
+def _rollback_project(client: PlaneLike, project_id: str, key: str, exc: Exception) -> Exception:
+    try:
+        client.delete_project(project_id)
+    except Exception:
+        note = f" (정리 실패: Plane 프로젝트 {key} 수동 삭제 필요)"
+        message = f"{exc}{note}"
+        try:
+            return type(exc)(message)
+        except Exception:
+            exc.args = (message,)
+            return exc
+    return exc
+
+
 def init_repo(
     repo: Repo,
     client: PlaneLike,
@@ -156,35 +178,47 @@ def init_repo(
 ) -> LedgerConfig:
     """Plane 유지보수 프로젝트를 먼저 만든 뒤 로컬 .ledger/ 뼈대와 설정을 쓴다."""
     _ = today
+    ledger_dir = _ledger_dir(repo)
+    cfg_path = ledger_dir / "ledger.yml"
+    if cfg_path.exists():
+        raise FlowError("이미 초기화된 저장소입니다: .ledger/ledger.yml")
+
+    title = plane_project_name(f"{repo.name} 유지보수")
+    _check_secrets(repo.name, title, workspace)
+
     decision_html = (templates / "plane" / TEMPLATE_FOR["DECISION"]).read_text(encoding="utf-8")
 
     existing_projects = client.list_projects()
     taken = {str(p["identifier"]).upper() for p in existing_projects if p.get("identifier")}
     key = maintenance_key(repo.name, taken)
-    title = plane_project_name(f"{repo.name} 유지보수")
 
     project = client.create_project(title, key)
     project_id = str(project["id"])
-    label = client.create_label(project_id, _PLAN_LABEL_NAME, _PLAN_LABEL_COLOR)
-    label_id = str(label["id"])
-    module = client.create_module(project_id, _PLAN_MODULE_NAME)
-    module_id = str(module["id"])
-    decision_item = client.create_item(project_id, UNIT_ITEMS["DECISION"], decision_html, [label_id])
-    client.add_to_module(project_id, module_id, [str(decision_item["id"])])
+    try:
+        label = client.create_label(project_id, _PLAN_LABEL_NAME, _PLAN_LABEL_COLOR)
+        label_id = str(label["id"])
+        module = client.create_module(project_id, _PLAN_MODULE_NAME)
+        module_id = str(module["id"])
+        decision_item = client.create_item(project_id, UNIT_ITEMS["DECISION"], decision_html, [label_id])
+        client.add_to_module(project_id, module_id, [str(decision_item["id"])])
 
-    ledger_dir = _ledger_dir(repo)
-    _copy_ledger_templates(templates, ledger_dir)
-    history_path = ledger_dir / "history.md"
-    if not history_path.exists():
-        history_path.parent.mkdir(parents=True, exist_ok=True)
-        history_path.write_text(empty_history(), encoding="utf-8")
+        _copy_ledger_templates(templates, ledger_dir)
+        history_path = ledger_dir / "history.md"
+        if not history_path.exists():
+            history_path.parent.mkdir(parents=True, exist_ok=True)
+            history_path.write_text(empty_history(), encoding="utf-8")
 
-    cfg = LedgerConfig(
-        method_version=METHOD_VERSION,
-        workspace=workspace,
-        projects=[PlaneProject(key=key, title=title, default=True)],
-    )
-    save_config(cfg, ledger_dir / "ledger.yml")
+        cfg = LedgerConfig(
+            method_version=METHOD_VERSION,
+            workspace=workspace,
+            projects=[PlaneProject(key=key, title=title, default=True)],
+        )
+        save_config(cfg, cfg_path)
+    except Exception as exc:
+        rolled = _rollback_project(client, project_id, key, exc)
+        if rolled is exc:
+            raise
+        raise rolled from exc
     return cfg
 
 
@@ -197,12 +231,15 @@ def plan_new(
     today: date,
 ) -> PlanNewResult:
     """단위 프로젝트를 Plane에 만들고 ledger.yml과 history.md에 기록한다."""
-    if not _KEY_RE.match(key):
+    if not _KEY_RE.fullmatch(key):
         raise FlowError(f"프로젝트 키 규칙 위반: {key}")
-    title = plane_project_name(title)
+    raw_title = title
+    title = plane_project_name(raw_title)
+    _check_secrets(raw_title, title)
     if not title:
         raise FlowError("제목에 Plane 프로젝트 이름으로 쓸 수 있는 글자가 없습니다")
     cfg = _load_repo_config(repo)
+    _check_secrets(cfg.workspace)
     if any(p.key == key for p in cfg.projects):
         raise FlowError(f"이미 붙은 키: {key}")
 
@@ -213,41 +250,47 @@ def plan_new(
 
     project = client.create_project(title, key)
     project_id = str(project["id"])
-    label = client.create_label(project_id, _PLAN_LABEL_NAME, _PLAN_LABEL_COLOR)
-    label_id = str(label["id"])
-    module = client.create_module(project_id, _PLAN_MODULE_NAME)
-    module_id = str(module["id"])
+    try:
+        label = client.create_label(project_id, _PLAN_LABEL_NAME, _PLAN_LABEL_COLOR)
+        label_id = str(label["id"])
+        module = client.create_module(project_id, _PLAN_MODULE_NAME)
+        module_id = str(module["id"])
 
-    item_ids: dict[str, str] = {}
-    prd_item: Optional[dict[str, Any]] = None
-    for container, html in html_by_container.items():
-        item = client.create_item(project_id, UNIT_ITEMS[container], html, [label_id])
-        item_ids[container] = str(item["id"])
-        if container == "PRD":
-            prd_item = item
+        item_ids: dict[str, str] = {}
+        prd_item: Optional[dict[str, Any]] = None
+        for container, html in html_by_container.items():
+            item = client.create_item(project_id, UNIT_ITEMS[container], html, [label_id])
+            item_ids[container] = str(item["id"])
+            if container == "PRD":
+                prd_item = item
 
-    client.add_to_module(project_id, module_id, list(item_ids.values()))
-    client.create_cycle(project_id, _PROTO_CYCLE_NAME)
+        client.add_to_module(project_id, module_id, list(item_ids.values()))
+        client.create_cycle(project_id, _PROTO_CYCLE_NAME)
 
-    if prd_item is None:
-        raise FlowError("PRD 항목 생성 실패")
+        if prd_item is None:
+            raise FlowError("PRD 항목 생성 실패")
 
-    ledger_dir = _ledger_dir(repo)
-    cfg.projects.append(PlaneProject(key=key, title=title, default=False))
-    save_config(cfg, ledger_dir / "ledger.yml")
+        ledger_dir = _ledger_dir(repo)
+        cfg.projects.append(PlaneProject(key=key, title=title, default=False))
+        save_config(cfg, ledger_dir / "ledger.yml")
 
-    history_path = ledger_dir / "history.md"
-    decision_id = new_decision_id(today, _existing_history_ids(history_path))
-    detail = f"plane:{key}-{prd_item['sequence_id']}@{prd_item['updated_at']}"
-    entry = HistoryEntry(
-        date=today.isoformat(),
-        kind="decision",
-        ref_id=decision_id,
-        projects=key,
-        title=f"단위 프로젝트 {key} 시작",
-        detail=detail,
-    )
-    append_entry(history_path, entry)
+        history_path = ledger_dir / "history.md"
+        decision_id = new_decision_id(today, _existing_history_ids(history_path))
+        detail = f"plane:{key}-{prd_item['sequence_id']}@{prd_item['updated_at']}"
+        entry = HistoryEntry(
+            date=today.isoformat(),
+            kind="decision",
+            ref_id=decision_id,
+            projects=key,
+            title=f"단위 프로젝트 {key} 시작",
+            detail=detail,
+        )
+        append_entry(history_path, entry)
+    except Exception as exc:
+        rolled = _rollback_project(client, project_id, key, exc)
+        if rolled is exc:
+            raise
+        raise rolled from exc
     return PlanNewResult(project_id=project_id, item_ids=item_ids, decision_id=decision_id)
 
 
@@ -407,7 +450,9 @@ class PlaneDocSource:
             if item_id is None:
                 return None
             item = self._client.get_item(project_id, item_id)
-        except (PlaneUnavailable, PlaneAuthError) as exc:
-            raise SourceUnavailable(str(exc)) from exc
+        except PlaneAuthError as exc:
+            raise SourceUnavailable(str(exc), kind="auth") from exc
+        except PlaneUnavailable as exc:
+            raise SourceUnavailable(str(exc), kind="unavailable") from exc
         html = item.get("description_html")
         return str(html) if isinstance(html, str) else ""

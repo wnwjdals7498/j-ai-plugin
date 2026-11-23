@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 from ledger.check import SourceUnavailable, run_check
 from ledger.config import load_config
@@ -208,6 +209,107 @@ class FlowsTest(unittest.TestCase):
         self.plane.fail_on["list_projects"] = PlaneAuthError("unauthorized")
         with self.assertRaises(SourceUnavailable):
             PlaneDocSource(self.plane, cfg).get_container_html("APP", "PRD")
+
+    def test_init_repo_rejects_already_initialized(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        ledger_path = self.repo.root / ".ledger/ledger.yml"
+        before_text = ledger_path.read_text(encoding="utf-8")
+        calls_before = len(self.plane.calls)
+
+        with self.assertRaisesRegex(FlowError, r"이미 초기화된 저장소입니다: \.ledger/ledger\.yml"):
+            init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+
+        self.assertEqual(len(self.plane.calls), calls_before)
+        self.assertEqual(ledger_path.read_text(encoding="utf-8"), before_text)
+
+    def test_create_flows_reject_secrets_before_plane_calls(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        calls_before = len(self.plane.calls)
+
+        with self.assertRaises(SecretFound):
+            plan_new(self.repo, self.plane, "제목 plane_api_" + "a" * 32, "SEC1", TEMPLATES, date(2026, 11, 23))
+        with self.assertRaises(SecretFound):
+            plan_new(self.repo, self.plane, "서버 10.1.2.3 연동", "SEC2", TEMPLATES, date(2026, 11, 23))
+        self.assertEqual(len(self.plane.calls), calls_before)
+
+        ip_dir = Path(self._tmp.name) / "app-10.1.2.3"
+        ip_dir.mkdir()
+        ip_repo = Repo(root=ip_dir, name=ip_dir.name)
+        plane_ip = FakePlane()
+        with self.assertRaises(SecretFound):
+            init_repo(ip_repo, plane_ip, "forge", TEMPLATES, date(2026, 11, 23))
+        self.assertEqual(len(plane_ip.calls), 0)
+
+        ws_dir = Path(self._tmp.name) / "clean-ws-app"
+        ws_dir.mkdir()
+        ws_repo = Repo(root=ws_dir, name=ws_dir.name)
+        plane_ws = FakePlane()
+        with self.assertRaises(SecretFound):
+            init_repo(ws_repo, plane_ws, "ws-10.2.3.4", TEMPLATES, date(2026, 11, 23))
+        self.assertEqual(len(plane_ws.calls), 0)
+
+    def test_init_repo_rolls_back_project_on_failure(self) -> None:
+        self.plane.fail_on["create_label"] = PlaneUnavailable("label fail")
+        with self.assertRaises(PlaneUnavailable):
+            init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        self.plane.fail_on.clear()
+        self.assertEqual(self.plane.list_projects(), [])
+
+        plane_del_fail = FakePlane()
+        plane_del_fail.fail_on["create_label"] = PlaneUnavailable("label fail")
+        plane_del_fail.fail_on["delete_project"] = PlaneUnavailable("delete fail")
+        with self.assertRaises(PlaneUnavailable) as ctx:
+            init_repo(self.repo, plane_del_fail, "forge", TEMPLATES, date(2026, 11, 23))
+        self.assertTrue(
+            str(ctx.exception).endswith(" (정리 실패: Plane 프로젝트 SAMPM 수동 삭제 필요)"),
+            str(ctx.exception),
+        )
+
+    def test_plan_new_rolls_back_only_new_project_on_failure(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+
+        self.plane.fail_on["create_label"] = PlaneAuthError("Plane 토큰 확인 필요")
+        with self.assertRaises(PlaneAuthError):
+            plan_new(self.repo, self.plane, "앱 첫 출시", "APP", TEMPLATES, date(2026, 11, 23))
+        self.plane.fail_on.clear()
+        self.assertEqual([p["identifier"] for p in self.plane.list_projects()], ["SAMPM"])
+
+        with patch("ledger.flows.save_config", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                plan_new(self.repo, self.plane, "저장 실패", "DISK", TEMPLATES, date(2026, 11, 23))
+        self.assertEqual([p["identifier"] for p in self.plane.list_projects()], ["SAMPM"])
+
+        self.plane.fail_on["create_label"] = PlaneUnavailable("label fail")
+        self.plane.fail_on["delete_project"] = PlaneUnavailable("delete fail")
+        with self.assertRaises(PlaneUnavailable) as ctx:
+            plan_new(self.repo, self.plane, "정리 실패", "APP2", TEMPLATES, date(2026, 11, 23))
+        self.assertTrue(
+            str(ctx.exception).endswith(" (정리 실패: Plane 프로젝트 APP2 수동 삭제 필요)"),
+            str(ctx.exception),
+        )
+
+    def test_plan_new_rejects_trailing_newline_key_before_plane_calls(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        calls_before = len(self.plane.calls)
+        with self.assertRaises(FlowError):
+            plan_new(self.repo, self.plane, "개행 키", "APP\n", TEMPLATES, date(2026, 11, 23))
+        self.assertEqual(len(self.plane.calls), calls_before)
+
+    def test_plane_doc_source_sets_source_unavailable_kind(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        plan_new(self.repo, self.plane, "앱 첫 출시", "APP", TEMPLATES, date(2026, 11, 23))
+        cfg = load_config(self.repo.root / ".ledger/ledger.yml")
+
+        self.plane.fail_on["list_projects"] = PlaneAuthError("unauthorized")
+        with self.assertRaises(SourceUnavailable) as auth_ctx:
+            PlaneDocSource(self.plane, cfg).get_container_html("APP", "PRD")
+        self.assertEqual(auth_ctx.exception.kind, "auth")
+
+        self.plane.fail_on.clear()
+        self.plane.fail_on["get_item"] = PlaneUnavailable("timeout")
+        with self.assertRaises(SourceUnavailable) as unavail_ctx:
+            PlaneDocSource(self.plane, cfg).get_container_html("APP", "PRD")
+        self.assertEqual(unavail_ctx.exception.kind, "unavailable")
 
 
 if __name__ == "__main__":
