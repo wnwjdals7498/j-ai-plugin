@@ -27,6 +27,15 @@ UNIT_ITEMS: dict[str, str] = {
     "DECISION": "[계획서] 결정",
 }
 
+TEMPLATE_FOR: dict[str, str] = {
+    "PRD": "prd.html",
+    "IMPL2": "ref-feature.html",
+    "IMPL3": "ref-screen.html",
+    "IMPL5": "ref-alert.html",
+    "IMPL7": "phases.html",
+    "DECISION": "decision.html",
+}
+
 REPO_FILES: dict[str, str] = {
     "IMPL1": ".ledger/design/data.md",
     "IMPL4": ".ledger/design/logging.md",
