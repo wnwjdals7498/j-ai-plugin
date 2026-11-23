@@ -19,7 +19,7 @@ from ledger.spec import DOC_BY_CODE, METHOD_VERSION, TEMPLATE_FOR, UNIT_ITEMS
 _KEY_RE = re.compile(r"^[A-Z0-9]{1,12}$")
 _MAX_KEY_LEN = 12
 _PLAN_LABEL_NAME = "계획서"
-_PLAN_LABEL_COLOR = "#3b82f6"
+_PLAN_LABEL_COLOR = "#6b7280"
 _PLAN_MODULE_NAME = "계획서"
 _PROTO_CYCLE_NAME = "프로토타입"
 

@@ -69,6 +69,8 @@ class FlowsTest(unittest.TestCase):
         self.assertEqual([(p.key, p.title, p.default) for p in cfg.projects], [("SAMPM", "sample-app 유지보수", True)])
         self.assertEqual(self.plane.item_names("SAMPM"), ["[계획서] 결정"])
         self.assertEqual(self.plane.labels("SAMPM"), ["계획서"])
+        label_calls = [c for c in self.plane.calls if c[0] == "create_label"]
+        self.assertEqual([(c[2], c[3]) for c in label_calls], [("계획서", "#6b7280")])
 
     def test_init_does_not_overwrite(self) -> None:
         (self.repo.root / ".ledger").mkdir()
@@ -92,6 +94,8 @@ class FlowsTest(unittest.TestCase):
         self.assertEqual(sorted(self.plane.item_names("APP")), sorted(UNIT_ITEMS.values()))
         self.assertEqual(self.plane.module_members("APP", "계획서"), self.plane.item_ids("APP"))
         self.assertEqual(self.plane.cycles("APP"), ["프로토타입"])
+        label_calls = [c for c in self.plane.calls if c[0] == "create_label"]
+        self.assertEqual([(c[2], c[3]) for c in label_calls], [("계획서", "#6b7280")] * 3)
         entries = parse_history((self.repo.root / ".ledger/history.md").read_text(encoding="utf-8"))
         self.assertEqual(
             [(e.kind, e.projects, e.title) for e in entries],
