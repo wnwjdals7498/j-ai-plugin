@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -17,6 +18,9 @@ _ENV_WORKSPACE = "FORGE_LEDGER_PLANE_WORKSPACE"
 _ENV_TOKEN = "FORGE_LEDGER_PLANE_TOKEN"
 _RETRY_DELAYS: tuple[float, ...] = (1.0, 2.0, 4.0)
 _RATE_WINDOW_SECONDS = 60.0
+_RATE_LIMIT_DEFAULT_WAIT = 60.0
+_RATE_LIMIT_MAX_WAIT = 65.0
+_RATE_LIMIT_RETRIES = 3
 _PER_PAGE = 100
 _DEFAULT_TIMEOUT = 30.0
 
@@ -98,6 +102,21 @@ def _seg(value: str) -> str:
     return urllib.parse.quote(value, safe="")
 
 
+def _notify_stderr(message: str) -> None:
+    print(message, file=sys.stderr)
+
+
+def _retry_after_seconds(raw: Optional[str]) -> float:
+    """429 응답의 Retry-After(정수 초)를 읽는다. 없거나 잘못되면 60초, 최대 65초."""
+    wait = _RATE_LIMIT_DEFAULT_WAIT
+    if raw is not None:
+        try:
+            wait = float(int(raw.strip()))
+        except ValueError:
+            wait = _RATE_LIMIT_DEFAULT_WAIT
+    return max(0.0, min(wait, _RATE_LIMIT_MAX_WAIT))
+
+
 class PlaneClient:
     """표준 라이브러리 urllib 기반 Plane CE API 클라이언트."""
 
@@ -107,6 +126,7 @@ class PlaneClient:
         per_minute: int = 50,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
+        notify: Optional[Callable[[str], None]] = None,
     ) -> None:
         if per_minute < 1:
             raise ValueError("per_minute는 1 이상이어야 한다")
@@ -119,6 +139,7 @@ class PlaneClient:
         self._per_minute = per_minute
         self._clock = clock
         self._sleep = sleep
+        self._notify = notify if notify is not None else _notify_stderr
         self._timestamps: deque[float] = deque()
         if parsed_url.hostname in ("127.0.0.1", "localhost", "::1"):
             self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -173,7 +194,9 @@ class PlaneClient:
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             headers["Content-Type"] = "application/json"
 
-        for attempt in range(len(_RETRY_DELAYS) + 1):
+        attempt = 0
+        rate_limited = 0
+        while True:
             self._wait_rate_limit()
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
             try:
@@ -187,25 +210,34 @@ class PlaneClient:
                     raise PlaneError("Plane 응답 JSON 파싱 실패") from None
             except urllib.error.HTTPError as exc:
                 status = exc.code
+                retry_after = exc.headers.get("Retry-After") if exc.headers is not None else None
                 exc.close()
                 if status in (401, 403):
                     raise PlaneAuthError("Plane 토큰 확인 필요") from None
-                if status == 429 or 500 <= status <= 599:
+                if status == 429:
+                    if rate_limited < _RATE_LIMIT_RETRIES:
+                        rate_limited += 1
+                        wait = _retry_after_seconds(retry_after)
+                        self._notify(f"Plane 호출 한도에 걸려 {int(wait)}초 기다립니다")
+                        self._sleep(wait)
+                        continue
+                    raise PlaneUnavailable("Plane 요청 실패: HTTP 429") from None
+                if 500 <= status <= 599:
                     if attempt < len(_RETRY_DELAYS):
                         self._sleep(_RETRY_DELAYS[attempt])
+                        attempt += 1
                         continue
                     raise PlaneUnavailable(f"Plane 요청 실패: HTTP {status}") from None
                 raise PlaneError(f"Plane 요청 오류: HTTP {status}") from None
             except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError) as exc:
                 if attempt < len(_RETRY_DELAYS):
                     self._sleep(_RETRY_DELAYS[attempt])
+                    attempt += 1
                     continue
                 raw_reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
                 detail = self._sanitize(str(raw_reason))
                 message = f"Plane 연결 실패: {detail}" if detail else "Plane 연결 실패"
                 raise PlaneUnavailable(message) from None
-
-        raise PlaneUnavailable("Plane 요청 실패")
 
     def _request_dict(
         self,

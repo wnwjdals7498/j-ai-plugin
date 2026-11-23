@@ -195,16 +195,58 @@ class PlaneClientTest(unittest.TestCase):
         slept: list[float] = []
         client = PlaneClient(self.settings, sleep=lambda s: slept.append(s))
 
-        self.server.status_queue = [503, 429, 200]
+        self.server.status_queue = [503, 503, 200]
         self.server.pages = [{"results": [{"id": "ok"}], "next_cursor": None, "next_page_results": False}]
         self.assertEqual(client.list_projects(), [{"id": "ok"}])
         self.assertEqual(slept, [1.0, 2.0])
 
         slept.clear()
-        self.server.force_status = 429
+        self.server.force_status = 503
         with self.assertRaises(PlaneUnavailable):
             client.list_projects()
         self.assertEqual(slept, [1.0, 2.0, 4.0])
+
+    def _rate_limited_client(self) -> tuple[PlaneClient, list[float], list[str]]:
+        slept: list[float] = []
+        notes: list[str] = []
+        client = PlaneClient(self.settings, sleep=lambda s: slept.append(s), notify=notes.append)
+        return client, slept, notes
+
+    def test_429_honors_retry_after(self) -> None:
+        client, slept, notes = self._rate_limited_client()
+        self.server.retry_after = "7"
+        self.server.status_queue = [429, 200]
+        self.assertEqual(client.list_projects(), [])
+        self.assertEqual(slept, [7.0])
+        self.assertEqual(notes, ["Plane 호출 한도에 걸려 7초 기다립니다"])
+
+    def test_429_without_header_waits_60(self) -> None:
+        client, slept, _ = self._rate_limited_client()
+        self.server.status_queue = [429, 200]
+        client.list_projects()
+        self.assertEqual(slept, [60.0])
+
+    def test_429_invalid_header_waits_60(self) -> None:
+        client, slept, _ = self._rate_limited_client()
+        self.server.retry_after = "soon"
+        self.server.status_queue = [429, 200]
+        client.list_projects()
+        self.assertEqual(slept, [60.0])
+
+    def test_429_wait_capped_at_65(self) -> None:
+        client, slept, _ = self._rate_limited_client()
+        self.server.retry_after = "500"
+        self.server.status_queue = [429, 200]
+        client.list_projects()
+        self.assertEqual(slept, [65.0])
+
+    def test_429_gives_up_after_three_retries(self) -> None:
+        client, slept, _ = self._rate_limited_client()
+        self.server.retry_after = "5"
+        self.server.force_status = 429
+        with self.assertRaisesRegex(PlaneUnavailable, "HTTP 429"):
+            client.list_projects()
+        self.assertEqual(slept, [5.0, 5.0, 5.0])
 
     def test_connection_failure_retries_and_hides_token(self) -> None:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

@@ -90,6 +90,7 @@ class FakePlaneServer:
         self.force_status: Optional[int] = None
         self.status_queue: list[int] = []
         self.error_body: str = ""
+        self.retry_after: Optional[str] = None
         self.projects: dict[str, dict[str, Any]] = {}
         self.items: dict[str, dict[str, dict[str, Any]]] = {}
         self._item_seq: dict[str, int] = {}
@@ -111,6 +112,8 @@ class FakePlaneServer:
             def _send_json(self, status: int, body: Any) -> None:
                 raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
                 self.send_response(status)
+                if status == 429 and owner.retry_after is not None:
+                    self.send_header("Retry-After", owner.retry_after)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(raw)))
                 self.end_headers()
