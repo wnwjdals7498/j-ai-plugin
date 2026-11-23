@@ -85,9 +85,19 @@ class FakePlaneServer:
         self.force_status: Optional[int] = None
         self.status_queue: list[int] = []
         self.error_body: str = ""
+        self.projects: dict[str, dict[str, Any]] = {}
+        self.items: dict[str, dict[str, dict[str, Any]]] = {}
+        self._item_seq: dict[str, int] = {}
+        self._tick = 0
+        self.touch_next_get_item: bool = False
         self._closed = False
 
         owner = self
+
+        def _next_timestamp() -> str:
+            owner._tick += 1
+            ts = datetime(2026, 11, 23, 0, 0, 0, tzinfo=timezone.utc) + timedelta(seconds=owner._tick)
+            return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         class _Handler(BaseHTTPRequestHandler):
             def log_message(self, format: str, *args: Any) -> None:
@@ -121,26 +131,51 @@ class FakePlaneServer:
                     return
 
                 clean_path = urlsplit(self.path).path
+                parts = clean_path.strip("/").split("/")
                 if method == "GET":
-                    if clean_path.endswith("/projects/") or clean_path.endswith("/work-items/"):
+                    if clean_path.endswith("/projects/"):
                         if owner.pages:
                             page = owner.pages.pop(0)
                         else:
-                            page = {"results": [], "next_cursor": None, "next_page_results": False}
+                            page = {
+                                "results": [dict(p) for p in owner.projects.values()],
+                                "next_cursor": None,
+                                "next_page_results": False,
+                            }
+                        self._send_json(200, page)
+                        return
+                    if clean_path.endswith("/work-items/"):
+                        if owner.pages:
+                            page = owner.pages.pop(0)
+                        else:
+                            pid = parts[-2] if len(parts) >= 2 else ""
+                            page = {
+                                "results": [dict(it) for it in owner.items.get(pid, {}).values()],
+                                "next_cursor": None,
+                                "next_page_results": False,
+                            }
                         self._send_json(200, page)
                         return
                     if "/work-items/" in clean_path:
                         if owner.item is not None:
                             item_payload = dict(owner.item)
                         else:
-                            item_id = clean_path.rstrip("/").rsplit("/", 1)[-1]
-                            item_payload = {
-                                "id": item_id,
-                                "sequence_id": 1,
-                                "updated_at": "2026-11-23T00:00:00Z",
-                                "name": "",
-                                "description_html": "",
-                            }
+                            pid = parts[-3] if len(parts) >= 3 else ""
+                            item_id = parts[-1]
+                            stored = owner.items.get(pid, {}).get(item_id)
+                            if stored is not None:
+                                item_payload = dict(stored)
+                                if owner.touch_next_get_item:
+                                    owner.touch_next_get_item = False
+                                    stored["updated_at"] = _next_timestamp()
+                            else:
+                                item_payload = {
+                                    "id": item_id,
+                                    "sequence_id": 1,
+                                    "updated_at": "2026-11-23T00:00:00Z",
+                                    "name": "",
+                                    "description_html": "",
+                                }
                         self._send_json(200, item_payload)
                         return
                     self._send_json(200, {})
@@ -148,7 +183,34 @@ class FakePlaneServer:
 
                 if method == "POST":
                     seq = len(owner.requests)
-                    payload: dict[str, Any] = {
+                    if clean_path.endswith("/projects/"):
+                        proj_id = f"id-{seq}"
+                        payload: dict[str, Any] = {
+                            "id": proj_id,
+                            "sequence_id": seq,
+                            "updated_at": _next_timestamp(),
+                        }
+                        if isinstance(parsed_json, dict):
+                            payload.update(parsed_json)
+                        owner.projects[proj_id] = dict(payload)
+                        self._send_json(201, payload)
+                        return
+                    if clean_path.endswith("/work-items/"):
+                        pid = parts[-2] if len(parts) >= 2 else ""
+                        item_seq = owner._item_seq.get(pid, 0) + 1
+                        owner._item_seq[pid] = item_seq
+                        item_id = f"id-{seq}"
+                        payload = {
+                            "id": item_id,
+                            "sequence_id": item_seq,
+                            "updated_at": _next_timestamp(),
+                        }
+                        if isinstance(parsed_json, dict):
+                            payload.update(parsed_json)
+                        owner.items.setdefault(pid, {})[item_id] = dict(payload)
+                        self._send_json(201, payload)
+                        return
+                    payload = {
                         "id": f"id-{seq}",
                         "sequence_id": seq,
                         "updated_at": "2026-11-23T00:00:00Z",
@@ -159,24 +221,37 @@ class FakePlaneServer:
                     return
 
                 if method == "PATCH":
-                    item_id = clean_path.rstrip("/").rsplit("/", 1)[-1]
-                    payload = (
-                        dict(owner.item)
-                        if owner.item is not None
-                        else {
+                    pid = parts[-3] if len(parts) >= 3 else ""
+                    item_id = parts[-1]
+                    if owner.item is not None:
+                        payload = dict(owner.item)
+                        if isinstance(parsed_json, dict):
+                            payload.update(parsed_json)
+                        payload["updated_at"] = "2026-11-23T12:00:00Z"
+                    elif item_id in owner.items.get(pid, {}):
+                        stored = owner.items[pid][item_id]
+                        if isinstance(parsed_json, dict):
+                            stored.update(parsed_json)
+                        stored["updated_at"] = _next_timestamp()
+                        payload = dict(stored)
+                    else:
+                        payload = {
                             "id": item_id,
                             "sequence_id": 1,
                             "name": "",
                             "description_html": "",
                         }
-                    )
-                    if isinstance(parsed_json, dict):
-                        payload.update(parsed_json)
-                    payload["updated_at"] = "2026-11-23T12:00:00Z"
+                        if isinstance(parsed_json, dict):
+                            payload.update(parsed_json)
+                        payload["updated_at"] = "2026-11-23T12:00:00Z"
                     self._send_json(200, payload)
                     return
 
                 if method == "DELETE":
+                    if len(parts) >= 2 and parts[-2] == "projects":
+                        pid = parts[-1]
+                        owner.projects.pop(pid, None)
+                        owner.items.pop(pid, None)
                     self.send_response(204)
                     self.send_header("Content-Length", "0")
                     self.end_headers()
