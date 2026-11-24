@@ -86,8 +86,10 @@ RUN python3.12 -m venv /opt/semgrep \
     && mkdir -p /opt/semgrep-rules \
     && while IFS= read -r pack; do \
          [ -z "${pack}" ] && continue; \
-         curl -fsSL "https://semgrep.dev/c/${pack}" -o "/opt/semgrep-rules/${pack//\//-}.yaml"; \
+         curl -fsSL "https://semgrep.dev/c/${pack}" -o "/opt/semgrep-rules/${pack//\//-}.yaml" || exit 1; \
        done < /tmp/semgrep-packs.txt \
+    && test "$(find /opt/semgrep-rules -type f | wc -l)" -eq "$(grep -c . /tmp/semgrep-packs.txt)" \
+    && test -z "$(find /opt/semgrep-rules -type f -size 0)" \
     && rm -f /tmp/semgrep-packs.txt \
     && ls -l /opt/semgrep-rules
 
