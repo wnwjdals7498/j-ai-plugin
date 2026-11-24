@@ -79,12 +79,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     has_range = args.base is not None or args.head is not None
-    has_files = args.files is not None
-    if has_files and has_range:
+    if args.files is not None and has_range:
         print("Specify either --files or --base/--head, not both.", file=sys.stderr)
         return 2
-    if has_files:
-        assert args.files is not None
+    if args.files is not None:
         paths: Sequence[str] = args.files
     elif args.base is not None and args.head is not None:
         paths = changed_files(args.root, args.base, args.head)
