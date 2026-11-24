@@ -99,7 +99,20 @@ class TestSharedRateLimiter(unittest.TestCase):
         self.assertNotIn(TEST_TOKEN, state.read_text(encoding="utf-8"))
         self.assertEqual(stat.S_IMODE(state.stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE(self.dir.stat().st_mode), 0o700)
-        self.assertTrue((self.dir / f"plane-rate-{bucket}.lock").exists())
+        lock = self.dir / f"plane-rate-{bucket}.lock"
+        self.assertTrue(lock.exists())
+        self.assertEqual(stat.S_IMODE(lock.stat().st_mode), 0o600)
+
+    def test_recreated_lock_file_keeps_mode_0600(self) -> None:
+        limiter = self._limiter()
+        lock = self.dir / "plane-rate-abc.lock"
+        lock.unlink()
+        old_umask = os.umask(0)
+        try:
+            limiter.acquire()
+        finally:
+            os.umask(old_umask)
+        self.assertEqual(stat.S_IMODE(lock.stat().st_mode), 0o600)
 
     def test_real_processes_share_budget(self) -> None:
         script = (
@@ -134,6 +147,22 @@ class TestMakeSharedLimiter(unittest.TestCase):
                 {"FORGE_LEDGER_STATE_DIR": str(blocker)},
                 notify=notes.append,
             )
+        self.assertIsInstance(limiter, LocalRateLimiter)
+        self.assertEqual(notes, ["공유 호출 한도 파일을 쓸 수 없어 프로세스 안 제한만 씁니다"])
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root는 읽기 전용 폴더에도 쓸 수 있다")
+    def test_falls_back_when_state_dir_read_only_with_existing_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_dir = Path(tmp) / "s"
+            env = {"FORGE_LEDGER_STATE_DIR": str(state_dir)}
+            make_shared_limiter("http://plane.example", TEST_TOKEN, env, notify=lambda _m: None)
+            state_dir.chmod(0o500)
+            notes: list[str] = []
+            try:
+                limiter = make_shared_limiter("http://plane.example", TEST_TOKEN, env, notify=notes.append)
+                limiter.acquire()
+            finally:
+                state_dir.chmod(0o700)
         self.assertIsInstance(limiter, LocalRateLimiter)
         self.assertEqual(notes, ["공유 호출 한도 파일을 쓸 수 없어 프로세스 안 제한만 씁니다"])
 

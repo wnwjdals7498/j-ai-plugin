@@ -86,6 +86,13 @@ class SharedRateLimiter:
         state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         fd = os.open(self._lock_path, os.O_RDWR | os.O_CREAT, 0o600)
         os.close(fd)
+        self._check_can_create_files()
+
+    def _check_can_create_files(self) -> None:
+        """폴더에 새 파일을 만들 수 있는지 미리 확인한다(읽기 전용 폴더에 .lock만 남은 경우 포함)."""
+        fd, tmp_name = tempfile.mkstemp(dir=self._dir, prefix=".plane-rate-", suffix=".tmp")
+        os.close(fd)
+        os.unlink(tmp_name)
 
     def _read(self) -> list[float]:
         try:
@@ -117,7 +124,7 @@ class SharedRateLimiter:
 
     def _try_take(self) -> Optional[float]:
         """한도에 여유가 있으면 한 칸을 잡고 None, 아니면 기다릴 초를 돌려준다."""
-        with open(self._lock_path, "a+b") as lock:
+        with os.fdopen(os.open(self._lock_path, os.O_RDWR | os.O_CREAT, 0o600), "a+b") as lock:
             self._flock(lock.fileno(), self._lock_ex)
             now = self._clock()
             timestamps = [t for t in self._read() if now - self._window < t <= now + self._window]
