@@ -148,11 +148,15 @@ job_install() (
         echo "설치된 플러그인 경로가 저장소와 다름: '$read_from' (기대: $plugin_root)" >&2
         return 1
     fi
-    local py
+    local py failed=0
     for py in python3.9 python3.13; do
         echo "=== [install] $py ==="
-        "$py" ci/install_smoke.py --root "$plugin_root" --python "$py"
+        if ! "$py" ci/install_smoke.py --root "$plugin_root" --python "$py"; then
+            echo "$py: 실패" >&2
+            failed=1
+        fi
     done
+    return "$failed"
 )
 
 job_all() {
