@@ -148,6 +148,9 @@ def default_state_dir(env: Mapping[str, str]) -> Path:
     xdg = env.get("XDG_STATE_HOME", "").strip()
     if xdg:
         return Path(xdg) / "forge-ledger"
+    home = env.get("HOME", "").strip()
+    if home:
+        return Path(home) / ".local" / "state" / "forge-ledger"
     return Path(os.path.expanduser("~/.local/state/forge-ledger"))
 
 

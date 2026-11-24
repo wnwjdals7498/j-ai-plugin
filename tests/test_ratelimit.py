@@ -159,7 +159,7 @@ class TestMakeSharedLimiter(unittest.TestCase):
         del env["FORGE_LEDGER_STATE_DIR"]
         self.assertEqual(default_state_dir(env), Path("/b/xdg/forge-ledger"))
         del env["XDG_STATE_HOME"]
-        self.assertEqual(default_state_dir(env), Path(os.path.expanduser("~/.local/state/forge-ledger")))
+        self.assertEqual(default_state_dir(env), Path("/c/home/.local/state/forge-ledger"))
 
 
 class TestPlaneClientLimiter(unittest.TestCase):
