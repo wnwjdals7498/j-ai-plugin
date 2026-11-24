@@ -145,8 +145,10 @@ def _has_keyword_value(body: str, keyword: str) -> bool:
                 if not next_line.strip():
                     continue
                 next_heading = _MD_HEADING_RE.match(next_line)
-                if next_heading is not None and len(next_heading.group(1)) <= heading_level:
-                    break
+                if next_heading is not None:
+                    if len(next_heading.group(1)) <= heading_level:
+                        break
+                    continue
                 return True
             continue
 
@@ -174,20 +176,27 @@ def _has_keyword_value(body: str, keyword: str) -> bool:
     return False
 
 
+def _md_row_cells(row: str) -> list[str]:
+    inner = row.strip().removeprefix("|").removesuffix("|")
+    return [c.strip() for c in inner.split("|")]
+
+
 def _has_md_threat(body: str) -> bool:
     lines = body.splitlines()
     found_threat_table = False
     for idx, line in enumerate(lines):
         if "|" in line and "위협" in line and idx + 1 < len(lines) and _MD_SEP_RE.match(lines[idx + 1].strip()):
             found_threat_table = True
+            header_cells = _md_row_cells(line)
+            threat_col = next(i for i, c in enumerate(header_cells) if "위협" in c)
             for row_line in lines[idx + 2 :]:
                 stripped = row_line.strip()
                 if not stripped or "|" not in stripped:
                     break
                 if _MD_SEP_RE.match(stripped):
                     continue
-                cells = [c.strip() for c in stripped.strip("|").split("|")]
-                if any(cells):
+                cells = _md_row_cells(stripped)
+                if threat_col < len(cells) and cells[threat_col]:
                     return True
     if found_threat_table:
         return False

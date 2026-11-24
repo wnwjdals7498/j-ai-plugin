@@ -62,6 +62,7 @@ cleanup_pycache() {
 }
 
 job_test() {
+    ensure_git_safe_dir
     trap cleanup_pycache EXIT
     ensure_py39_venv
     "$CI_VENV_DIR/py39/bin/coverage" run -m unittest discover -s tests -t .
@@ -102,7 +103,7 @@ job_deps() {
     for req in ci/requirements-*.txt; do
         "$CI_VENV_DIR/py3x/bin/pip-audit" --disable-pip --no-deps --require-hashes -r "$req"
     done
-    trivy fs --scanners misconfig,secret --exit-code 1 --skip-check-update --skip-db-update --cache-dir /opt/trivy-cache --skip-dirs tests .
+    trivy fs --scanners misconfig,secret --exit-code 1 --skip-check-update --skip-db-update --cache-dir /opt/trivy-cache --skip-dirs tests --ignorefile .trivyignore.yaml .
 }
 
 job_all() {

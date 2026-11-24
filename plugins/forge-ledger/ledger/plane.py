@@ -7,17 +7,16 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Optional, Protocol
 
+from ledger.ratelimit import LocalRateLimiter, RateLimiter
 from ledger.secrets import find_secrets
 
 _ENV_URL = "FORGE_LEDGER_PLANE_URL"
 _ENV_WORKSPACE = "FORGE_LEDGER_PLANE_WORKSPACE"
 _ENV_TOKEN = "FORGE_LEDGER_PLANE_TOKEN"  # nosec B105 # 환경 변수 이름이며 비밀값이 아님
 _RETRY_DELAYS: tuple[float, ...] = (1.0, 2.0, 4.0)
-_RATE_WINDOW_SECONDS = 60.0
 _RATE_LIMIT_DEFAULT_WAIT = 60.0
 _RATE_LIMIT_MAX_WAIT = 65.0
 _RATE_LIMIT_RETRIES = 3
@@ -127,6 +126,8 @@ class PlaneClient:
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         notify: Optional[Callable[[str], None]] = None,
+        *,
+        limiter: Optional[RateLimiter] = None,
     ) -> None:
         if per_minute < 1:
             raise ValueError("per_minute는 1 이상이어야 한다")
@@ -136,11 +137,11 @@ class PlaneClient:
         if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
             raise PlaneError(f"설정 오류: {_ENV_URL}")
         self._workspace = _seg(settings.workspace)
-        self._per_minute = per_minute
-        self._clock = clock
         self._sleep = sleep
         self._notify = notify if notify is not None else _notify_stderr
-        self._timestamps: deque[float] = deque()
+        self._limiter: RateLimiter = (
+            limiter if limiter is not None else LocalRateLimiter(per_minute=per_minute, clock=clock, sleep=sleep)
+        )
         if parsed_url.hostname in ("127.0.0.1", "localhost", "::1"):
             self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         else:
@@ -158,21 +159,6 @@ class PlaneClient:
         if find_secrets(cleaned):
             return ""
         return cleaned.strip()
-
-    def _wait_rate_limit(self) -> None:
-        now = self._clock()
-        while self._timestamps and now - self._timestamps[0] >= _RATE_WINDOW_SECONDS:
-            self._timestamps.popleft()
-        if len(self._timestamps) >= self._per_minute:
-            wait = _RATE_WINDOW_SECONDS - (now - self._timestamps[0])
-            if wait > 0:
-                self._sleep(wait)
-            now = self._clock()
-            while self._timestamps and now - self._timestamps[0] >= _RATE_WINDOW_SECONDS:
-                self._timestamps.popleft()
-            if len(self._timestamps) >= self._per_minute:
-                self._timestamps.popleft()
-        self._timestamps.append(now)
 
     def _request(
         self,
@@ -197,7 +183,7 @@ class PlaneClient:
         attempt = 0
         rate_limited = 0
         while True:
-            self._wait_rate_limit()
+            self._limiter.acquire()
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
             try:
                 with self._opener.open(req, timeout=_DEFAULT_TIMEOUT) as resp:

@@ -38,6 +38,10 @@ unset GITEA_RUNNER_REGISTRATION_TOKEN
 
 ## 3. 상태 확인과 재시작
 
+`docker compose -f ci/runner/compose.yml ps|logs|restart`는 `compose.yml`이 필수 환경 변수를 검사하므로 `GITEA_INSTANCE_URL`과 `FORGE_RUNNER_DATA`가 설정된 셸에서만 동작한다.
+
+환경 변수 설정이 있는 셸:
+
 컨테이너 상태 확인:
 
 ```bash
@@ -54,6 +58,14 @@ docker compose -f ci/runner/compose.yml logs --tail 50
 
 ```bash
 docker compose -f ci/runner/compose.yml restart
+```
+
+환경 변수 없이 컨테이너 이름으로 바로 실행:
+
+```bash
+docker ps --filter name=forge-ledger-runner
+docker logs --tail 50 forge-ledger-runner
+docker restart forge-ledger-runner
 ```
 
 ## 4. 검사 이미지 재빌드 절차

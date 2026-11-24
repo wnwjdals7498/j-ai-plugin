@@ -155,17 +155,28 @@ def _check_secrets(*texts: str) -> None:
         raise SecretFound(f"비밀값 감지: {', '.join(sorted(found))}")
 
 
+def _append_error_note(exc: Exception, note: str) -> Exception:
+    message = f"{exc}{note}"
+    try:
+        return type(exc)(message)
+    except Exception:
+        exc.args = (message,)
+        return exc
+
+
+def _restore_ledger_yml(cfg_path: Path, previous_bytes: bytes, key: str, exc: Exception) -> Exception:
+    try:
+        cfg_path.write_bytes(previous_bytes)
+    except Exception:
+        return _append_error_note(exc, f" (ledger.yml 복원 실패: {key} 항목 수동 삭제 필요)")
+    return exc
+
+
 def _rollback_project(client: PlaneLike, project_id: str, key: str, exc: Exception) -> Exception:
     try:
         client.delete_project(project_id)
     except Exception:
-        note = f" (정리 실패: Plane 프로젝트 {key} 수동 삭제 필요)"
-        message = f"{exc}{note}"
-        try:
-            return type(exc)(message)
-        except Exception:
-            exc.args = (message,)
-            return exc
+        return _append_error_note(exc, f" (정리 실패: Plane 프로젝트 {key} 수동 삭제 필요)")
     return exc
 
 
@@ -250,6 +261,9 @@ def plan_new(
 
     project = client.create_project(title, key)
     project_id = str(project["id"])
+    ledger_dir = _ledger_dir(repo)
+    cfg_path = ledger_dir / "ledger.yml"
+    previous_cfg_bytes: Optional[bytes] = None
     try:
         label = client.create_label(project_id, _PLAN_LABEL_NAME, _PLAN_LABEL_COLOR)
         label_id = str(label["id"])
@@ -270,9 +284,9 @@ def plan_new(
         if prd_item is None:
             raise FlowError("PRD 항목 생성 실패")
 
-        ledger_dir = _ledger_dir(repo)
+        previous_cfg_bytes = cfg_path.read_bytes()
         cfg.projects.append(PlaneProject(key=key, title=title, default=False))
-        save_config(cfg, ledger_dir / "ledger.yml")
+        save_config(cfg, cfg_path)
 
         history_path = ledger_dir / "history.md"
         decision_id = new_decision_id(today, _existing_history_ids(history_path))
@@ -287,7 +301,10 @@ def plan_new(
         )
         append_entry(history_path, entry)
     except Exception as exc:
-        rolled = _rollback_project(client, project_id, key, exc)
+        rolled = exc
+        if previous_cfg_bytes is not None:
+            rolled = _restore_ledger_yml(cfg_path, previous_cfg_bytes, key, rolled)
+        rolled = _rollback_project(client, project_id, key, rolled)
         if rolled is exc:
             raise
         raise rolled from exc

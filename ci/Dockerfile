@@ -90,6 +90,9 @@ RUN python3.12 -m venv /opt/semgrep \
        done < /tmp/semgrep-packs.txt \
     && test "$(find /opt/semgrep-rules -type f | wc -l)" -eq "$(grep -c . /tmp/semgrep-packs.txt)" \
     && test -z "$(find /opt/semgrep-rules -type f -size 0)" \
+    && mkdir -p /tmp/semgrep-empty \
+    && semgrep scan --config /opt/semgrep-rules --metrics=off --disable-version-check --error /tmp/semgrep-empty \
+    && rm -rf /tmp/semgrep-empty \
     && rm -f /tmp/semgrep-packs.txt \
     && ls -l /opt/semgrep-rules
 

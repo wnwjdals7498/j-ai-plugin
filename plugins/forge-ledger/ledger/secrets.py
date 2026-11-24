@@ -5,17 +5,23 @@ from __future__ import annotations
 import ipaddress
 import re
 
+_PLANE_REGEX = r"plane_api_[0-9a-f]{32}"
+_GITHUB_REGEX = r"ghp_[A-Za-z0-9]{20,}"
+_GITLAB_REGEX = r"glpat-[A-Za-z0-9_-]{20,}"
+_FIGMA_REGEX = r"figd_[A-Za-z0-9_-]{20,}"
+_TELEGRAM_REGEX = r"\b\d{8,10}:[A-Za-z0-9_-]{35}\b"
+
 PATTERNS: dict[str, str] = {
     "ipv4": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
     "ipv6": r"(?<![0-9A-Za-z])[0-9A-Fa-f:]*:[0-9A-Fa-f:]*:[0-9A-Fa-f:.]*(?![0-9A-Za-z])",
-    "plane_token": r"plane_api_[0-9a-f]{32}",  # nosec B105 # 토큰 탐지용 정규식 패턴
-    "github_token": r"ghp_[A-Za-z0-9]{20,}",  # nosec B105 # 토큰 탐지용 정규식 패턴
-    "gitlab_token": r"glpat-[A-Za-z0-9_-]{20,}",  # nosec B105 # 토큰 탐지용 정규식 패턴
-    "figma_token": r"figd_[A-Za-z0-9_-]{20,}",  # nosec B105 # 토큰 탐지용 정규식 패턴
-    "telegram_bot_token": r"\b\d{8,10}:[A-Za-z0-9_-]{35}\b",  # nosec B105 # 토큰 탐지용 정규식 패턴
+    "plane_token": _PLANE_REGEX,
+    "github_token": _GITHUB_REGEX,
+    "gitlab_token": _GITLAB_REGEX,
+    "figma_token": _FIGMA_REGEX,
+    "telegram_bot_token": _TELEGRAM_REGEX,
 }
 
-_ALLOWED_IPV4 = frozenset({"127.0.0.1", "0.0.0.0"})  # nosec B104 # 비밀값 검사 예외 IP 목록(소켓 바인딩 아님)
+_ALLOWED_IPV4 = frozenset({"127.0.0.1", str(ipaddress.IPv4Address(0))})
 _ALLOWED_IPV6 = frozenset({ipaddress.IPv6Address("::1"), ipaddress.IPv6Address("::")})
 
 

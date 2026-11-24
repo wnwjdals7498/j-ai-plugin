@@ -6,7 +6,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ledger.check import SourceUnavailable, check_repo, check_unit, doc_rules, run_check
+from ledger.check import (
+    SourceUnavailable,
+    _has_keyword_value,
+    _has_md_threat,
+    check_repo,
+    check_unit,
+    doc_rules,
+    run_check,
+)
 from tests.fakes import DictSource, RaisingSource
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -253,3 +261,27 @@ class CheckTest(unittest.TestCase):
         rep_unavail = run_check(self.filled_repo, ["APP"], RaisingSource())
         self.assertEqual(rep_unavail.exit_code, 2)
         self.assertEqual(json.loads(rep_unavail.to_json())["error"], "unavailable")
+
+    def test_keyword_heading_with_only_subheading_is_empty(self) -> None:
+        self.assertFalse(_has_keyword_value("## 되돌리기\n### 절차\n", "되돌리기"))
+
+    def test_keyword_heading_with_content_under_subheading(self) -> None:
+        self.assertTrue(_has_keyword_value("## 되돌리기\n### 절차\n- 이전 태그로 배포\n", "되돌리기"))
+
+    def test_keyword_heading_followed_by_sibling_heading_is_empty(self) -> None:
+        self.assertFalse(_has_keyword_value("## 되돌리기\n## 다음 절\n내용\n", "되돌리기"))
+
+    def test_threat_table_empty_threat_cell_is_empty(self) -> None:
+        self.assertFalse(_has_md_threat("| 위협 | 대응 |\n|---|---|\n|  | 방화벽 |\n"))
+
+    def test_threat_table_threat_in_second_column(self) -> None:
+        self.assertFalse(_has_md_threat("| 자산 | 위협 |\n|---|---|\n| DB |  |\n"))
+        self.assertTrue(_has_md_threat("| 자산 | 위협 |\n|---|---|\n| DB | 토큰 노출 |\n"))
+
+    def test_threat_table_filled_threat_cell(self) -> None:
+        self.assertTrue(_has_md_threat("| 위협 | 대응 |\n|---|---|\n| 토큰 노출 | 마스킹 |\n"))
+
+    def test_threat_table_adjacent_pipes_count_as_empty_cell(self) -> None:
+        self.assertFalse(_has_md_threat("| 위협 | 대응 |\n|---|---|\n|| 방화벽 |\n"))
+        self.assertTrue(_has_md_threat("| 자산 | 위협 |\n|---|---|\n|| 토큰 노출 |\n"))
+        self.assertFalse(_has_md_threat("|| 위협 |\n|---|---|\n| DB |  |\n"))
