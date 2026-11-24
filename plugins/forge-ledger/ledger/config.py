@@ -143,7 +143,7 @@ def _yaml_scalar(value: str) -> str:
         value == ""
         or value in ("true", "false")
         or (value.lstrip("-").isdigit() and value != "-")
-        or any(ch in value for ch in ('#', ':', '"', "'", "[", "]", "\n", "\t"))
+        or any(ch in value for ch in ("#", ":", '"', "'", "[", "]", "\n", "\t"))
         or value[0].isspace()
         or value[-1].isspace()
     ):

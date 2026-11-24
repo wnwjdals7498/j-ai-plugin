@@ -422,9 +422,7 @@ class PlaneDocSource:
         if self._project_ids is None:
             projects = self._client.list_projects()
             self._project_ids = {
-                str(p["identifier"]): str(p["id"])
-                for p in projects
-                if p.get("identifier") and p.get("id")
+                str(p["identifier"]): str(p["id"]) for p in projects if p.get("identifier") and p.get("id")
             }
         return self._project_ids.get(project_key)
 
@@ -432,9 +430,7 @@ class PlaneDocSource:
         if project_id not in self._item_ids:
             items = self._client.list_items(project_id)
             self._item_ids[project_id] = {
-                str(it["name"]): str(it["id"])
-                for it in items
-                if it.get("name") and it.get("id")
+                str(it["name"]): str(it["id"]) for it in items if it.get("name") and it.get("id")
             }
         return self._item_ids[project_id].get(item_name)
 

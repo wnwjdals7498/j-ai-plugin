@@ -17,9 +17,7 @@ _TABLE_RE = re.compile(r"<table(?:\s[^>]*)?>(.*?)</table>", re.IGNORECASE | re.D
 _TR_RE = re.compile(r"<tr(?:\s[^>]*)?>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 _TH_RE = re.compile(r"<th(?:\s[^>]*)?>(.*?)</th>", re.IGNORECASE | re.DOTALL)
 _LI_RE = re.compile(r"<li(?:\s[^>]*)?>(.*?)</li>", re.IGNORECASE | re.DOTALL)
-_MD_SEP_RE = re.compile(
-    r"^(?:\|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)*\|?|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?)$"
-)
+_MD_SEP_RE = re.compile(r"^(?:\|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)*\|?|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?)$")
 _MD_HEADING_RE = re.compile(r"^\s*(#{1,6})\s+")
 _MD_LIST_RE = re.compile(r"^([ \t]*)(?:[-*+]|\d+[.)])\s+")
 _LEDGER_META_FILES: tuple[tuple[str, str], ...] = (
@@ -390,9 +388,7 @@ def _check_ledger_meta_secrets(repo_root: Path) -> list[DocResult]:
             continue
         found = find_secrets(text)
         if found:
-            results.append(
-                DocResult(scope="repo", code=code, state="written", reasons=[f"비밀값: {', '.join(found)}"])
-            )
+            results.append(DocResult(scope="repo", code=code, state="written", reasons=[f"비밀값: {', '.join(found)}"]))
     return results
 
 

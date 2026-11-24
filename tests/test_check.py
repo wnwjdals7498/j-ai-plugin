@@ -78,7 +78,11 @@ class CheckTest(unittest.TestCase):
     def test_additional_rules(self) -> None:
         self.assertIn(
             "필드 없음: 결정권자",
-            doc_rules("PRD1", "<table><tr><td>진행 상태</td><td>초안</td></tr><tr><td>목표 출시일</td><td>미정</td></tr></table>", None),
+            doc_rules(
+                "PRD1",
+                "<table><tr><td>진행 상태</td><td>초안</td></tr><tr><td>목표 출시일</td><td>미정</td></tr></table>",
+                None,
+            ),
         )
         self.assertIn(
             "구분 없음: 사업",
@@ -135,7 +139,9 @@ class CheckTest(unittest.TestCase):
     def test_run_check_detects_secrets_in_history_and_ledger_yml(self) -> None:
         src = DictSource({("APP", c): FILLED[c] for c in ("PRD", "IMPL2", "IMPL3", "IMPL5", "IMPL7")})
         history_path = self.filled_repo / ".ledger" / "history.md"
-        history_path.write_text("# 이력\n| 2026-11-23 | decision | D-261123-0001 | APP | 서버 10.9.8.7 | detail |\n", encoding="utf-8")
+        history_path.write_text(
+            "# 이력\n| 2026-11-23 | decision | D-261123-0001 | APP | 서버 10.9.8.7 | detail |\n", encoding="utf-8"
+        )
 
         rep = run_check(self.filled_repo, ["APP"], src)
         raw_json = rep.to_json()
@@ -206,11 +212,7 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(doc_rules("IMPL6", multi, None), [])
 
         two_threat_tables = (
-            "| 위협 | 대응 |\n"
-            "|--|--|\n\n"
-            "| 위협 | 대응 |\n"
-            "| --- | --- |\n"
-            "| 위조 요청 | 서명 검증 |\n"
+            "| 위협 | 대응 |\n" "|--|--|\n\n" "| 위협 | 대응 |\n" "| --- | --- |\n" "| 위조 요청 | 서명 검증 |\n"
         )
         self.assertEqual(doc_rules("IMPL6", two_threat_tables, None), [])
 

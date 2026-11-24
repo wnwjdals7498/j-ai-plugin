@@ -49,20 +49,20 @@ class SectionsTest(unittest.TestCase):
         self.assertEqual(replaced, '<h2 class="editor-heading-block">PRD 2 목표</h2><p>new</p>')
 
     def test_inner_heading_tags_and_spec_integration(self) -> None:
-        html = append_html_section("<h2><span>PRD 1</span> 문서 머리</h2><p>a</p>", section_heading("PRD7"), "<p>해당 없음: 백엔드 전용</p>")
+        html = append_html_section(
+            "<h2><span>PRD 1</span> 문서 머리</h2><p>a</p>", section_heading("PRD7"), "<p>해당 없음: 백엔드 전용</p>"
+        )
         sections = split_html_sections(html)
         self.assertEqual(sections["PRD1"], "<p>a</p>")
         self.assertEqual(section_state(sections["PRD7"], DOC_BY_CODE["PRD7"].na_allowed), ("na", []))
-        self.assertEqual(section_state(sections["PRD7"], DOC_BY_CODE["PRD1"].na_allowed), ("missing", ["해당 없음 불가"]))
+        self.assertEqual(
+            section_state(sections["PRD7"], DOC_BY_CODE["PRD1"].na_allowed), ("missing", ["해당 없음 불가"])
+        )
         self.assertEqual(section_state("<p>해당 없음:   </p>", True), ("missing", ["이유 없음"]))
         self.assertEqual(section_state("<p>해당 없음: {{이유}}</p>", True)[0], "missing")
 
     def test_md_sections_multiple_and_subheadings(self) -> None:
-        md = (
-            "# 로깅\n\n"
-            "## 구현 4 로깅 처리 레퍼런스\n### 세부\n내용1\n"
-            "## D-261123-7f3a 로그 포맷\n내용2\n"
-        )
+        md = "# 로깅\n\n" "## 구현 4 로깅 처리 레퍼런스\n### 세부\n내용1\n" "## D-261123-7f3a 로그 포맷\n내용2\n"
         sections = split_md_sections(md)
         self.assertEqual(sections["IMPL4"].strip(), "### 세부\n내용1")
         self.assertEqual(sections["D-261123-7f3a"].strip(), "내용2")
