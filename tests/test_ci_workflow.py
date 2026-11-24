@@ -10,9 +10,13 @@ ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = ROOT / ".gitea" / "workflows" / "pr-check.yml"
 TAG_PATH = ROOT / "ci" / "image" / "TAG"
 EXPECTED_JOBS = {"lint", "test", "secrets", "sast", "deps"}
+PY39_JOBS = {"lint", "test"}
+PY3X_JOBS = {"sast", "deps"}
+UV_JOBS = PY39_JOBS | PY3X_JOBS
+CACHE_ACTION = "actions/cache@caa296126883cff596d87d8935842f9db880ef25"
 EXPECTED_ACTIONS = {
     "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-    "actions/cache@caa296126883cff596d87d8935842f9db880ef25",
+    CACHE_ACTION,
 }
 
 
@@ -71,7 +75,32 @@ class TestWorkflow(unittest.TestCase):
         text = _read_workflow()
         uses = re.findall(r"(?m)^\s+(?:-\s+)?uses:\s*(\S+)\s*$", text)
         self.assertEqual(set(uses), EXPECTED_ACTIONS)
-        self.assertEqual(len(uses), len(EXPECTED_JOBS) * 2)
+        self.assertEqual(len(uses), len(EXPECTED_JOBS) + len(UV_JOBS))
+
+    def test_cache_keys_per_job(self) -> None:
+        text = _read_workflow()
+        blocks = _extract_job_blocks(text)
+        for job_id in PY39_JOBS:
+            block = blocks[job_id]
+            with self.subTest(job=job_id):
+                self.assertIn(CACHE_ACTION, block)
+                self.assertRegex(block, r"(?m)^\s+path:\s*/root/\.cache/uv\s*$")
+                self.assertIn(
+                    "key: uv-py39-${{ hashFiles('ci/requirements-py39.txt') }}",
+                    block,
+                )
+        for job_id in PY3X_JOBS:
+            block = blocks[job_id]
+            with self.subTest(job=job_id):
+                self.assertIn(CACHE_ACTION, block)
+                self.assertRegex(block, r"(?m)^\s+path:\s*/root/\.cache/uv\s*$")
+                self.assertIn(
+                    "key: uv-py3x-${{ hashFiles('ci/requirements-py3x.txt') }}",
+                    block,
+                )
+        secrets_block = blocks["secrets"]
+        self.assertNotIn("actions/cache", secrets_block)
+        self.assertNotIn("UV_CACHE_DIR", secrets_block)
 
     def test_each_job_runs_its_check(self) -> None:
         text = _read_workflow()
@@ -82,7 +111,8 @@ class TestWorkflow(unittest.TestCase):
             with self.subTest(job=job_id):
                 self.assertRegex(block, rf"ci/run-checks\.sh\s+{re.escape(job_id)}\b")
                 self.assertRegex(block, r"(?m)^\s+fetch-depth:\s*0\s*$")
-                self.assertRegex(block, r"(?m)^\s+UV_CACHE_DIR:\s*/root/\.cache/uv\s*$")
+                if job_id in UV_JOBS:
+                    self.assertRegex(block, r"(?m)^\s+UV_CACHE_DIR:\s*/root/\.cache/uv\s*$")
         secrets_block = blocks["secrets"]
         self.assertIn("BASE_SHA: ${{ github.event.pull_request.base.sha }}", secrets_block)
         self.assertIn("HEAD_SHA: ${{ github.event.pull_request.head.sha }}", secrets_block)
