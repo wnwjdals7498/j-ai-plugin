@@ -83,10 +83,7 @@ class SharedRateLimiter:
         self._dir = state_dir
         self._state_path = state_dir / f"plane-rate-{bucket}.json"
         self._lock_path = state_dir / f"plane-rate-{bucket}.lock"
-        existed = state_dir.is_dir()
-        state_dir.mkdir(parents=True, exist_ok=True)
-        if not existed:
-            os.chmod(state_dir, 0o700)
+        state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         fd = os.open(self._lock_path, os.O_RDWR | os.O_CREAT, 0o600)
         os.close(fd)
 
