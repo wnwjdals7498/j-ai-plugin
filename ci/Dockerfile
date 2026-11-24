@@ -7,6 +7,9 @@ FROM ghcr.io/astral-sh/uv:0.13.7 AS uv
 FROM python:3.12-slim-bookworm
 
 ARG PYTHON39_VERSION=3.9.25
+ARG PYTHON310_VERSION=3.10.22
+ARG PYTHON311_VERSION=3.11.18
+ARG PYTHON313_VERSION=3.13.18
 ARG NODE_VERSION=26.13.1
 ARG GITLEAKS_VERSION=8.30.1
 ARG TRIVY_VERSION=0.76.2
@@ -35,6 +38,17 @@ COPY --from=uv /uv /uvx /usr/local/bin/
 RUN uv python install --no-bin "${PYTHON39_VERSION}" \
     && ln -sf "$(uv python find --no-project "${PYTHON39_VERSION}")" /usr/local/bin/python3.9 \
     && python3.9 --version
+
+# Python 3.10, 3.11, 3.13 (uv 관리 배포본) -> python3.10, python3.11, python3.13
+RUN uv python install --no-bin "${PYTHON310_VERSION}" \
+    && ln -sf "$(uv python find --no-project "${PYTHON310_VERSION}")" /usr/local/bin/python3.10 \
+    && python3.10 --version \
+    && uv python install --no-bin "${PYTHON311_VERSION}" \
+    && ln -sf "$(uv python find --no-project "${PYTHON311_VERSION}")" /usr/local/bin/python3.11 \
+    && python3.11 --version \
+    && uv python install --no-bin "${PYTHON313_VERSION}" \
+    && ln -sf "$(uv python find --no-project "${PYTHON313_VERSION}")" /usr/local/bin/python3.13 \
+    && python3.13 --version
 
 WORKDIR /tmp/dl
 
