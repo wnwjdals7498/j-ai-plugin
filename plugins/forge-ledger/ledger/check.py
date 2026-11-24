@@ -3,7 +3,9 @@ from __future__ import annotations
 import html as html_lib
 import json
 import re
-import xml.etree.ElementTree as ET
+
+# nosemgrep: opt.semgrep-rules.python.lang.security.use-defused-xml.use-defused-xml -- 표준 라이브러리 제약(로컬 drawio)
+import xml.etree.ElementTree as ET  # nosec B405 # 표준 라이브러리 제약, 로컬 drawio만 파싱
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Optional, Protocol
@@ -260,7 +262,8 @@ def doc_rules(code: str, body: str, repo_root: Optional[Path]) -> list[str]:
         if repo_root is not None and code in DRAWIO:
             drawio_path = repo_root / DRAWIO[code]
             try:
-                ET.parse(drawio_path)
+                # nosemgrep: opt.semgrep-rules.python.lang.security.use-defused-xml-parse.use-defused-xml-parse -- 표준 라이브러리 제약(로컬 drawio)
+                ET.parse(drawio_path)  # nosec B314 # 표준 라이브러리 제약, 로컬 drawio만 파싱
             except (OSError, ET.ParseError):
                 reasons.append("drawio 파싱 실패")
     elif code == "IMPL6":

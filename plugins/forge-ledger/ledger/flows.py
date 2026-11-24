@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import shutil
-import subprocess
+import subprocess  # nosec B404 # git 저장소 루트 조회용(shell=False)
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -46,7 +46,7 @@ class Repo:
     def discover(cls, start: Path) -> Repo:
         """git 최상위 폴더를 찾고, 실패하면 start를 저장소 루트로 쓴다."""
         try:
-            proc = subprocess.run(
+            proc = subprocess.run(  # nosec B603 B607 # 고정 git rev-parse 명령 실행(shell=False)
                 ["git", "rev-parse", "--show-toplevel"],
                 cwd=start,
                 capture_output=True,

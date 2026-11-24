@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import subprocess
+import subprocess  # nosec B404 # 변경 파일 목록 조회용(shell=False)
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -47,7 +47,7 @@ def scan_files(root: Path, paths: Sequence[str]) -> list[Finding]:
 
 def changed_files(root: Path, base: str, head: str) -> list[str]:
     """Return sorted list of added/copied/modified/renamed files between base and head."""
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603 B607 # 고정 git diff 명령을 인자 목록으로 실행(shell=False)
         [
             "git",
             "-C",

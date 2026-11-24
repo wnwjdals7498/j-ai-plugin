@@ -13,7 +13,7 @@ source = ["plugins/forge-ledger", "ci"]
 branch = true
 
 [tool.coverage.report]
-fail_under = 0
+fail_under = 81
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
