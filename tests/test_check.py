@@ -280,3 +280,8 @@ class CheckTest(unittest.TestCase):
 
     def test_threat_table_filled_threat_cell(self) -> None:
         self.assertTrue(_has_md_threat("| 위협 | 대응 |\n|---|---|\n| 토큰 노출 | 마스킹 |\n"))
+
+    def test_threat_table_adjacent_pipes_count_as_empty_cell(self) -> None:
+        self.assertFalse(_has_md_threat("| 위협 | 대응 |\n|---|---|\n|| 방화벽 |\n"))
+        self.assertTrue(_has_md_threat("| 자산 | 위협 |\n|---|---|\n|| 토큰 노출 |\n"))
+        self.assertFalse(_has_md_threat("|| 위협 |\n|---|---|\n| DB |  |\n"))
