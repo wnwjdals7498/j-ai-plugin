@@ -62,6 +62,7 @@ cleanup_pycache() {
 }
 
 job_test() {
+    ensure_git_safe_dir
     trap cleanup_pycache EXIT
     ensure_py39_venv
     "$CI_VENV_DIR/py39/bin/coverage" run -m unittest discover -s tests -t .
