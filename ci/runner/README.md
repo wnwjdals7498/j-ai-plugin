@@ -58,15 +58,17 @@ docker compose -f ci/runner/compose.yml restart
 
 ## 4. 검사 이미지 재빌드 절차
 
-`ci/Dockerfile`, `ci/requirements-*.txt`, `ci/image/TAG` 등 이미지 입력이 변경되면 로컬 검사 이미지(`forge-ledger-ci:<TAG>`)를 다시 빌드한다.
+`ci/Dockerfile` 또는 `ci/image/*`(`TAG`, `semgrep-packs.txt`) 등 이미지 입력이 변경되면 로컬 검사 이미지(`forge-ledger-ci:<TAG>`)를 다시 빌드한다. (`ci/requirements-*.txt`는 실행 시점 가상환경 설치 입력이므로 이미지 재빌드 대상이 아니다.)
 
-1. 저장소 루트에서 빌드 스크립트를 실행한다.
+이미지 입력을 바꾸는 PR에서는 기존 태그를 덮어쓰지 않도록 `ci/image/TAG` 정수를 먼저 올린 뒤 아래 순서로 빌드·반영한다.
+
+1. `ci/image/TAG`의 정수를 1 올리고, 저장소 루트에서 빌드 스크립트를 실행한다.
 
 ```bash
 bash scripts/ci-image-build.sh
 ```
 
-2. `ci/image/TAG` 값을 올린 경우에는 다음 두 곳의 태그도 같은 값으로 갱신한 뒤 러너 컨테이너를 재생성한다.
+2. 다음 두 곳의 태그도 새 `ci/image/TAG` 값으로 갱신한 뒤 러너 컨테이너를 재생성한다.
    - `ci/runner/compose.yml`의 `GITEA_RUNNER_LABELS` (`forge-ci:docker://forge-ledger-ci:<TAG>`)
    - `.gitea/workflows/pr-check.yml`의 각 작업 `container` (`forge-ledger-ci:<TAG>`)
 
