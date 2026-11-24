@@ -11,7 +11,7 @@ permissions:
 jobs:
   lint:
     runs-on: forge-ci
-    container: forge-ledger-ci:2
+    container: forge-ledger-ci:3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -27,7 +27,7 @@ jobs:
 
   test:
     runs-on: forge-ci
-    container: forge-ledger-ci:2
+    container: forge-ledger-ci:3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -43,7 +43,7 @@ jobs:
 
   secrets:
     runs-on: forge-ci
-    container: forge-ledger-ci:2
+    container: forge-ledger-ci:3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -56,7 +56,7 @@ jobs:
 
   sast:
     runs-on: forge-ci
-    container: forge-ledger-ci:2
+    container: forge-ledger-ci:3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -72,7 +72,7 @@ jobs:
 
   deps:
     runs-on: forge-ci
-    container: forge-ledger-ci:2
+    container: forge-ledger-ci:3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -85,3 +85,23 @@ jobs:
         env:
           UV_CACHE_DIR: /root/.cache/uv
         run: bash ci/run-checks.sh deps
+
+  matrix:
+    runs-on: forge-ci
+    container: forge-ledger-ci:3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Run matrix
+        run: bash ci/run-checks.sh matrix
+
+  install:
+    runs-on: forge-ci
+    container: forge-ledger-ci:3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Run install
+        run: bash ci/run-checks.sh install

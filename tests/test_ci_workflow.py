@@ -9,10 +9,11 @@ from ledger.secrets import find_secrets
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = ROOT / ".gitea" / "workflows" / "pr-check.yml"
 TAG_PATH = ROOT / "ci" / "image" / "TAG"
-EXPECTED_JOBS = {"lint", "test", "secrets", "sast", "deps"}
+EXPECTED_JOBS = {"lint", "test", "secrets", "sast", "deps", "matrix", "install"}
 PY39_JOBS = {"lint", "test"}
 PY3X_JOBS = {"sast", "deps"}
 UV_JOBS = PY39_JOBS | PY3X_JOBS
+NO_CACHE_JOBS = {"secrets", "matrix", "install"}
 CACHE_ACTION = "actions/cache@caa296126883cff596d87d8935842f9db880ef25"
 EXPECTED_ACTIONS = {
     "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -52,7 +53,7 @@ class TestWorkflow(unittest.TestCase):
         self.assertRegex(text, r"(?m)^permissions:\s*\n  contents:\s*read\s*$")
         self.assertNotIn("write", text.lower())
 
-    def test_five_jobs(self) -> None:
+    def test_seven_jobs(self) -> None:
         text = _read_workflow()
         blocks = _extract_job_blocks(text)
         self.assertEqual(set(blocks.keys()), EXPECTED_JOBS)
@@ -98,9 +99,12 @@ class TestWorkflow(unittest.TestCase):
                     "key: uv-py3x-${{ hashFiles('ci/requirements-py3x.txt') }}",
                     block,
                 )
-        secrets_block = blocks["secrets"]
-        self.assertNotIn("actions/cache", secrets_block)
-        self.assertNotIn("UV_CACHE_DIR", secrets_block)
+        for job_id in NO_CACHE_JOBS:
+            with self.subTest(job=job_id):
+                self.assertIn(job_id, blocks)
+                block = blocks[job_id]
+                self.assertNotIn("actions/cache", block)
+                self.assertNotIn("UV_CACHE_DIR", block)
 
     def test_each_job_runs_its_check(self) -> None:
         text = _read_workflow()
