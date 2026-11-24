@@ -6,4 +6,14 @@ line-length = 120
 python_version = "3.9"
 strict = true
 mypy_path = "plugins/forge-ledger"
-files = ["plugins/forge-ledger/ledger", "plugins/forge-ledger/hooks"]
+files = ["plugins/forge-ledger/ledger", "plugins/forge-ledger/hooks", "ci"]
+
+[tool.coverage.run]
+source = ["plugins/forge-ledger", "ci"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 81
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]

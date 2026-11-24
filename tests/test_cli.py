@@ -183,7 +183,8 @@ class CliTest(unittest.TestCase):
         self.assertEqual(self.run_cli("plan", "new", "앱 첫 출시", "--key", "APP").returncode, 0)
         history_path = self.repo / ".ledger" / "history.md"
         history_path.write_text(
-            history_path.read_text(encoding="utf-8") + "| 2026-11-23 | decision | D-261123-0001 | APP | 10.1.2.3 | d |\n",
+            history_path.read_text(encoding="utf-8")
+            + "| 2026-11-23 | decision | D-261123-0001 | APP | 10.1.2.3 | d |\n",
             encoding="utf-8",
         )
         r = self.run_cli("plan", "check", "--project", "APP", "--json")
@@ -209,6 +210,8 @@ class CliTest(unittest.TestCase):
         stderr = io.StringIO()
         with patch("ledger.plane.PlaneClient.list_projects", side_effect=PlaneUnavailable("down")):
             with redirect_stdout(stdout), redirect_stderr(stderr):
-                code = main(["--repo", str(self.repo), "plan", "check", "--project", "APP", "--json"], env=self._base_env())
+                code = main(
+                    ["--repo", str(self.repo), "plan", "check", "--project", "APP", "--json"], env=self._base_env()
+                )
         self.assertEqual(code, 2)
         self.assertEqual(json.loads(stdout.getvalue())["error"], "unavailable")

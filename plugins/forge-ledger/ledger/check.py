@@ -3,7 +3,9 @@ from __future__ import annotations
 import html as html_lib
 import json
 import re
-import xml.etree.ElementTree as ET
+
+# nosemgrep: opt.semgrep-rules.python.lang.security.use-defused-xml.use-defused-xml -- 표준 라이브러리 제약(로컬 drawio)
+import xml.etree.ElementTree as ET  # nosec B405 # 표준 라이브러리 제약, 로컬 drawio만 파싱
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Optional, Protocol
@@ -17,9 +19,7 @@ _TABLE_RE = re.compile(r"<table(?:\s[^>]*)?>(.*?)</table>", re.IGNORECASE | re.D
 _TR_RE = re.compile(r"<tr(?:\s[^>]*)?>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 _TH_RE = re.compile(r"<th(?:\s[^>]*)?>(.*?)</th>", re.IGNORECASE | re.DOTALL)
 _LI_RE = re.compile(r"<li(?:\s[^>]*)?>(.*?)</li>", re.IGNORECASE | re.DOTALL)
-_MD_SEP_RE = re.compile(
-    r"^(?:\|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)*\|?|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?)$"
-)
+_MD_SEP_RE = re.compile(r"^(?:\|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)*\|?|\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?)$")
 _MD_HEADING_RE = re.compile(r"^\s*(#{1,6})\s+")
 _MD_LIST_RE = re.compile(r"^([ \t]*)(?:[-*+]|\d+[.)])\s+")
 _LEDGER_META_FILES: tuple[tuple[str, str], ...] = (
@@ -262,7 +262,8 @@ def doc_rules(code: str, body: str, repo_root: Optional[Path]) -> list[str]:
         if repo_root is not None and code in DRAWIO:
             drawio_path = repo_root / DRAWIO[code]
             try:
-                ET.parse(drawio_path)
+                # nosemgrep: opt.semgrep-rules.python.lang.security.use-defused-xml-parse.use-defused-xml-parse -- 표준 라이브러리 제약(로컬 drawio)
+                ET.parse(drawio_path)  # nosec B314 # 표준 라이브러리 제약, 로컬 drawio만 파싱
             except (OSError, ET.ParseError):
                 reasons.append("drawio 파싱 실패")
     elif code == "IMPL6":
@@ -390,9 +391,7 @@ def _check_ledger_meta_secrets(repo_root: Path) -> list[DocResult]:
             continue
         found = find_secrets(text)
         if found:
-            results.append(
-                DocResult(scope="repo", code=code, state="written", reasons=[f"비밀값: {', '.join(found)}"])
-            )
+            results.append(DocResult(scope="repo", code=code, state="written", reasons=[f"비밀값: {', '.join(found)}"]))
     return results
 
 

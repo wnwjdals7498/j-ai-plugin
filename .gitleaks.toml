@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "시험 고정 데이터 및 비밀값 검사 테스트 파일"
+paths = [
+    '''^tests/test_secrets\.py$''',
+    '''^tests/fixtures/''',
+    '''^tests/test_ci_scripts\.py$''',
+]

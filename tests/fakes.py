@@ -378,10 +378,7 @@ class FakePlane:
 
     def list_projects(self) -> list[dict[str, Any]]:
         self._record_and_check("list_projects")
-        return [
-            {"id": p.id, "name": p.name, "identifier": p.identifier}
-            for p in self._projects.values()
-        ]
+        return [{"id": p.id, "name": p.name, "identifier": p.identifier} for p in self._projects.values()]
 
     def create_project(self, name: str, identifier: str) -> dict[str, Any]:
         self._record_and_check("create_project", name, identifier)

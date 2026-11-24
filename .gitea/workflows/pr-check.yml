@@ -1,0 +1,87 @@
+name: pr-check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: forge-ci
+    container: forge-ledger-ci:1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: /root/.cache/uv
+          key: uv-py39-${{ hashFiles('ci/requirements-py39.txt') }}
+      - name: Run lint
+        env:
+          UV_CACHE_DIR: /root/.cache/uv
+        run: bash ci/run-checks.sh lint
+
+  test:
+    runs-on: forge-ci
+    container: forge-ledger-ci:1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: /root/.cache/uv
+          key: uv-py39-${{ hashFiles('ci/requirements-py39.txt') }}
+      - name: Run test
+        env:
+          UV_CACHE_DIR: /root/.cache/uv
+        run: bash ci/run-checks.sh test
+
+  secrets:
+    runs-on: forge-ci
+    container: forge-ledger-ci:1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Run secrets
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash ci/run-checks.sh secrets
+
+  sast:
+    runs-on: forge-ci
+    container: forge-ledger-ci:1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: /root/.cache/uv
+          key: uv-py3x-${{ hashFiles('ci/requirements-py3x.txt') }}
+      - name: Run sast
+        env:
+          UV_CACHE_DIR: /root/.cache/uv
+        run: bash ci/run-checks.sh sast
+
+  deps:
+    runs-on: forge-ci
+    container: forge-ledger-ci:1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: /root/.cache/uv
+          key: uv-py3x-${{ hashFiles('ci/requirements-py3x.txt') }}
+      - name: Run deps
+        env:
+          UV_CACHE_DIR: /root/.cache/uv
+        run: bash ci/run-checks.sh deps
