@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # forge-ledger PR 자동 검사 실행 스크립트.
-# 사용법: ci/run-checks.sh <lint|test|secrets|sast|deps|all>
+# 사용법: ci/run-checks.sh <lint|test|secrets|sast|deps|matrix|install|all>
 set -euo pipefail
 
 CI_VENV_DIR="${CI_VENV_DIR:-/tmp/forge-ci-venv}"
@@ -106,8 +106,57 @@ job_deps() {
     trivy fs --scanners misconfig,secret --exit-code 1 --skip-check-update --skip-db-update --cache-dir /opt/trivy-cache --skip-dirs tests --ignorefile .trivyignore.yaml .
 }
 
+job_matrix() {
+    ensure_git_safe_dir
+    trap cleanup_pycache EXIT
+    export UV_PYTHON_DOWNLOADS=never
+    mkdir -p "$CI_VENV_DIR"
+    local versions=(3.10 3.11 3.12 3.13)
+    local -A results=()
+    local failed=0
+    local ver venv_dir
+    for ver in "${versions[@]}"; do
+        venv_dir="$CI_VENV_DIR/m$ver"
+        echo "=== [matrix] Python $ver ==="
+        if uv venv --clear "$venv_dir" --python "$ver" &&
+            "$venv_dir/bin/python" -m unittest discover -s tests -t .; then
+            results["$ver"]="통과"
+        else
+            results["$ver"]="실패"
+            failed=1
+        fi
+    done
+    echo "=== matrix 결과 ==="
+    for ver in "${versions[@]}"; do
+        echo "Python $ver: ${results[$ver]}"
+    done
+    return "$failed"
+}
+
+job_install() (
+    local tmp_home
+    tmp_home="$(mktemp -d)"
+    trap 'rm -rf "$tmp_home"' EXIT
+    export HOME="$tmp_home"
+    local plugin_root="$PWD/plugins/forge-ledger"
+    claude plugin marketplace add "$PWD"
+    claude plugin install forge-ledger@forge
+    local listing read_from
+    listing="$(claude plugin list)"
+    read_from="$(printf '%s\n' "$listing" | sed -n 's/^[[:space:]]*Read from:[[:space:]]*//p' | sed -n '1p')"
+    if [ "$read_from" != "$plugin_root" ]; then
+        echo "설치된 플러그인 경로가 저장소와 다름: '$read_from' (기대: $plugin_root)" >&2
+        return 1
+    fi
+    local py
+    for py in python3.9 python3.13; do
+        echo "=== [install] $py ==="
+        "$py" ci/install_smoke.py --root "$plugin_root" --python "$py"
+    done
+)
+
 job_all() {
-    local jobs=(lint test secrets sast deps)
+    local jobs=(lint test secrets sast deps matrix install)
     local -A results=()
     local failed=0
     local job
@@ -129,7 +178,7 @@ job_all() {
 
 main() {
     if [ "$#" -ne 1 ]; then
-        echo "사용법: $0 <lint|test|secrets|sast|deps|all>" >&2
+        echo "사용법: $0 <lint|test|secrets|sast|deps|matrix|install|all>" >&2
         return 2
     fi
     case "$1" in
@@ -138,9 +187,11 @@ main() {
         secrets) job_secrets ;;
         sast) job_sast ;;
         deps) job_deps ;;
+        matrix) job_matrix ;;
+        install) job_install ;;
         all) job_all ;;
         *)
-            echo "알 수 없는 작업: $1 (허용: lint|test|secrets|sast|deps|all)" >&2
+            echo "알 수 없는 작업: $1 (허용: lint|test|secrets|sast|deps|matrix|install|all)" >&2
             return 2
             ;;
     esac
