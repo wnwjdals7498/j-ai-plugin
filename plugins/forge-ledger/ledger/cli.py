@@ -19,6 +19,7 @@ from ledger.plane import (
     PlaneSettings,
     PlaneUnavailable,
 )
+from ledger.ratelimit import make_shared_limiter
 from ledger.secrets import find_secrets
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "skills" / "ledger-plan" / "templates"
@@ -148,7 +149,10 @@ def main(
         found_ws = find_secrets(settings.workspace)
         if found_ws:
             raise flows.SecretFound(f"비밀값 감지: {', '.join(found_ws)}")
-        client = PlaneClient(settings)
+        client = PlaneClient(
+            settings,
+            limiter=make_shared_limiter(settings.base_url, settings.token, effective_env),
+        )
         today = date.today()
 
         if args.command == "init":
