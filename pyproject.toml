@@ -6,4 +6,4 @@ line-length = 120
 python_version = "3.9"
 strict = true
 mypy_path = "plugins/forge-ledger"
-files = ["plugins/forge-ledger/ledger", "plugins/forge-ledger/hooks"]
+files = ["plugins/forge-ledger/ledger", "plugins/forge-ledger/hooks", "ci"]
