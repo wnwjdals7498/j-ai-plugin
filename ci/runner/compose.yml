@@ -1,0 +1,21 @@
+services:
+  runner:
+    image: gitea/runner:6.0.1
+    container_name: forge-ledger-runner
+    restart: unless-stopped
+    environment:
+      CONFIG_FILE: /config.yaml
+      GITEA_INSTANCE_URL: "${GITEA_INSTANCE_URL:?GITEA_INSTANCE_URL 필요}"
+      GITEA_RUNNER_REGISTRATION_TOKEN: "${GITEA_RUNNER_REGISTRATION_TOKEN:-}"
+      GITEA_RUNNER_NAME: forge-ledger-ci
+      GITEA_RUNNER_LABELS: "forge-ci:docker://forge-ledger-ci:1"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.yaml:/config.yaml:ro
+      - ${FORGE_RUNNER_DATA:?FORGE_RUNNER_DATA 필요}:/data
+    networks:
+      - forge-ci-net
+
+networks:
+  forge-ci-net:
+    name: forge-ci-net

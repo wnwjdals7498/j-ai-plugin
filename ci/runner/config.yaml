@@ -1,0 +1,21 @@
+# gitea/runner:6.0.1 설정 파일
+# 키 이름 대조 기준: gitea.com/gitea/runner v6.0.1 internal/pkg/config/config.example.yaml
+
+log:
+  level: info
+
+runner:
+  file: /data/.runner
+  capacity: 1
+
+cache:
+  enabled: true
+  dir: /data/cache
+
+container:
+  network: forge-ci-net
+  privileged: false
+  options: "--memory=3g --cpus=4"
+  # "-": 러너가 호스트 Docker 소켓을 자동 탐지하되 작업·액션 컨테이너에는 마운트하지 않는다.
+  docker_host: "-"
+  force_pull: false
