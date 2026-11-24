@@ -57,7 +57,12 @@ job_lint() {
     fi
 }
 
+cleanup_pycache() {
+    find . -maxdepth 5 -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null || true
+}
+
 job_test() {
+    trap cleanup_pycache EXIT
     ensure_py39_venv
     "$CI_VENV_DIR/py39/bin/coverage" run -m unittest discover -s tests -t .
     "$CI_VENV_DIR/py39/bin/coverage" report
@@ -73,6 +78,7 @@ job_secrets() {
 }
 
 job_sast() {
+    ensure_git_safe_dir
     semgrep scan --config /opt/semgrep-rules --error --metrics=off --disable-version-check .
     ensure_py3x_venv
     "$CI_VENV_DIR/py3x/bin/bandit" -c pyproject.toml -r plugins ci scripts
