@@ -35,6 +35,7 @@ class CliTest(unittest.TestCase):
             "FORGE_LEDGER_PLANE_URL": self.server.base_url,
             "FORGE_LEDGER_PLANE_WORKSPACE": "forge",
             "FORGE_LEDGER_PLANE_TOKEN": self.token,
+            "FORGE_LEDGER_STATE_DIR": str(self.tmp / "state"),
         }
 
     def run_cli(
@@ -43,6 +44,7 @@ class CliTest(unittest.TestCase):
         env: Optional[dict[str, str]] = None,
     ) -> subprocess.CompletedProcess[str]:
         proc_env = {k: v for k, v in os.environ.items() if not k.startswith("FORGE_LEDGER_PLANE_")}
+        proc_env["FORGE_LEDGER_STATE_DIR"] = str(self.tmp / "state")
         if env is None:
             proc_env.update(self._base_env())
         else:
