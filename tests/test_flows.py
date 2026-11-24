@@ -311,6 +311,33 @@ class FlowsTest(unittest.TestCase):
             PlaneDocSource(self.plane, cfg).get_container_html("APP", "PRD")
         self.assertEqual(unavail_ctx.exception.kind, "unavailable")
 
+    def test_plan_new_history_failure_restores_ledger_yml(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        ledger_path = self.repo.root / ".ledger/ledger.yml"
+        history_path = self.repo.root / ".ledger/history.md"
+        ledger_before = ledger_path.read_bytes()
+        history_before = history_path.read_bytes()
+
+        with patch("ledger.flows.append_entry", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                plan_new(self.repo, self.plane, "앱 첫 출시", "APP", TEMPLATES, date(2026, 11, 23))
+
+        self.assertEqual(ledger_path.read_bytes(), ledger_before)
+        self.assertEqual(history_path.read_bytes(), history_before)
+        self.assertEqual([p["identifier"] for p in self.plane.list_projects()], ["SAMPM"])
+
+    def test_plan_new_reports_when_ledger_restore_fails(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+
+        with patch("ledger.flows.append_entry", side_effect=OSError("disk full")):
+            with patch.object(Path, "write_bytes", side_effect=OSError("read-only")):
+                with self.assertRaises(OSError) as ctx:
+                    plan_new(self.repo, self.plane, "앱 첫 출시", "APP", TEMPLATES, date(2026, 11, 23))
+
+        self.assertIn("ledger.yml 복원 실패", str(ctx.exception))
+        self.assertIn("APP", str(ctx.exception))
+        self.assertEqual([p["identifier"] for p in self.plane.list_projects()], ["SAMPM"])
+
 
 if __name__ == "__main__":
     unittest.main()
