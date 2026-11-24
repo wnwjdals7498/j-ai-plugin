@@ -264,7 +264,6 @@ def plan_new(
     ledger_dir = _ledger_dir(repo)
     cfg_path = ledger_dir / "ledger.yml"
     previous_cfg_bytes: Optional[bytes] = None
-    cfg_saved = False
     try:
         label = client.create_label(project_id, _PLAN_LABEL_NAME, _PLAN_LABEL_COLOR)
         label_id = str(label["id"])
@@ -288,7 +287,6 @@ def plan_new(
         previous_cfg_bytes = cfg_path.read_bytes()
         cfg.projects.append(PlaneProject(key=key, title=title, default=False))
         save_config(cfg, cfg_path)
-        cfg_saved = True
 
         history_path = ledger_dir / "history.md"
         decision_id = new_decision_id(today, _existing_history_ids(history_path))
@@ -304,7 +302,7 @@ def plan_new(
         append_entry(history_path, entry)
     except Exception as exc:
         rolled = exc
-        if cfg_saved and previous_cfg_bytes is not None:
+        if previous_cfg_bytes is not None:
             rolled = _restore_ledger_yml(cfg_path, previous_cfg_bytes, key, rolled)
         rolled = _rollback_project(client, project_id, key, rolled)
         if rolled is exc:

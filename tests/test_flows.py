@@ -326,6 +326,22 @@ class FlowsTest(unittest.TestCase):
         self.assertEqual(history_path.read_bytes(), history_before)
         self.assertEqual([p["identifier"] for p in self.plane.list_projects()], ["SAMPM"])
 
+    def test_plan_new_save_config_partial_write_restores_ledger_yml(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        ledger_path = self.repo.root / ".ledger/ledger.yml"
+        ledger_before = ledger_path.read_bytes()
+
+        def truncate_then_fail(cfg: object, path: Path) -> None:
+            path.write_text("", encoding="utf-8")
+            raise OSError("disk full")
+
+        with patch("ledger.flows.save_config", side_effect=truncate_then_fail):
+            with self.assertRaises(OSError):
+                plan_new(self.repo, self.plane, "부분 쓰기", "PART", TEMPLATES, date(2026, 11, 23))
+
+        self.assertEqual(ledger_path.read_bytes(), ledger_before)
+        self.assertEqual([p["identifier"] for p in self.plane.list_projects()], ["SAMPM"])
+
     def test_plan_new_reports_when_ledger_restore_fails(self) -> None:
         init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
 
