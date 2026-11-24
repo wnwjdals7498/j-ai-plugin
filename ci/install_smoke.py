@@ -27,7 +27,7 @@ class SmokeResult(NamedTuple):
 def _run(
     argv: Sequence[str], *, stdin: str = "", extra_env: Optional[dict[str, str]] = None
 ) -> subprocess.CompletedProcess[str]:
-    env = {"PATH": os.environ.get("PATH", "")}
+    env = {"PATH": os.environ.get("PATH", ""), "PYTHONDONTWRITEBYTECODE": "1"}
     if extra_env:
         env.update(extra_env)
     return subprocess.run(  # nosec B603 # 인자 목록 실행, shell 미사용
