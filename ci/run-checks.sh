@@ -23,9 +23,9 @@ ensure_git_safe_dir() {
 
 ensure_py39_venv() {
     local venv_dir="$CI_VENV_DIR/py39"
-    if [ ! -f "$venv_dir/.ready" ]; then
+    if [ ! -f "$venv_dir/.ready" ] || [ ! -x "$venv_dir/bin/python" ]; then
         mkdir -p "$CI_VENV_DIR"
-        uv venv "$venv_dir" --python 3.9
+        uv venv --clear "$venv_dir" --python 3.9
         uv pip install --python "$venv_dir/bin/python" --require-hashes -r ci/requirements-py39.txt
         touch "$venv_dir/.ready"
     fi
@@ -33,9 +33,9 @@ ensure_py39_venv() {
 
 ensure_py3x_venv() {
     local venv_dir="$CI_VENV_DIR/py3x"
-    if [ ! -f "$venv_dir/.ready" ]; then
+    if [ ! -f "$venv_dir/.ready" ] || [ ! -x "$venv_dir/bin/python" ]; then
         mkdir -p "$CI_VENV_DIR"
-        uv venv "$venv_dir" --python 3.12
+        uv venv --clear "$venv_dir" --python 3.12
         uv pip install --python "$venv_dir/bin/python" --require-hashes -r ci/requirements-py3x.txt
         touch "$venv_dir/.ready"
     fi
