@@ -1,0 +1,9 @@
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+mypy_path = "plugins/forge-ledger"
+files = ["plugins/forge-ledger/ledger", "plugins/forge-ledger/hooks"]
