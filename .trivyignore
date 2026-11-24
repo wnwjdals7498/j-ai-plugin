@@ -1,4 +1,0 @@
-# ci/Dockerfile은 작업 컨테이너 이미지이며 checkout 쓰기 권한 때문에 root로 실행한다.
-DS-0002
-# 상시 실행 서버가 아니라 단발성 검사 작업 컨테이너이므로 HEALTHCHECK가 필요 없다.
-DS-0026
