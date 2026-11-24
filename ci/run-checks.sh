@@ -72,8 +72,20 @@ job_test() {
 job_secrets() {
     ensure_git_safe_dir
     gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
-    local base="${BASE_SHA:-$(git merge-base origin/main HEAD)}"
-    local head="${HEAD_SHA:-HEAD}"
+    local base head
+    if [ -n "${BASE_SHA:-}" ]; then
+        base="$BASE_SHA"
+    else
+        if ! base="$(git merge-base origin/main HEAD)"; then
+            echo "BASE_SHA가 비어 있고 origin/main과의 merge-base를 구할 수 없음" >&2
+            return 1
+        fi
+    fi
+    if [ -z "$base" ]; then
+        echo "BASE_SHA 또는 origin/main merge-base가 비어 있음" >&2
+        return 1
+    fi
+    head="${HEAD_SHA:-HEAD}"
     python3.9 ci/scan_changed_secrets.py --base "$base" --head "$head"
 }
 
