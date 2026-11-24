@@ -14,12 +14,17 @@ cleanup() {
 trap cleanup EXIT
 
 head_sha=$(git -C "$repo_root" rev-parse HEAD)
+base_sha="${BASE_SHA:-$(git -C "$repo_root" merge-base origin/main HEAD)}"
+target_head="${HEAD_SHA:-$head_sha}"
+
 git clone --no-local --quiet "$repo_root" "$tmp_dir"
 if [ "$(git -C "$tmp_dir" rev-parse HEAD)" != "$head_sha" ]; then
     git -C "$tmp_dir" checkout --quiet "$head_sha"
 fi
 
 docker run --rm \
+    -e BASE_SHA="$base_sha" \
+    -e HEAD_SHA="$target_head" \
     -v "$tmp_dir:/src" \
     -w /src \
     "forge-ledger-ci:$tag" \
