@@ -7,3 +7,13 @@ python_version = "3.9"
 strict = true
 mypy_path = "plugins/forge-ledger"
 files = ["plugins/forge-ledger/ledger", "plugins/forge-ledger/hooks", "ci"]
+
+[tool.coverage.run]
+source = ["plugins/forge-ledger", "ci"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 0
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
