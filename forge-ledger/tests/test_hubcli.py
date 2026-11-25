@@ -183,6 +183,15 @@ class HubCliTest(unittest.TestCase):
             self.assertIn("o/n plane: ok", out)
             self.assertEqual(load_registry(self.state_dir), [str(nested)])
 
+    def test_sync_registers_ledger_subfolder_from_cwd_on_first_run(self) -> None:
+        mono = self._git_repo("mono", "git@host:o/n.git")
+        nested = mono / "tool"
+        (nested / "src").mkdir(parents=True)
+        self._write_ledger(nested)
+        code, _, err = self._cli("sync", cwd=nested / "src")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(load_registry(self.state_dir), [str(nested)])
+
     def test_registration_keeps_workspace_of_other_path(self) -> None:
         mono = self._git_repo("mono", "git@host:o/n.git")
         nested = mono / "tool"

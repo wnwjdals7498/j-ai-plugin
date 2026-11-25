@@ -43,23 +43,44 @@ class Repo:
     name: str
 
     @classmethod
+    def at(cls, root: Path) -> Repo:
+        """root를 그대로 저장소 루트로 쓴다."""
+        resolved = root.resolve()
+        return cls(root=resolved, name=resolved.name)
+
+    @classmethod
     def discover(cls, start: Path) -> Repo:
-        """git 최상위 폴더를 찾고, 실패하면 start를 저장소 루트로 쓴다."""
-        try:
-            proc = subprocess.run(  # nosec B603 B607 # 고정 git rev-parse 명령 실행(shell=False)
-                ["git", "rev-parse", "--show-toplevel"],
-                cwd=start,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-        except OSError:
-            proc = None
-        if proc is not None and proc.returncode == 0 and proc.stdout.strip():
-            root = Path(proc.stdout.strip())
-        else:
-            root = start.resolve()
-        return cls(root=root, name=root.name)
+        """`start`에서 git 최상위까지 올라가며 `.ledger/ledger.yml`이 있는 가장 가까운 폴더를 루트로 쓴다.
+
+        큰 저장소의 하위 폴더가 `.ledger/`를 가질 수 있다. 없으면 git 최상위이고, git 저장소가 아니면 `start`다.
+        """
+        current = start.resolve()
+        top = git_toplevel(start)
+        if top is None:
+            return cls.at(current)
+        for folder in (current, *current.parents):
+            if (folder / ".ledger" / "ledger.yml").is_file():
+                return cls.at(folder)
+            if folder == top:
+                break
+        return cls.at(top)
+
+
+def git_toplevel(start: Path) -> Optional[Path]:
+    """`start`가 속한 git 작업 트리의 최상위 폴더. git 저장소가 아니면 `None`이다."""
+    try:
+        proc = subprocess.run(  # nosec B603 B607 # 고정 git rev-parse 명령 실행(shell=False)
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=start,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    return Path(proc.stdout.strip()).resolve()
 
 
 @dataclass

@@ -14,7 +14,7 @@ from typing import Any, Callable, Mapping, Optional, TextIO
 
 from ledger.adapters import ForgeAdapter, PmAdapter
 from ledger.dashboard import DashboardApp, serve
-from ledger.flows import Repo
+from ledger.flows import git_toplevel
 from ledger.gitea import GiteaClient, GiteaError, GiteaSettings
 from ledger.hubstore import HubStore, load_registry, save_registry
 from ledger.hubsync import (
@@ -83,7 +83,7 @@ def _register_target(repo_arg: Optional[str]) -> Optional[Path]:
     """등록할 저장소 폴더. `--repo`가 없고 현재 폴더가 git 저장소가 아니면 `None`이다."""
     if repo_arg:
         return project_root(Path(repo_arg))
-    if not (Repo.discover(Path.cwd()).root / ".git").exists():
+    if git_toplevel(Path.cwd()) is None:
         return None
     return project_root(Path.cwd())
 

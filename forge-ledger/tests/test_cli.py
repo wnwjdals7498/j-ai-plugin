@@ -147,6 +147,57 @@ class CliTest(unittest.TestCase):
         self.assertEqual(r_bad_args.returncode, 1)
         self.assertEqual(len(r_bad_args.stderr.strip().splitlines()), 1)
 
+    def _monorepo(self) -> tuple[Path, Path]:
+        top = self.tmp.resolve() / "mono"
+        sub = top / "sub"
+        sub.mkdir(parents=True)
+        subprocess.run(["git", "init", "-q"], cwd=top, check=True, capture_output=True)
+        return top, sub
+
+    def _main(self, *argv: str, cwd: Optional[Path] = None) -> tuple[int, str]:
+        stderr = io.StringIO()
+        previous = Path.cwd()
+        os.chdir(cwd or previous)
+        try:
+            with redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+                code = main(list(argv), env=self._base_env())
+        finally:
+            os.chdir(previous)
+        return code, stderr.getvalue()
+
+    def test_cli_init_with_repo_uses_given_path(self) -> None:
+        top, sub = self._monorepo()
+        code, err = self._main("init", "--repo", str(sub))
+        self.assertEqual(code, 0, err)
+        self.assertTrue((sub / ".ledger" / "ledger.yml").is_file())
+        self.assertFalse((top / ".ledger").exists())
+
+    def test_cli_init_without_repo_uses_discovered_root(self) -> None:
+        top, sub = self._monorepo()
+        code, err = self._main("init", cwd=sub)
+        self.assertEqual(code, 0, err)
+        self.assertTrue((top / ".ledger" / "ledger.yml").is_file())
+        self.assertFalse((sub / ".ledger").exists())
+
+    def test_cli_commands_find_ledger_in_subfolder(self) -> None:
+        top, sub = self._monorepo()
+        self.assertEqual(self._main("init", "--repo", str(sub))[0], 0)
+        nested = sub / "a" / "b"
+        nested.mkdir(parents=True)
+
+        code, err = self._main("plan", "new", "앱 첫 출시", "--key", "APP", cwd=nested)
+        self.assertEqual(code, 0, err)
+        # `--repo`로 하위 폴더 안쪽을 가리켜도 init 이외의 명령은 루트를 찾는다.
+        body = self.tmp / "dec.html"
+        body.write_text("<p>단순 구조 선택</p>", encoding="utf-8")
+        code, err = self._main(
+            "decide", "구조 결정", "--project", "APP", "--body-file", str(body), "--repo", str(nested)
+        )
+        self.assertEqual(code, 0, err)
+        self.assertIn("구조 결정", (sub / ".ledger" / "history.md").read_text(encoding="utf-8"))
+        self.assertFalse((top / ".ledger").exists())
+        self.assertFalse((nested / ".ledger").exists())
+
     def test_cli_main_in_process(self) -> None:
         stdout = io.StringIO()
         stderr = io.StringIO()

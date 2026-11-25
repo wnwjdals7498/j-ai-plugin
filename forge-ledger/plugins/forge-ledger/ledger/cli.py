@@ -149,8 +149,10 @@ def main(
         return run_hub(args, effective_env, out=sys.stdout, err=sys.stderr)
 
     try:
-        repo_start = Path(args.repo) if args.repo else Path.cwd()
-        repo = flows.Repo.discover(repo_start)
+        if args.command == "init" and args.repo:
+            repo = flows.Repo.at(Path(args.repo))  # `.ledger/`를 새로 만들 곳이라 위로 찾지 않는다
+        else:
+            repo = flows.Repo.discover(Path(args.repo) if args.repo else Path.cwd())
         settings = PlaneSettings.from_env(effective_env)
         found_ws = find_secrets(settings.workspace)
         if found_ws:
