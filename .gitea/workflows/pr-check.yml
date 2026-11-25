@@ -3,7 +3,7 @@ name: pr-check
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read

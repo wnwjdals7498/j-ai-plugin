@@ -46,7 +46,7 @@ class TestWorkflow(unittest.TestCase):
         self.assertRegex(text, r"(?m)^on:\s*$")
         self.assertRegex(text, r"(?m)^  pull_request:\s*$")
         self.assertRegex(text, r"(?m)^    types:\s*\[opened,\s*synchronize,\s*reopened\]\s*$")
-        self.assertRegex(text, r"(?m)^    branches:\s*\[main\]\s*$")
+        self.assertRegex(text, r"(?m)^    branches:\s*\[master\]\s*$")
 
     def test_permissions_read_only(self) -> None:
         text = _read_workflow()
