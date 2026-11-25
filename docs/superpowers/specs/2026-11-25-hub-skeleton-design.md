@@ -76,7 +76,7 @@
 
 PM 도구와 포지를 서비스 종류와 무관하게 다루는 Protocol 두 개를 정의한다. 골격에 필요한 읽기 메서드만 둔다.
 
-- `PmAdapter`: `whoami()`, `list_projects()`, `current_cycle(project_id)`(이름, 시작·종료일, 전체·완료 수)
+- `PmAdapter`: `whoami()`, `list_project_infos()`(기존 `PlaneClient.list_projects()`가 원본 딕셔너리를 돌려주므로 이름을 나눔), `current_cycle(project_id)`(이름, 시작·종료일, 전체·완료 수)
 - `ForgeAdapter`: `whoami()`, `get_repo(owner, name)`, `list_open_issues(owner, name)`, `list_open_pulls(owner, name)`, `list_runs(owner, name, limit)`
 
 확인된 응답 근거 [검증]
