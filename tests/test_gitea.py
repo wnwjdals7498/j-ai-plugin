@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 import unittest
 
-from ledger.adapters import IssueInfo, PullInfo, RepoInfo, RunInfo, parse_run_path
+from ledger.adapters import IssueInfo, PullInfo, RepoInfo, RunInfo, parse_run_path, to_utc_iso
 from ledger.gitea import GiteaAuthError, GiteaClient, GiteaError, GiteaSettings, GiteaUnavailable
 from tests.hub_fakes import FakeGiteaServer
 
@@ -24,6 +24,27 @@ class ParseRunPathTest(unittest.TestCase):
         self.assertEqual(parse_run_path("pr-check.yml@refs/pull/5/head"), ("pr-check.yml", "refs/pull/5/head"))
         self.assertEqual(parse_run_path("pr-check.yml"), ("pr-check.yml", ""))
         self.assertEqual(parse_run_path("a@b@c"), ("a", "b@c"))
+
+
+class ToUtcIsoTest(unittest.TestCase):
+    def test_to_utc_iso(self) -> None:
+        self.assertEqual(to_utc_iso("2026-11-24T17:45:51+09:00"), "2026-11-24T08:45:51Z")
+        self.assertEqual(to_utc_iso("2026-11-25T05:50:20.427362Z"), "2026-11-25T05:50:20Z")
+        self.assertEqual(to_utc_iso(""), "")
+        with self.assertRaises(ValueError):
+            to_utc_iso("bad")
+
+    def test_to_utc_iso_any_fraction_length(self) -> None:
+        # Go는 소수 초 끝의 0을 지우고 최대 9자리까지 준다. Python 3.9는 3·6자리만 읽는다.
+        for fraction in ("4", "4273", "427362123"):
+            with self.subTest(fraction=fraction):
+                self.assertEqual(to_utc_iso(f"2026-11-25T14:50:20.{fraction}+09:00"), "2026-11-25T05:50:20Z")
+
+    def test_to_utc_iso_edges(self) -> None:
+        self.assertEqual(to_utc_iso("0001-01-01T00:00:00Z"), "0001-01-01T00:00:00Z")
+        for value in ("2026-11-24T17:45:51", "2026-11-24", "0001-01-01T00:00:00+09:00"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                to_utc_iso(value)
 
 
 class GiteaSettingsTest(unittest.TestCase):
@@ -65,7 +86,7 @@ class GiteaClientTest(unittest.TestCase):
         self.assertEqual([i.number for i in issues], list(range(1, 121)))
         self.assertEqual(
             issues[0],
-            IssueInfo(number=1, title="이슈 1", labels=("bug", "p1"), created_at="2026-11-20T09:00:00+09:00"),
+            IssueInfo(number=1, title="이슈 1", labels=("bug", "p1"), created_at="2026-11-20T00:00:00Z"),
         )
         self.assertEqual(len(self.server.requests), 3)
         self.assertEqual(self.client.calls, 3)
@@ -80,8 +101,8 @@ class GiteaClientTest(unittest.TestCase):
 
     def test_list_open_pulls_maps_draft(self) -> None:
         self.server.pulls = [
-            {"number": 1, "title": "a", "draft": True, "created_at": "2026-11-21T00:00:00Z"},
-            {"number": 2, "title": "b", "draft": False, "created_at": "2026-11-22T00:00:00Z"},
+            {"number": 1, "title": "a", "draft": True, "created_at": "2026-11-21T09:00:00+09:00"},
+            {"number": 2, "title": "b", "draft": False, "created_at": "2026-11-22T00:00:00.5Z"},
         ]
         self.assertEqual(
             self.client.list_open_pulls("o", "n"),
@@ -104,7 +125,7 @@ class GiteaClientTest(unittest.TestCase):
                 "head_branch": "",
                 "head_sha": "abc123",
                 "pull_requests": [{"number": 5}],
-                "started_at": "2026-11-24T01:00:00Z",
+                "started_at": "2026-11-24T10:00:00+09:00",
             }
         ]
         self.assertEqual(
@@ -132,6 +153,11 @@ class GiteaClientTest(unittest.TestCase):
         ]
         run = self.client.list_runs("o", "n")[0]
         self.assertEqual((run.conclusion, run.pull_numbers, run.workflow, run.ref), ("", (), "", ""))
+
+    def test_bad_time_is_format_error(self) -> None:
+        self.server.issues = [{**_issue(1), "created_at": "bad"}]
+        with self.assertRaisesRegex(GiteaError, "Gitea 응답 형식 오류"):
+            self.client.list_open_issues("o", "n")
 
     def test_auth_error(self) -> None:
         self.server.status_queue = [401]

@@ -12,7 +12,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Optional
 
-from ledger.adapters import IssueInfo, PullInfo, RepoInfo, RunInfo, parse_run_path
+from ledger.adapters import IssueInfo, PullInfo, RepoInfo, RunInfo, parse_run_path, to_utc_iso
 from ledger.ratelimit import LocalRateLimiter, RateLimiter
 from ledger.secrets import find_secrets
 
@@ -104,6 +104,13 @@ def _text(data: dict[str, Any], key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _time(data: dict[str, Any], key: str) -> str:
+    try:
+        return to_utc_iso(_text(data, key))
+    except ValueError:
+        raise GiteaError(_FORMAT_ERROR) from None
+
+
 def _number(data: dict[str, Any], key: str) -> int:
     value = data.get(key)
     if isinstance(value, bool) or not isinstance(value, int):
@@ -116,7 +123,7 @@ def _issue_info(data: dict[str, Any]) -> IssueInfo:
         number=_number(data, "number"),
         title=_text(data, "title"),
         labels=tuple(_text(label, "name") for label in _objects(data.get("labels"))),
-        created_at=_text(data, "created_at"),
+        created_at=_time(data, "created_at"),
     )
 
 
@@ -125,7 +132,7 @@ def _pull_info(data: dict[str, Any]) -> PullInfo:
         number=_number(data, "number"),
         title=_text(data, "title"),
         draft=bool(data.get("draft")),
-        created_at=_text(data, "created_at"),
+        created_at=_time(data, "created_at"),
     )
 
 
@@ -141,7 +148,7 @@ def _run_info(data: dict[str, Any]) -> RunInfo:
         ref=ref,
         head_sha=_text(data, "head_sha"),
         pull_numbers=tuple(_number(pull, "number") for pull in _objects(data.get("pull_requests"))),
-        started_at=_text(data, "started_at"),
+        started_at=_time(data, "started_at"),
     )
 
 

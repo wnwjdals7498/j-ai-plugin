@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Optional, Protocol
+
+_FRACTION_RE = re.compile(r"(?<=:\d{2})\.\d+")
 
 
 @dataclass(frozen=True)
@@ -92,3 +96,24 @@ def parse_run_path(path: str) -> tuple[str, str]:
     """`<워크플로 파일>@<ref>`를 첫 `@`에서 나눈다. `@`이 없으면 ref는 빈 문자열이다."""
     workflow, _, ref = path.partition("@")
     return workflow, ref
+
+
+def to_utc_iso(value: str) -> str:
+    """오프셋이 있는 ISO 8601 시각을 UTC `YYYY-MM-DDTHH:MM:SSZ`로 바꾼다.
+
+    빈 문자열은 그대로 돌려준다. 해석할 수 없거나 오프셋이 없으면 `ValueError`다.
+    """
+    if not value:
+        return ""
+    # 소수 초는 버린다. Python 3.9의 fromisoformat은 `Z`와 3·6자리가 아닌 소수 초를 읽지 못한다.
+    text = _FRACTION_RE.sub("", value)
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        raise ValueError(f"오프셋 없는 시각: {value}")
+    try:
+        utc = parsed.astimezone(timezone.utc)
+    except OverflowError:
+        raise ValueError(f"범위를 벗어난 시각: {value}") from None
+    return utc.replace(tzinfo=None).isoformat(timespec="seconds") + "Z"
