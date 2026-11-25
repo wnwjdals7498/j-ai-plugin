@@ -234,6 +234,17 @@ class HooksTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         self.assertIn("forge-ledger: Plane 프로젝트 3개", r.stdout)
 
+    def test_main_falls_back_to_discovered_root_from_subfolder(self) -> None:
+        nested = self.repo / "a" / "b"
+        nested.mkdir(parents=True)
+        env = {**self.state_env, "PATH": os.environ.get("PATH", ""), "CLAUDE_PROJECT_DIR": str(nested)}
+        out = io.StringIO()
+        with patch.dict(os.environ, env, clear=True):
+            with redirect_stdout(out):
+                self.assertEqual(session_start.main(), 0)
+        self.assertFalse((self.state_dir / DB_NAME).exists())
+        self.assertIn("forge-ledger: Plane 프로젝트 3개", out.getvalue())
+
     def test_maybe_refresh_spawns_without_token_in_argv(self) -> None:
         self._register(NOW - timedelta(seconds=601))
         gitea_token = "tok" + "g" * 30

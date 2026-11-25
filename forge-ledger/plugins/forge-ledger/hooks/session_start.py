@@ -169,7 +169,7 @@ def main() -> int:
             except Exception:  # 허브를 읽지 못해도 기존 요약은 보인다
                 text = None
             if text is None:
-                text = summary(Path(project_dir))
+                text = summary(repo_root)
             if text:
                 print(text)
             maybe_refresh(repo_root, env, now, _spawn_detached)  # 이번 출력은 기존 값이다
