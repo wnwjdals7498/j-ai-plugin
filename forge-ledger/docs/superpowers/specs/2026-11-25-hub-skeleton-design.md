@@ -104,7 +104,7 @@ Plane 구현은 기존 `PlaneClient`에 읽기 메서드를 더해 만든다. Gi
 | `issue` | 열린 Gitea 이슈(`type=issues`) | number, title, labels, created_at |
 | `pull` | 열린 Gitea PR | number, title, draft, created_at |
 | `ci_run` | 최근 Actions 실행 50건 | run_number, event, status, conclusion, workflow(`path`의 `@` 앞), ref(`path`의 `@` 뒤), head_sha, pull_numbers, started_at |
-| `plane_project` | `ledger.yml`에 붙은 Plane 프로젝트 | key, title, default, id |
+| `plane_project` | `ledger.yml`에 붙은 Plane 프로젝트 | key, title, default, id, found(Plane에서 찾았는지) |
 | `cycle` | 각 Plane 프로젝트의 현재 cycle(`cycle_view=current`) | name, start_date, end_date, total_issues, completed_issues |
 
 ### 6.4 S1 수치 규칙
