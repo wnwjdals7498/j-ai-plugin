@@ -183,6 +183,16 @@ class HubCliTest(unittest.TestCase):
             self.assertIn("o/n plane: ok", out)
             self.assertEqual(load_registry(self.state_dir), [str(nested)])
 
+    def test_registration_keeps_workspace_of_other_path(self) -> None:
+        mono = self._git_repo("mono", "git@host:o/n.git")
+        nested = mono / "tool"
+        self._write_ledger(nested)
+        self.assertEqual(self._cli("sync", "--repo", str(nested))[0], 0)
+        # 등록한 뒤 대조 전에 실패해도 등록 단계가 Plane 설정을 지우지 않는다.
+        env = {**self.env, "FORGE_LEDGER_GITEA_URL": "no-scheme"}
+        self.assertEqual(self._cli("sync", "--repo", str(mono), env=env)[0], 1)
+        self.assertEqual(list(self._status()["o/n"]["sources"]), ["gitea", "plane"])
+
     def test_sync_outside_git_syncs_registered_only(self) -> None:
         code, out, _ = self._cli("sync")
         self.assertEqual((code, out), (0, _EMPTY_TEXT + "\n"))

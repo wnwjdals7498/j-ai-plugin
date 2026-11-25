@@ -306,6 +306,37 @@ def _run_source(
     return SyncOutcome(f"{ref.owner}/{ref.name}", source, result, api_calls, error_kind)
 
 
+def _repo_plane_workspace(store: HubStore, ref: RepoRef) -> str:
+    """저장소의 Plane 워크스페이스. 존재하는 어느 경로에도 `ledger.yml`이 없을 때만 빈 문자열이다.
+
+    지금 대조하는 경로의 값을 먼저 쓴다. 같은 저장소의 다른 경로(모노레포의 상위 폴더 등)에는 `ledger.yml`이 없을 수 있다.
+    """
+    if ref.plane_workspace:
+        return ref.plane_workspace
+    repo = next((row for row in store.repos() if (row.owner, row.name) == (ref.owner, ref.name)), None)
+    if repo is None:
+        return ""
+    unreadable = False
+    for path in repo.local_paths:
+        if path == ref.path or not os.path.isdir(path):
+            continue
+        try:
+            config = _ledger_config(Path(path))
+        except RepoResolveError:
+            unreadable = True
+            continue
+        if config is not None and config.workspace:
+            return config.workspace
+    # 읽지 못한 `ledger.yml`은 없는 것이 아니므로 이전 값을 둔다.
+    return repo.plane_workspace if unreadable else ""
+
+
+def register_repo(store: HubStore, ref: RepoRef) -> tuple[int, str]:
+    """경로를 저장소에 등록한다. (repo_id, 저장소의 Plane 워크스페이스)를 돌려준다."""
+    workspace = _repo_plane_workspace(store, ref)
+    return store.upsert_repo(ref.owner, ref.name, ref.path, workspace), workspace
+
+
 def sync_repo(
     store: HubStore,
     ref: RepoRef,
@@ -316,25 +347,30 @@ def sync_repo(
     now: Callable[[], datetime],
     log: Callable[[dict[str, Any]], None],
 ) -> list[SyncOutcome]:
-    repo_id = store.upsert_repo(ref.owner, ref.name, ref.path, ref.plane_workspace)
+    repo_id, workspace = register_repo(store, ref)
     outcomes = [
         _run_source(store, repo_id, ref, "gitea", forge_url, forge, partial(_sync_gitea, store, repo_id, ref), now, log)
     ]
     if ref.plane_workspace:
         outcomes.append(_run_source(store, repo_id, ref, "plane", pm_url, pm, partial(_sync_plane, ref), now, log))
-    else:
-        _close_plane_rows(store, repo_id, pm_url, now)
+    elif not workspace:
+        _close_plane_rows(store, repo_id, ref, pm_url, now, log)
     return outcomes
 
 
-def _close_plane_rows(store: HubStore, repo_id: int, pm_url: str, now: _Now) -> None:
-    """`ledger.yml`이 없어진 저장소에 남은 Plane 행을 닫는다. Plane을 부르지 않고 `sync_run`도 남기지 않는다."""
+def _close_plane_rows(store: HubStore, repo_id: int, ref: RepoRef, pm_url: str, now: _Now, log: _Log) -> None:
+    """`ledger.yml`이 모두 없어진 저장소에 남은 Plane 행을 닫는다.
+
+    Plane을 부르지 않고 `sync_run`도 남기지 않는다. 닫을 때만 로그 한 줄을 남긴다.
+    """
     kinds = ("cycle", "plane_project")
     if not any(store.entities(repo_id, kind) for kind in kinds):
         return
     source_id = store.source_id("plane", pm_url)
     for kind in kinds:
         _apply(store, source_id, repo_id, now, kind, [])
+    extra = {"repo": f"{ref.owner}/{ref.name}", "error_kind": "no_ledger"}
+    _emit(log, now, "plane", "skipped", 0, "", 0, extra)
 
 
 def _record_missing_path(

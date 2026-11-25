@@ -609,6 +609,80 @@ class SyncPathsTest(_SyncCase):
             self.assertNotIn(b"user:", content, name)
 
 
+class MonorepoPathsTest(_SyncCase):
+    """같은 `owner/name`의 두 경로. `.ledger`는 하위 폴더에만 있다."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.upper = _git_repo(self.tmp / "mono", "git@host:o/n.git")
+        self.lower = self.upper / "tool"
+        _write_ledger(self.lower, ("HUB",))
+
+    def _sync_paths(self, *roots: Path) -> list[SyncOutcome]:
+        self.events.clear()
+        return sync_paths(
+            self.store,
+            [str(root) for root in roots],
+            lambda: (self.forge, FORGE_URL),
+            lambda _: (self.pm, PM_URL),
+            _now,
+            self.events.append,
+        )
+
+    def _assert_plane_kept(self, label: object, result: str = "ok") -> None:
+        [repo] = self.store.repos()
+        self.assertEqual(repo.plane_workspace, "ws", label)
+        self.assertEqual((self._keys("plane_project"), self._keys("cycle")), (["HUB"], ["c1"]), label)
+        run = self.store.last_run(repo.id, "plane")
+        assert run is not None
+        self.assertEqual(run.result, result, label)
+        self.assertNotIn("no_ledger", [line.get("error_kind") for line in self.events], label)
+
+    def test_path_without_ledger_keeps_plane_rows_in_any_order(self) -> None:
+        self._sync_paths(self.lower)
+        for roots in ((self.lower, self.upper), (self.upper, self.lower), (self.upper,)):
+            outcomes = self._sync_paths(*roots)
+            self.assertEqual([o.source for o in outcomes].count("plane"), len(roots) - 1, roots)
+            self._assert_plane_kept(roots)
+
+    def test_plane_outage_keeps_previous_rows(self) -> None:
+        self._sync_paths(self.upper, self.lower)
+        self.pm.errors["list_project_infos"] = PlaneUnavailable("연결 실패")
+        for roots in ((self.lower, self.upper), (self.upper, self.lower)):
+            self._sync_paths(*roots)
+            self._assert_plane_kept(roots, "failed")
+
+    def test_unreadable_ledger_in_other_path_keeps_plane_rows(self) -> None:
+        self._sync_paths(self.upper, self.lower)
+        (self.lower / ".ledger" / "ledger.yml").write_text("method_version: x\n", encoding="utf-8")
+        self._sync_paths(self.upper)
+        self._assert_plane_kept("broken")
+
+    def test_plane_rows_close_with_log_when_no_path_has_ledger(self) -> None:
+        for name, remove in (("ledger", self.lower / ".ledger"), ("folder", self.lower)):
+            _write_ledger(self.lower, ("HUB",))
+            self._sync_paths(self.upper, self.lower)
+            shutil.rmtree(remove)
+            runs_before, calls_before = self._run_count(), self.pm.calls
+            self._sync_paths(self.upper)
+            [repo] = self.store.repos()
+            self.assertEqual(repo.plane_workspace, "", name)
+            self.assertEqual((self._keys("plane_project"), self._keys("cycle")), ([], []), name)
+            # gitea 실행 하나만 늘고 Plane은 부르지 않는다.
+            self.assertEqual((self._run_count() - runs_before, self.pm.calls - calls_before), (1, 0), name)
+            [line] = [event for event in self.events if event["source"] == "plane"]
+            self.assertEqual(set(line), LOG_KEYS | {"repo", "error_kind"}, name)
+            self.assertEqual(
+                (line["component"], line["result"], line["error_kind"], line["level"], line["repo"]),
+                ("sync", "skipped", "no_ledger", "warning", "o/n"),
+                name,
+            )
+            self.assertEqual((line["correlation_id"], line["api_calls"]), ("", 0), name)
+            # 닫을 행이 없으면 다시 기록하지 않는다.
+            self._sync_paths(self.upper)
+            self.assertEqual([event["source"] for event in self.events], ["gitea"], name)
+
+
 class LockTest(unittest.TestCase):
     def test_lock_busy_returns_false(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

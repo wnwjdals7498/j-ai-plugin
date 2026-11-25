@@ -19,6 +19,7 @@ from ledger.hubsync import (
     SyncOutcome,
     json_logger,
     project_root,
+    register_repo,
     resolve_repo,
     sync_lock,
     sync_paths,
@@ -96,7 +97,7 @@ def _run_sync(args: argparse.Namespace, env: Mapping[str, str], now: _Now, out: 
         if target is not None:
             ref = resolve_repo(target)
             save_registry(state_dir, [*load_registry(state_dir), str(target)])
-            store.upsert_repo(ref.owner, ref.name, str(target), ref.plane_workspace)
+            register_repo(store, ref)
         paths = [str(target)] if args.repo else load_registry(state_dir)
         outcomes = sync_paths(
             store, paths, lambda: _make_forge(env), lambda ws: _make_pm(env, ws), now, json_logger(err)
