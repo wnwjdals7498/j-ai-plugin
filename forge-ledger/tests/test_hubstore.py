@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import sqlite3
 import stat
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,6 +23,26 @@ from ledger.hubstore import (
 
 T1 = "2026-11-25T00:00:00Z"
 T2 = "2026-11-25T00:10:00Z"
+_PLUGIN_ROOT = str(Path(__file__).resolve().parent.parent / "plugins" / "forge-ledger")
+_CONCURRENT_ROUNDS = 10
+
+# 모두 import를 마친 뒤 부모의 신호를 받아 한꺼번에 저장소를 만든다.
+_CREATE_STORE = """
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from ledger.hubstore import HubStore
+print("ready", flush=True)
+sys.stdin.readline()
+assert HubStore(Path(sys.argv[2])).repos() == []
+"""
+
+_OPEN_AND_CLOSE_DB = """
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+conn.execute("SELECT * FROM repo").fetchall()
+conn.close()
+"""
 
 
 def _mode(path: Path) -> int:
@@ -85,6 +107,18 @@ class SchemaTest(_StoreCase):
         self.assertEqual(store.repos(), [])
         self.assertEqual(_mode(path), 0o600)
 
+    def test_reopen_keeps_locks_of_open_connection(self) -> None:
+        store = HubStore(self.state_dir)
+        conn = sqlite3.connect(store.path, isolation_level=None)
+        self.addCleanup(conn.close)
+        conn.execute("INSERT INTO source (kind, base_url_digest) VALUES ('gitea', 'x')")
+        wal = Path(f"{store.path}-wal")
+        self.assertTrue(wal.exists())
+        HubStore(self.state_dir)
+        # 잠금이 풀렸으면 다른 프로세스는 자신이 마지막 연결이라고 보고 닫을 때 -wal을 지운다.
+        subprocess.run([sys.executable, "-c", _OPEN_AND_CLOSE_DB, str(store.path)], check=True, timeout=60)
+        self.assertTrue(wal.exists())
+
     def test_concurrent_read_during_write(self) -> None:
         store = HubStore(self.state_dir)
         source, repo = self._seed(store)
@@ -107,6 +141,45 @@ class SchemaTest(_StoreCase):
     def test_url_digest(self) -> None:
         self.assertEqual(url_digest("http://h.example/"), url_digest("http://h.example"))
         self.assertRegex(url_digest("http://h.example"), r"\A[0-9a-f]{16}\Z")
+
+
+class ConcurrentCreateTest(_StoreCase):
+    def _create_in_four_processes(self, state_dir: Path) -> None:
+        command = [sys.executable, "-c", _CREATE_STORE, _PLUGIN_ROOT, str(state_dir)]
+        pipe = subprocess.PIPE
+        children = [subprocess.Popen(command, stdin=pipe, stdout=pipe, stderr=pipe, text=True) for _ in range(4)]
+        try:
+            for child in children:
+                assert child.stdout is not None
+                self.assertEqual(child.stdout.readline(), "ready\n")
+            for child in children:
+                assert child.stdin is not None
+                child.stdin.write("go\n")
+                child.stdin.flush()
+            for child in children:
+                _, errors = child.communicate(timeout=60)
+                self.assertEqual((child.returncode, errors), (0, ""))
+        finally:
+            for child in children:
+                child.kill()
+                child.wait()
+                for stream in (child.stdin, child.stdout, child.stderr):
+                    if stream is not None:
+                        stream.close()
+        path = state_dir / DB_NAME
+        self.assertEqual(_user_version(path), 1)
+        self.assertEqual(_mode(path), 0o600)
+
+    def test_four_processes_create_new_store(self) -> None:
+        for index in range(_CONCURRENT_ROUNDS):
+            self._create_in_four_processes(self.state_dir / str(index))
+
+    def test_four_processes_rebuild_corrupt_db(self) -> None:
+        for index in range(_CONCURRENT_ROUNDS):
+            state_dir = self.state_dir / str(index)
+            state_dir.mkdir(mode=0o700, parents=True)
+            (state_dir / DB_NAME).write_bytes(b"not sqlite")
+            self._create_in_four_processes(state_dir)
 
 
 class EntityTest(_StoreCase):

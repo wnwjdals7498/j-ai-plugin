@@ -16,6 +16,7 @@ SCHEMA_VERSION = 1
 DB_NAME = "hub.sqlite3"
 REGISTRY_NAME = "hub-repos.json"
 LOCK_NAME = "hub-sync.lock"
+DB_LOCK_NAME = "hub-db.lock"  # 스키마 확인·재생성 전용. 대조 잠금과 따로 둔다
 
 _REGISTRY_VERSION = 1
 _BUSY_TIMEOUT_SECONDS = 10
@@ -114,11 +115,37 @@ def _make_state_dir(state_dir: Path) -> None:
 
 
 @contextmanager
+def _exclusive_lock(path: Path) -> Iterator[None]:
+    """여러 프로세스(와 스레드)를 한 번에 하나씩 들여보낸다(POSIX 전용)."""
+    import fcntl
+
+    fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)  # 닫으면 잠금도 풀린다
+
+
+def _create_private_file(path: Path) -> None:
+    """파일이 없을 때만 0600으로 만든다.
+
+    있는 DB 파일을 열었다 닫으면 같은 프로세스의 SQLite 연결이 잡은 POSIX 잠금이 모두 풀린다.
+    """
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        return
+    os.close(fd)
+
+
+@contextmanager
 def _open(path: Path) -> Iterator[sqlite3.Connection]:
     """작업 하나에 쓰는 연결. 열린 트랜잭션은 COMMIT하지 않으면 닫을 때 버려진다."""
     conn = sqlite3.connect(path, timeout=_BUSY_TIMEOUT_SECONDS, isolation_level=None)
     try:
         conn.row_factory = sqlite3.Row
+        conn.execute(f"PRAGMA busy_timeout = {_BUSY_TIMEOUT_SECONDS * 1000}")
         conn.execute("PRAGMA journal_mode=WAL")
         yield conn
     finally:
@@ -129,7 +156,8 @@ class HubStore:
     def __init__(self, state_dir: Path) -> None:
         _make_state_dir(state_dir)
         self.path = state_dir / DB_NAME
-        self._ensure_schema()
+        with _exclusive_lock(state_dir / DB_LOCK_NAME):
+            self._ensure_schema()
 
     def _ensure_schema(self) -> None:
         try:
@@ -145,17 +173,15 @@ class HubStore:
 
     def _init_schema(self) -> bool:
         """스키마를 맞춘다. 다른 버전의 파일이면 False를 돌려준다."""
-        os.close(os.open(self.path, os.O_CREAT | os.O_WRONLY, 0o600))
+        _create_private_file(self.path)
         with _open(self.path) as conn:
             # 이미 맞는 파일이면 쓰기 잠금을 잡지 않는다(대조 중에도 읽기가 바로 열린다).
-            if conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION:
-                return True
-            conn.execute("BEGIN IMMEDIATE")
             version = conn.execute("PRAGMA user_version").fetchone()[0]
-            if version == SCHEMA_VERSION:  # 잠금을 기다리는 사이에 다른 프로세스가 만들었다
+            if version == SCHEMA_VERSION:
                 return True
             if version != 0 or conn.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone() is not None:
                 return False
+            conn.execute("BEGIN IMMEDIATE")
             for statement in _SCHEMA:
                 conn.execute(statement)
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
