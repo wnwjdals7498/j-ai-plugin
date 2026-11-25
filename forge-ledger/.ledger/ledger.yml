@@ -1,0 +1,13 @@
+# 비밀값과 접속 주소는 넣지 않는다
+method_version: 1              # 작성방식 규격 버전
+plane:
+  workspace: forge             # 워크스페이스 이름
+  projects:                    # 이 저장소에 붙은 Plane 프로젝트(D5)
+    - key: FORGM               # 작업 항목 식별자 접두어(키 규칙은 P0에서)
+      title: forge ledger 유지보수
+      default: true            # plan fix, 넘어간 기능, 저장소 전체 결정의 대상(D15·D16)
+screens:
+  tool: penpot                 # D14. figma는 자리만
+  team: ""                     # Penpot 팀 이름
+  files: []
+hub: ""                        # 허브 이름. 주소는 PMT 환경 문서와 userConfig
