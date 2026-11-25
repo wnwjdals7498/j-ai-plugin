@@ -26,6 +26,7 @@ from ledger.hubsync import (
     sync_paths,
     sync_repo,
 )
+from ledger.hubview import health, render_session, repo_summary
 from ledger.plane import PlaneAuthError, PlaneUnavailable
 
 FORGE_URL = "http://forge.invalid"
@@ -224,6 +225,24 @@ class ResolveRepoTest(unittest.TestCase):
         with self.assertRaises(RepoResolveError):
             resolve_repo(repo)
 
+    def test_resolve_repo_uses_configured_remote(self) -> None:
+        repo = _git_repo(self.root / "clone", "git@host:mirror/other.git")
+
+        def git(*args: str) -> None:
+            subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+
+        git("remote", "add", "gitea", "ssh://git@host:2222/o/n.git")
+        git("config", "forge-ledger.remote", "gitea")
+        ref = resolve_repo(repo)
+        self.assertEqual((ref.owner, ref.name), ("o", "n"))
+        # 설정한 원격이 없으면 origin으로 넘어가지 않는다(다른 서버의 저장소를 대조하지 않게).
+        git("config", "forge-ledger.remote", "nowhere")
+        with self.assertRaises(RepoResolveError):
+            resolve_repo(repo)
+        git("config", "--unset", "forge-ledger.remote")
+        ref = resolve_repo(repo)
+        self.assertEqual((ref.owner, ref.name), ("mirror", "other"))
+
 
 class SyncRepoTest(_SyncCase):
     def test_sync_writes_entities_and_runs(self) -> None:
@@ -339,10 +358,30 @@ class SyncRepoTest(_SyncCase):
 
     def test_removed_ledger_closes_plane_rows_without_calls(self) -> None:
         self._sync(self._ref())
-        outcome = self._sync(self._ref(()))["plane"]
-        self.assertEqual((outcome.result, outcome.api_calls), ("ok", 0))
+        runs_before, calls_before = self._run_count(), self.pm.calls
+        outcomes = self._sync(self._ref(()), pm_url="")
+        self.assertEqual(list(outcomes), ["gitea"])
+        self.assertEqual((self._run_count() - runs_before, self.pm.calls - calls_before), (1, 0))
         self.assertEqual(self._keys("plane_project"), [])
         self.assertEqual(self._keys("cycle"), [])
+
+    def test_repo_without_ledger_hides_plane(self) -> None:
+        outcomes = self._sync(self._ref(()))
+        self.assertEqual(list(outcomes), ["gitea"])
+        self.assertEqual((self._run_count(), self.pm.calls, len(self.events)), (1, 0, 1))
+        [repo] = self.store.repos()
+        self.assertIsNone(self.store.last_run(repo.id, "plane"))
+        repo_sum = repo_summary(self.store, repo, _now())
+        self.assertEqual(list(repo_sum["sources"]), ["gitea"])
+        self.assertNotIn("Plane", render_session(repo_sum, _now()))
+        self.assertEqual([item["source"] for item in health(self.store, _now())["sources"]], ["gitea"])
+
+    def test_removed_ledger_hides_earlier_plane_runs(self) -> None:
+        self._sync(self._ref())
+        shutil.rmtree(self.tmp / "work" / ".ledger")
+        self._sync(self._ref(()))
+        [repo] = self.store.repos()
+        self.assertNotIn("Plane", render_session(repo_summary(self.store, repo, _now()), _now()))
 
     def test_no_token_is_skipped(self) -> None:
         outcomes = sync_repo(self.store, self._ref(), None, "", self.pm, PM_URL, _now, self.events.append)
@@ -430,9 +469,7 @@ class SyncPathsTest(_SyncCase):
         self.assertEqual(
             outcomes[:2], [SyncOutcome("o/gone", s, "skipped", 0, "path_missing") for s in ("gitea", "plane")]
         )
-        self.assertEqual(
-            [(o.repo, o.source, o.result) for o in outcomes[2:]], [("o/n", s, "ok") for s in ("gitea", "plane")]
-        )
+        self.assertEqual([(o.repo, o.source, o.result) for o in outcomes[2:]], [("o/n", "gitea", "ok")])
         repo_id = self._ids()["gone"]
         for source, line in zip(("gitea", "plane"), self.events):
             run = self.store.last_run(repo_id, source)
@@ -473,9 +510,7 @@ class SyncPathsTest(_SyncCase):
         outcomes = self._sync_paths([gone])
         self.assertEqual(outcomes, [SyncOutcome("o/gone", "gitea", "skipped", 0, "path_missing")])
         self.assertEqual(self.workspaces, [])
-        run = self.store.last_run(self._ids()["gone"], "plane")
-        assert run is not None
-        self.assertEqual(run.result, "ok")
+        self.assertIsNone(self.store.last_run(self._ids()["gone"], "plane"))
 
     def test_path_missing_without_any_source_still_names_repo_in_log(self) -> None:
         gone = self._synced_then_removed("gone", ())
@@ -538,7 +573,7 @@ class SyncPathsTest(_SyncCase):
         good = _git_repo(self.tmp / "good", "git@host:o/n.git")
         outcomes = self._sync_paths([str(plain), str(good)])
         self.assertEqual(outcomes[0], SyncOutcome(str(plain), "", "failed", 0, "error"))
-        self.assertEqual([o.result for o in outcomes[1:]], ["ok", "ok"])
+        self.assertEqual([o.result for o in outcomes[1:]], ["ok"])
 
     def test_adapters_are_made_once_per_workspace(self) -> None:
         paths = [str(_git_repo(self.tmp / name, f"git@host:o/{name}.git")) for name in ("a", "b", "c")]
@@ -564,7 +599,7 @@ class SyncPathsTest(_SyncCase):
             _now,
             json_logger(stream),
         )
-        self.assertEqual(len(outcomes), 3)
+        self.assertEqual(len(outcomes), 2)
         self.assertTrue(stream.getvalue())
         stored = {path.name: path.read_bytes() for path in self.state_dir.iterdir()}
         stored["log"] = stream.getvalue().encode("utf-8")

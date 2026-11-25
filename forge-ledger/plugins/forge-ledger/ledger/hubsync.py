@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterator, Optional, Protocol, Sequence, TextIO
 
 from ledger.adapters import ForgeAdapter, PmAdapter
 from ledger.config import LedgerConfig, load_config
+from ledger.flows import Repo
 from ledger.gitea import GiteaAuthError, GiteaUnavailable
 from ledger.hubstore import LOCK_NAME, EntityRow, HubStore
 from ledger.plane import PlaneAuthError, PlaneUnavailable
@@ -86,10 +87,11 @@ def parse_remote(url: str) -> tuple[str, str]:
     raise RepoResolveError("원격 주소에서 owner/name을 읽지 못했다")
 
 
-def _git_origin_url(path: Path) -> str:
+def _git(path: Path, *args: str) -> tuple[int, str]:
+    """git 명령의 (종료 코드, 앞뒤 공백을 뺀 stdout)."""
     try:
-        proc = subprocess.run(  # nosec B603 B607 # 고정 git remote 명령 실행(shell=False)
-            ["git", "remote", "get-url", "origin"],
+        proc = subprocess.run(  # nosec B603 B607 # git 원격 조회 명령 실행(shell=False)
+            ["git", *args],
             cwd=path,
             capture_output=True,
             text=True,
@@ -98,9 +100,20 @@ def _git_origin_url(path: Path) -> str:
         )
     except (OSError, subprocess.SubprocessError, UnicodeDecodeError):
         raise RepoResolveError("git 원격 조회 실패") from None
-    if proc.returncode != 0:
-        raise RepoResolveError("git origin 원격을 읽지 못했다")
-    return proc.stdout.strip()
+    return proc.returncode, proc.stdout.strip()
+
+
+def _git_remote_url(path: Path) -> str:
+    """`git config forge-ledger.remote`가 가리키는 원격(없으면 `origin`)의 주소.
+
+    origin이 Gitea가 아닌 저장소에서 Gitea 원격을 고르는 설정이다.
+    """
+    code, configured = _git(path, "config", "--get", "forge-ledger.remote")
+    remote = configured if code == 0 and configured else "origin"
+    code, url = _git(path, "remote", "get-url", "--", remote)
+    if code != 0:
+        raise RepoResolveError("git 원격 주소를 읽지 못했다")
+    return url
 
 
 def _ledger_config(root: Path) -> Optional[LedgerConfig]:
@@ -113,7 +126,23 @@ def _ledger_config(root: Path) -> Optional[LedgerConfig]:
         raise RepoResolveError("ledger.yml을 읽지 못했다") from None
 
 
-def resolve_repo(path: Path, git_remote: Callable[[Path], str] = _git_origin_url) -> RepoRef:
+def project_root(start: Path) -> Path:
+    """허브가 저장소로 등록하는 폴더.
+
+    `start`에서 git 최상위까지 올라가며 `.ledger/ledger.yml`이 있는 가장 가까운 폴더이고, 없으면 git 최상위다.
+    큰 저장소의 하위 폴더가 `.ledger/`를 가질 수 있다. git 저장소가 아니면 `start`다.
+    """
+    top = Repo.discover(start).root.resolve()
+    current = start.resolve()
+    for folder in (current, *current.parents):
+        if (folder / ".ledger" / "ledger.yml").is_file():
+            return folder
+        if folder == top:
+            break
+    return top
+
+
+def resolve_repo(path: Path, git_remote: Callable[[Path], str] = _git_remote_url) -> RepoRef:
     owner, name = parse_remote(git_remote(path))
     config = _ledger_config(path)
     if config is None:
@@ -288,12 +317,24 @@ def sync_repo(
     log: Callable[[dict[str, Any]], None],
 ) -> list[SyncOutcome]:
     repo_id = store.upsert_repo(ref.owner, ref.name, ref.path, ref.plane_workspace)
-    return [
-        _run_source(
-            store, repo_id, ref, "gitea", forge_url, forge, partial(_sync_gitea, store, repo_id, ref), now, log
-        ),
-        _run_source(store, repo_id, ref, "plane", pm_url, pm, partial(_sync_plane, ref), now, log),
+    outcomes = [
+        _run_source(store, repo_id, ref, "gitea", forge_url, forge, partial(_sync_gitea, store, repo_id, ref), now, log)
     ]
+    if ref.plane_workspace:
+        outcomes.append(_run_source(store, repo_id, ref, "plane", pm_url, pm, partial(_sync_plane, ref), now, log))
+    else:
+        _close_plane_rows(store, repo_id, pm_url, now)
+    return outcomes
+
+
+def _close_plane_rows(store: HubStore, repo_id: int, pm_url: str, now: _Now) -> None:
+    """`ledger.yml`이 없어진 저장소에 남은 Plane 행을 닫는다. Plane을 부르지 않고 `sync_run`도 남기지 않는다."""
+    kinds = ("cycle", "plane_project")
+    if not any(store.entities(repo_id, kind) for kind in kinds):
+        return
+    source_id = store.source_id("plane", pm_url)
+    for kind in kinds:
+        _apply(store, source_id, repo_id, now, kind, [])
 
 
 def _record_missing_path(

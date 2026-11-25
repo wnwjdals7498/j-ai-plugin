@@ -10,6 +10,7 @@ from typing import Mapping, NoReturn, Optional
 from ledger import flows
 from ledger.check import CheckReport, run_check
 from ledger.config import load_config
+from ledger.hubcli import HUB_COMMANDS, add_hub_parsers, run_hub
 from ledger.miniyaml import MiniYamlError
 from ledger.plane import (
     PlaneAuthError,
@@ -82,6 +83,8 @@ def _build_parser() -> _ArgumentParser:
     p_decide.add_argument("--project", required=True, help="대상 프로젝트 키 또는 *")
     p_decide.add_argument("--body-file", required=True, dest="body_file", help="결정 본문 HTML 파일 경로")
 
+    add_hub_parsers(sub, repo_parent)
+
     return parser
 
 
@@ -141,6 +144,9 @@ def main(
     except _CliInputError as exc:
         _emit_error(str(exc), token)
         return 1
+
+    if args.command in HUB_COMMANDS:
+        return run_hub(args, effective_env, out=sys.stdout, err=sys.stderr)
 
     try:
         repo_start = Path(args.repo) if args.repo else Path.cwd()

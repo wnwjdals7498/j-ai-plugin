@@ -83,6 +83,11 @@ def _source_status(store: HubStore, repo_id: int, source: str, now: datetime, in
     }
 
 
+def _sources_of(repo: RepoRow) -> tuple[str, ...]:
+    """저장소가 모으는 소스. `ledger.yml`이 없으면 Plane 상태를 보이지 않는다(토큰 문제로 오해되지 않게)."""
+    return _SOURCES if repo.plane_workspace else ("gitea",)
+
+
 def _projects(store: HubStore, repo_id: int, today: date) -> list[dict[str, Any]]:
     cycles: dict[Optional[str], dict[str, Any]] = {}
     for view in store.entities(repo_id, "cycle"):
@@ -113,7 +118,7 @@ def repo_summary(store: HubStore, repo: RepoRow, now: datetime, interval_s: int 
     ages = [(now - _moment(attrs["created_at"])).days for attrs in waiting if attrs["created_at"]]
     runs = [view.attrs for view in store.entities(repo.id, "ci_run")]
     sources: dict[str, dict[str, Any]] = {}
-    for source in _SOURCES:
+    for source in _sources_of(repo):
         status = _source_status(store, repo.id, source, now, interval_s)
         sources[source] = {key: status[key] for key in ("state", "label", "last_ok_at")}
     return {
@@ -148,7 +153,7 @@ def health(store: HubStore, now: datetime, interval_s: int = 600) -> dict[str, A
                 **_source_status(store, repo.id, source, now, interval_s),
             }
             for repo in store.repos()
-            for source in _SOURCES
+            for source in _sources_of(repo)
         ],
     }
 
