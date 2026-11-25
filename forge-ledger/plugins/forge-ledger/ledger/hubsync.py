@@ -304,17 +304,22 @@ def _record_missing_path(
     now: _Now,
     log: _Log,
 ) -> list[SyncOutcome]:
-    """사라진 경로의 저장소를 알면 소스마다 건너뛴 `sync_run`을 남긴다. 로그에는 경로 대신 `owner/name`을 쓴다."""
+    """사라진 경로를 기록한다. 로그에는 경로 대신 `owner/name`을 쓴다.
+
+    저장소의 경로가 모두 사라졌을 때만 소스마다 건너뛴 `sync_run`을 남긴다. 남은 복제본의 결과를 덮지 않기 위해서다.
+    """
     extra = {"error_kind": "path_missing"}
     sources: list[tuple[str, str]] = []
     repo = store.find_repo_by_path(str(Path(path)))
     if repo is not None:
         extra["repo"] = f"{repo.owner}/{repo.name}"
-        forge_url = forge_for()[1]
-        if forge_url:
-            sources.append(("gitea", forge_url))
-        if repo.plane_workspace:
-            sources.append(("plane", pm_for(repo.plane_workspace)[1]))
+        # `os.path.isdir`는 읽을 수 없는 경로에 예외를 내지 않는다.
+        if not any(os.path.isdir(local_path) for local_path in repo.local_paths):
+            forge_url = forge_for()[1]
+            if forge_url:
+                sources.append(("gitea", forge_url))
+            if repo.plane_workspace:
+                sources.append(("plane", pm_for(repo.plane_workspace)[1]))
     if repo is None or not sources:
         _emit(log, now, "", "skipped", 0, "", 0, extra)
         return [SyncOutcome(extra.get("repo", path), "", "skipped", 0, "path_missing")]

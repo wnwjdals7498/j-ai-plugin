@@ -489,6 +489,40 @@ class SyncPathsTest(_SyncCase):
             ("o/gone", "", "", "path_missing"),
         )
 
+    def test_gone_clone_does_not_hide_live_clone_result(self) -> None:
+        clones = [_git_repo(self.tmp / name, "git@host:o/n.git") for name in ("a", "b")]
+        for clone in clones:
+            _write_ledger(clone, ("HUB",))
+        live, gone = (str(clone) for clone in clones)
+        self._sync_paths([live, gone])
+        shutil.rmtree(gone)
+        for name in ("get_repo", "list_open_issues", "list_open_pulls", "list_runs"):
+            self.forge.errors[name] = GiteaError("형식 오류")
+        # 살아 있는 경로를 함께 넘기지 않아도(일부 경로만 대조) 저장소의 다른 경로를 확인한다.
+        for paths in ([live, gone], [gone]):
+            self._sync_paths([live])
+            runs_before = self._run_count()
+            self.events.clear()
+            outcomes = self._sync_paths(paths)
+            self.assertEqual(outcomes[-1], SyncOutcome("o/n", "", "skipped", 0, "path_missing"), paths)
+            self.assertEqual(self._run_count() - runs_before, 2 * (len(paths) - 1), paths)
+            gitea = self.store.last_run(self._repo_id(), "gitea")
+            plane = self.store.last_run(self._repo_id(), "plane")
+            assert gitea is not None and plane is not None
+            self.assertEqual((gitea.result, gitea.error_kind, plane.result), ("failed", "error", "ok"), paths)
+            line = self.events[-1]
+            self.assertEqual(
+                (line["repo"], line["source"], line["correlation_id"], line["error_kind"]),
+                ("o/n", "", "", "path_missing"),
+            )
+        shutil.rmtree(live)
+        outcomes = self._sync_paths([gone])
+        self.assertEqual(outcomes, [SyncOutcome("o/n", s, "skipped", 0, "path_missing") for s in ("gitea", "plane")])
+        for source in ("gitea", "plane"):
+            run = self.store.last_run(self._repo_id(), source)
+            assert run is not None
+            self.assertEqual((run.result, run.error_kind), ("skipped", "path_missing"), source)
+
     def test_never_synced_missing_path_has_no_run(self) -> None:
         gone = str(self.tmp / "never")
         outcomes = self._sync_paths([gone])
