@@ -3,10 +3,14 @@ name: pr-check
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: forge-ledger
 
 jobs:
   lint:
@@ -19,7 +23,7 @@ jobs:
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: /root/.cache/uv
-          key: uv-py39-${{ hashFiles('ci/requirements-py39.txt') }}
+          key: uv-py39-${{ hashFiles('forge-ledger/ci/requirements-py39.txt') }}
       - name: Run lint
         env:
           UV_CACHE_DIR: /root/.cache/uv
@@ -35,7 +39,7 @@ jobs:
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: /root/.cache/uv
-          key: uv-py39-${{ hashFiles('ci/requirements-py39.txt') }}
+          key: uv-py39-${{ hashFiles('forge-ledger/ci/requirements-py39.txt') }}
       - name: Run test
         env:
           UV_CACHE_DIR: /root/.cache/uv
@@ -64,7 +68,7 @@ jobs:
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: /root/.cache/uv
-          key: uv-py3x-${{ hashFiles('ci/requirements-py3x.txt') }}
+          key: uv-py3x-${{ hashFiles('forge-ledger/ci/requirements-py3x.txt') }}
       - name: Run sast
         env:
           UV_CACHE_DIR: /root/.cache/uv
@@ -80,7 +84,7 @@ jobs:
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: /root/.cache/uv
-          key: uv-py3x-${{ hashFiles('ci/requirements-py3x.txt') }}
+          key: uv-py3x-${{ hashFiles('forge-ledger/ci/requirements-py3x.txt') }}
       - name: Run deps
         env:
           UV_CACHE_DIR: /root/.cache/uv

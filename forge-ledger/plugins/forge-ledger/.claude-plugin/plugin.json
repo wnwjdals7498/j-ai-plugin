@@ -30,6 +30,25 @@
       "required": true,
       "title": "Plane MCP 주소",
       "description": "Plane MCP 엔드포인트 URL (/http/api-key/mcp로 끝남)"
+    },
+    "gitea_url": {
+      "type": "string",
+      "required": true,
+      "title": "Gitea 주소",
+      "description": "Gitea 서버의 기본 URL"
+    },
+    "gitea_token": {
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "title": "Gitea 토큰",
+      "description": "허브 대조에 쓰는 Gitea 개인 액세스 토큰"
+    },
+    "dashboard_bind": {
+      "type": "string",
+      "default": "127.0.0.1",
+      "title": "대시보드 바인드 주소",
+      "description": "로컬 대시보드 서버가 연결을 받을 주소"
     }
   }
 }

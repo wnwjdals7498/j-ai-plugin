@@ -13,7 +13,22 @@ class LayoutTest(unittest.TestCase):
         m = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
         self.assertEqual(m["name"], "forge-ledger")
         uc = m["userConfig"]
-        self.assertEqual(set(uc), {"plane_url", "plane_workspace", "plane_api_key", "plane_mcp_url"})
+        self.assertEqual(
+            set(uc),
+            {
+                "plane_url",
+                "plane_workspace",
+                "plane_api_key",
+                "plane_mcp_url",
+                "gitea_url",
+                "gitea_token",
+                "dashboard_bind",
+            },
+        )
+        self.assertTrue(uc["gitea_url"]["required"])
+        self.assertTrue(uc["gitea_token"]["required"])
+        self.assertIs(uc["gitea_token"]["sensitive"], True)
+        self.assertEqual(uc["dashboard_bind"]["default"], "127.0.0.1")
         self.assertTrue(uc["plane_api_key"]["sensitive"])
         self.assertEqual(uc["plane_workspace"]["default"], "forge")
         for v in uc.values():

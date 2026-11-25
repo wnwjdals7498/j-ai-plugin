@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
+from hooks import session_start
 from hooks.pre_tool_use import should_block
-from hooks.session_start import build_exports, summary
+from hooks.session_start import build_exports, hub_summary, maybe_refresh, summary
 from ledger.config import LedgerConfig, PlaneProject, save_config
 from ledger.history import HistoryEntry, append_entry
+from ledger.hubstore import DB_NAME, HubStore, save_registry
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "plugins" / "forge-ledger"
 HOOKS_DIR = PLUGIN_ROOT / "hooks"
@@ -39,13 +45,24 @@ def run_hook(
     )
 
 
+NOW = datetime(2026, 11, 25, 12, 0, 0, tzinfo=timezone.utc)
+
+
+def _iso(moment: datetime) -> str:
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 class HooksTest(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.tmp_path = Path(self._tmp.name)
         self.envfile = self.tmp_path / "claude.env"
-        self.repo = self.tmp_path / "repo"
+        self.repo = self.tmp_path.resolve() / "repo"
         self.repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=self.repo, check=True, capture_output=True)
+        # 훅이 실제 사용자의 상태 폴더를 읽지 않게 모든 실행에 넘긴다.
+        self.state_dir = self.tmp_path / "state"
+        self.state_env = {"FORGE_LEDGER_STATE_DIR": str(self.state_dir)}
 
         cfg = LedgerConfig(
             method_version=1,
@@ -120,7 +137,12 @@ class HooksTest(unittest.TestCase):
         r = run_hook(
             "session_start.py",
             {},
-            env={**self.opts, "CLAUDE_ENV_FILE": str(self.envfile), "CLAUDE_PROJECT_DIR": str(self.repo)},
+            env={
+                **self.opts,
+                **self.state_env,
+                "CLAUDE_ENV_FILE": str(self.envfile),
+                "CLAUDE_PROJECT_DIR": str(self.repo),
+            },
         )
         self.assertEqual(r.returncode, 0)
         env_text = self.envfile.read_text(encoding="utf-8")
@@ -139,8 +161,147 @@ class HooksTest(unittest.TestCase):
         self.assertEqual(summary(empty_repo), "")
 
     def test_session_start_fail_open(self) -> None:
-        r = run_hook("session_start.py", {}, env={"CLAUDE_PROJECT_DIR": "/nonexistent"})
+        r = run_hook("session_start.py", {}, env={**self.state_env, "CLAUDE_PROJECT_DIR": "/nonexistent"})
         self.assertEqual(r.returncode, 0)
+
+    def _register(self, synced_at: datetime | None = None, source: str = "gitea") -> int:
+        store = HubStore(self.state_dir)
+        repo_id = store.upsert_repo("o", "n", str(self.repo), "forge")
+        save_registry(self.state_dir, [str(self.repo)])
+        if synced_at is not None:
+            self._record_run(store, repo_id, source, synced_at)
+        return repo_id
+
+    def _record_run(self, store: HubStore, repo_id: int, source: str, moment: datetime) -> None:
+        source_id = store.source_id(source, f"http://{source}.invalid")
+        run_id = store.start_run(source_id, repo_id, _iso(moment))
+        store.finish_run(run_id, "ok", 1, "", _iso(moment))
+
+    def _refresh(self, env: dict[str, str]) -> tuple[bool, list[tuple[list[str], dict[str, str]]]]:
+        spawned: list[tuple[list[str], dict[str, str]]] = []
+        started = maybe_refresh(
+            self.repo, {**self.state_env, **env}, NOW, lambda argv, child: spawned.append((argv, child))
+        )
+        return started, spawned
+
+    def test_exports_include_gitea_and_bind(self) -> None:
+        token = "tok" + "g" * 30
+        env = {
+            "CLAUDE_PLUGIN_OPTION_GITEA_URL": "http://h:3",
+            "CLAUDE_PLUGIN_OPTION_GITEA_TOKEN": token,
+            "CLAUDE_PLUGIN_OPTION_DASHBOARD_BIND": "127.0.0.1",
+        }
+        self.assertEqual(
+            build_exports(env),
+            [
+                "export FORGE_LEDGER_GITEA_URL=http://h:3",
+                f"export FORGE_LEDGER_GITEA_TOKEN={token}",
+                "export FORGE_LEDGER_DASHBOARD_BIND=127.0.0.1",
+            ],
+        )
+
+    def test_hub_summary_none_without_db_or_registration(self) -> None:
+        self.assertIsNone(hub_summary(self.repo, self.state_env, NOW))
+        self.assertFalse((self.state_dir / DB_NAME).exists())
+        HubStore(self.state_dir).upsert_repo("o", "other", str(self.tmp_path / "other"), "")
+        self.assertIsNone(hub_summary(self.repo, self.state_env, NOW))
+
+    def test_session_start_prints_hub_summary_when_registered(self) -> None:
+        self._register(NOW)
+        (self.repo / "sub").mkdir()
+        for project_dir in (self.repo, self.repo / "sub"):
+            r = run_hook("session_start.py", {}, env={**self.state_env, "CLAUDE_PROJECT_DIR": str(project_dir)})
+            self.assertEqual((r.returncode, r.stderr), (0, ""))
+            self.assertTrue(r.stdout.startswith("forge-ledger 허브: o/n ("), r.stdout)
+            self.assertIn("열린 결함 (Gitea): 0", r.stdout)
+            self.assertNotIn("Plane 프로젝트 3개", r.stdout)
+            self.assertLessEqual(len(r.stdout.rstrip("\n")), 1500)
+
+    def test_session_start_fail_open_with_corrupt_db(self) -> None:
+        self._register()
+        for suffix in ("", "-wal", "-shm"):
+            Path(f"{self.state_dir / DB_NAME}{suffix}").unlink(missing_ok=True)
+        (self.state_dir / DB_NAME).write_bytes(b"not a database" * 100)
+        r = run_hook("session_start.py", {}, env={**self.state_env, "CLAUDE_PROJECT_DIR": str(self.repo)})
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("forge-ledger: Plane 프로젝트 3개", r.stdout)
+
+    def test_session_start_falls_back_when_db_cannot_open(self) -> None:
+        self.state_dir.mkdir()
+        (self.state_dir / DB_NAME).write_bytes(b"")
+        (self.state_dir / "hub-db.lock").mkdir()  # 잠금 파일을 열 수 없게 한다
+        r = run_hook("session_start.py", {}, env={**self.state_env, "CLAUDE_PROJECT_DIR": str(self.repo)})
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("forge-ledger: Plane 프로젝트 3개", r.stdout)
+
+    def test_maybe_refresh_spawns_without_token_in_argv(self) -> None:
+        self._register(NOW - timedelta(seconds=601))
+        gitea_token = "tok" + "g" * 30
+        plane_token = "tok" + "p" * 30
+        started, spawned = self._refresh(
+            {
+                "CLAUDE_PLUGIN_OPTION_GITEA_TOKEN": gitea_token,
+                "CLAUDE_PLUGIN_OPTION_PLANE_API_KEY": plane_token,
+                "FORGE_LEDGER_GITEA_TOKEN": "stale",
+            }
+        )
+        self.assertTrue(started)
+        [(argv, child)] = spawned
+        self.assertEqual(
+            argv,
+            [sys.executable, str(PLUGIN_ROOT / "scripts" / "ledger.py"), "sync", "--repo", str(self.repo), "--quiet"],
+        )
+        for token in (gitea_token, plane_token):
+            self.assertNotIn(token, " ".join(argv))
+        self.assertEqual(
+            (child["FORGE_LEDGER_GITEA_TOKEN"], child["FORGE_LEDGER_PLANE_TOKEN"]), (gitea_token, plane_token)
+        )
+        self.assertEqual(child["FORGE_LEDGER_STATE_DIR"], str(self.state_dir))
+
+    def test_maybe_refresh_skips_when_fresh(self) -> None:
+        repo_id = self._register(NOW - timedelta(hours=1), "gitea")
+        # gitea·plane 중 가장 최근 시작이 기준이다. 600초까지는 새 것으로 본다.
+        self._record_run(HubStore(self.state_dir), repo_id, "plane", NOW - timedelta(seconds=600))
+        self.assertEqual(self._refresh({"FORGE_LEDGER_GITEA_TOKEN": "tok"}), (False, []))
+
+    def test_maybe_refresh_without_runs_needs_registration_and_token(self) -> None:
+        env = {"CLAUDE_PLUGIN_OPTION_PLANE_API_KEY": "tok"}
+        self.assertEqual(self._refresh(env), (False, []))  # 등록 전
+        save_registry(self.state_dir, [str(self.repo)])
+        self.assertEqual(self._refresh({}), (False, []))
+        self.assertTrue(self._refresh(env)[0])  # DB가 아직 없어도 다시 대조한다
+        self.assertFalse((self.state_dir / DB_NAME).exists())
+        self._register()
+        self.assertTrue(self._refresh(env)[0])  # 실행 기록이 없다
+
+    def test_default_spawn_is_detached_and_silent(self) -> None:
+        with patch.object(session_start.subprocess, "Popen") as popen:
+            session_start._spawn_detached(["python3", "x"], {"A": "1"})
+        popen.assert_called_once_with(
+            ["python3", "x"],
+            env={"A": "1"},
+            start_new_session=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    def test_main_prints_stored_values_then_refreshes(self) -> None:
+        self._register()
+        env = {
+            **self.state_env,
+            "PATH": os.environ.get("PATH", ""),
+            "CLAUDE_PROJECT_DIR": str(self.repo),
+            "CLAUDE_PLUGIN_OPTION_GITEA_TOKEN": "tok",
+        }
+        out = io.StringIO()
+        printed_before_spawn: list[str] = []
+        with patch.dict(os.environ, env, clear=True):
+            with patch.object(session_start, "_spawn_detached", lambda *_: printed_before_spawn.append(out.getvalue())):
+                with redirect_stdout(out):
+                    self.assertEqual(session_start.main(), 0)
+        [text] = printed_before_spawn
+        self.assertIn("forge-ledger 허브: o/n (수집 전)", text)
 
     def test_block_secret_in_ledger_write(self) -> None:
         p = {"tool_name": "Write", "tool_input": {"file_path": "/r/.ledger/design/data.md", "content": "10.1.2.3"}}

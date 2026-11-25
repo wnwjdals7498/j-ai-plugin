@@ -6,6 +6,7 @@ import unittest
 import urllib.error
 from unittest import mock
 
+from ledger.adapters import CycleInfo, PmAdapter, ProjectInfo
 from ledger.plane import (
     PlaneAuthError,
     PlaneClient,
@@ -312,3 +313,177 @@ class PlaneClientTest(unittest.TestCase):
                 with self.assertRaises(PlaneUnavailable):
                     client.list_projects()
             self.assertEqual(slept, [1.0, 2.0, 4.0])
+
+    def test_current_cycle_maps_counts(self) -> None:
+        self.server.cycles["p1"] = [
+            {
+                "id": "c1",
+                "name": "허브 골격",
+                "start_date": "2026-11-25",
+                "end_date": "2026-11-29",
+                "total_issues": 8,
+                "completed_issues": 3,
+            }
+        ]
+        cycle = self.client.current_cycle("p1")
+        self.assertEqual(
+            cycle,
+            CycleInfo(
+                id="c1",
+                name="허브 골격",
+                start_date="2026-11-25T00:00:00Z",
+                end_date="2026-11-29T00:00:00Z",
+                total_issues=8,
+                completed_issues=3,
+            ),
+        )
+        req = self.server.requests[-1]
+        self.assertEqual(req.method, "GET")
+        self.assertIn("/projects/p1/cycles/", req.path)
+        self.assertIn("cycle_view=current", req.path)
+
+    def test_current_cycle_iso_timestamps_and_defaults(self) -> None:
+        self.server.cycles["p1"] = [
+            {
+                "id": "c2",
+                "name": "실서버 형식",
+                "start_date": "2026-11-25T05:50:20.427362Z",
+                "end_date": "2026-11-29T23:59:00Z",
+            }
+        ]
+        cycle = self.client.current_cycle("p1")
+        self.assertEqual(
+            cycle,
+            CycleInfo(
+                id="c2",
+                name="실서버 형식",
+                start_date="2026-11-25T05:50:20Z",
+                end_date="2026-11-29T23:59:00Z",
+                total_issues=0,
+                completed_issues=0,
+            ),
+        )
+
+    def test_current_cycle_accepts_list_and_rejects_bad_date(self) -> None:
+        with mock.patch.object(
+            self.client,
+            "_request",
+            return_value=[
+                {
+                    "id": "c3",
+                    "name": "목록 응답",
+                    "start_date": "2026-11-25T09:00:00+09:00",
+                    "end_date": "2026-11-29T09:00:00+09:00",
+                    "total_issues": 5,
+                    "completed_issues": 2,
+                }
+            ],
+        ):
+            cycle = self.client.current_cycle("p1")
+        self.assertEqual(
+            cycle,
+            CycleInfo(
+                id="c3",
+                name="목록 응답",
+                start_date="2026-11-25T00:00:00Z",
+                end_date="2026-11-29T00:00:00Z",
+                total_issues=5,
+                completed_issues=2,
+            ),
+        )
+
+        self.server.cycles["p1"] = [{"id": "c4", "name": "잘못된 날짜", "start_date": "bad", "end_date": ""}]
+        with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+            self.client.current_cycle("p1")
+
+    def test_current_cycle_none_when_empty(self) -> None:
+        self.server.cycles["p1"] = []
+        self.assertIsNone(self.client.current_cycle("p1"))
+        with mock.patch.object(self.client, "_request", return_value=[]):
+            self.assertIsNone(self.client.current_cycle("p1"))
+
+    def test_current_cycle_rejects_malformed_response(self) -> None:
+        bad_payloads: list[object] = [
+            [None, {"id": "c2"}],
+            [None],
+            {},
+            {"results": "x"},
+        ]
+        for payload in bad_payloads:
+            with self.subTest(payload=payload):
+                with mock.patch.object(self.client, "_request", return_value=payload):
+                    with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                        self.client.current_cycle("p1")
+
+    def test_whoami_and_calls_counter(self) -> None:
+        self.server.me = {"email": "dev@example.com"}
+        self.assertEqual(self.client.calls, 0)
+        self.assertEqual(self.client.whoami(), "dev@example.com")
+        self.assertEqual(self.client.calls, 1)
+        req = self.server.requests[-1]
+        self.assertEqual((req.method, req.path), ("GET", "/api/v1/users/me/"))
+
+    def test_whoami_rejects_missing_or_invalid_email(self) -> None:
+        for payload in ({}, {"email": ""}, {"email": None}, {"email": 123}):
+            with self.subTest(payload=payload):
+                self.server.me = payload
+                with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                    self.client.whoami()
+
+    def test_list_project_infos(self) -> None:
+        self.server.pages = [
+            {
+                "results": [{"id": "p1", "identifier": "HUB", "name": "허브"}],
+                "next_cursor": None,
+                "next_page_results": False,
+            }
+        ]
+
+        def accepts(adapter: PmAdapter) -> list[ProjectInfo]:
+            return adapter.list_project_infos()
+
+        self.assertEqual(
+            accepts(self.client),
+            [ProjectInfo(id="p1", identifier="HUB", name="허브")],
+        )
+
+    def test_list_project_infos_validates_required_fields(self) -> None:
+        self.server.pages = [
+            {"results": [{"id": "p1", "identifier": "HUB"}], "next_cursor": None, "next_page_results": False}
+        ]
+        self.assertEqual(
+            self.client.list_project_infos(),
+            [ProjectInfo(id="p1", identifier="HUB", name="")],
+        )
+
+        bad_items: list[dict[str, object]] = [
+            {"identifier": "HUB"},
+            {"id": "", "identifier": "HUB"},
+            {"id": None, "identifier": "HUB"},
+            {"id": 123, "identifier": "HUB"},
+            {"id": "p1"},
+            {"id": "p1", "identifier": ""},
+            {"id": "p1", "identifier": None},
+            {"id": "p1", "identifier": 456},
+        ]
+        for item in bad_items:
+            with self.subTest(item=item):
+                self.server.pages = [{"results": [item], "next_cursor": None, "next_page_results": False}]
+                with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                    self.client.list_project_infos()
+
+    def test_redirect_not_followed(self) -> None:
+        other = FakePlaneServer()
+        self.addCleanup(other.close)
+        slept: list[float] = []
+        client = PlaneClient(self.settings, sleep=slept.append)
+        self.server.redirect_location = f"{other.base_url}/x"
+        for status in (301, 302, 303, 307, 308):
+            with self.subTest(status=status):
+                self.server.status_queue = [status]
+                with self.assertRaisesRegex(PlaneError, f"Plane 요청 오류: HTTP {status}$") as ctx:
+                    client.whoami()
+                self.assertNotIsInstance(ctx.exception, (PlaneAuthError, PlaneUnavailable))
+                self.assertEqual(other.requests, [])
+        self.assertEqual(client.calls, 5)
+        self.assertEqual(slept, [])
