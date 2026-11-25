@@ -217,7 +217,8 @@ class HubStore:
                     "INSERT INTO repo (owner, name, local_paths, plane_workspace) VALUES (?, ?, ?, ?)",
                     (owner, name, encoded, plane_workspace),
                 )
-                assert cursor.lastrowid is not None
+                if cursor.lastrowid is None:
+                    raise RuntimeError("허브 저장소 쓰기 실패")
                 return cursor.lastrowid
             conn.execute(
                 "UPDATE repo SET local_paths = ?, plane_workspace = ? WHERE id = ?",
@@ -255,7 +256,8 @@ class HubStore:
             cursor = conn.execute(
                 "INSERT INTO sync_run (source_id, repo_id, started_at) VALUES (?, ?, ?)", (source_id, repo_id, now)
             )
-            assert cursor.lastrowid is not None
+            if cursor.lastrowid is None:
+                raise RuntimeError("허브 저장소 쓰기 실패")
             return cursor.lastrowid
 
     def finish_run(self, run_id: int, result: str, api_calls: int, error_kind: str, now: str) -> None:
