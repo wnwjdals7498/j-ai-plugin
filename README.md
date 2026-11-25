@@ -36,12 +36,23 @@ claude plugin install model-handoff@j-ai-plugins
 - pi(freellmapi) 헤드리스 핸드오프: `pi -p --mode json --model freellmapi/auto:smart ... < /dev/null`로 수동 디스패치합니다. 종료 코드가 아니라 `stopReason`으로 판정합니다. [절차](model-handoff/skills/handoff/references/pi-headless.md)
 - 주의: Antigravity 공식 FAQ는 소비자 요금제에서 agy를 다른 코딩 에이전트 안에서 감싸 쓰는 것을 지원하지 않으며 계정 정지 사유가 될 수 있다고 안내합니다. `handoff config disable agy`로 끌 수 있습니다.
 
+## forge-ledger (Claude Code)
+
+작업 계획서 작성방식(문서 18종 규격·게이트)으로 프로젝트를 이끌고, Plane(작업 관리)과 Gitea(코드)를 잇는 플러그인입니다. 저장소 전체(플러그인·시험·CI·설계 문서)는 `forge-ledger/` 아래에 있고, 플러그인 원천은 `forge-ledger/plugins/forge-ledger`입니다. Python 3.9 이상, 표준 라이브러리만 사용합니다.
+
+```bash
+claude plugin install forge-ledger@j-ai-plugins
+```
+
+- 설정: Plane 주소·워크스페이스·API 키(필수). 비밀값은 플러그인 설정(sensitive)에만 둡니다.
+- 개발 검사: `forge-ledger/`에서 `bash scripts/dev-setup.sh` 뒤 `bash scripts/dev-check.sh`.
+
 ## 마켓플레이스 구조
 
 | 제품 | 목록 | 플러그인 경로 |
 |---|---|---|
 | Codex | `.agents/plugins/marketplace.json` | `./proj-mgmt-tool`, `./pmt-server` |
-| Claude Code | `.claude-plugin/marketplace.json` | `./proj-mgmt-tool`, `./pmt-server`, `./model-handoff` |
+| Claude Code | `.claude-plugin/marketplace.json` | `./proj-mgmt-tool`, `./pmt-server`, `./model-handoff`, `./forge-ledger/plugins/forge-ledger` |
 
 저장소 원천을 직접 설치하므로 별도 `dist` 생성이 필요하지 않습니다. ZIP 배포는 `proj-mgmt-tool/scripts/build_plugins.py`로 codex/claude/opencode 클라이언트와 server를 만듭니다. 새 배포에서는 본체·플러그인 manifest·마켓플레이스 항목의 버전을 함께 갱신합니다.
 
