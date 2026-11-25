@@ -399,6 +399,21 @@ class PlaneClientTest(unittest.TestCase):
     def test_current_cycle_none_when_empty(self) -> None:
         self.server.cycles["p1"] = []
         self.assertIsNone(self.client.current_cycle("p1"))
+        with mock.patch.object(self.client, "_request", return_value=[]):
+            self.assertIsNone(self.client.current_cycle("p1"))
+
+    def test_current_cycle_rejects_malformed_response(self) -> None:
+        bad_payloads: list[object] = [
+            [None, {"id": "c2"}],
+            [None],
+            {},
+            {"results": "x"},
+        ]
+        for payload in bad_payloads:
+            with self.subTest(payload=payload):
+                with mock.patch.object(self.client, "_request", return_value=payload):
+                    with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                        self.client.current_cycle("p1")
 
     def test_whoami_and_calls_counter(self) -> None:
         self.server.me = {"email": "dev@example.com"}
@@ -407,6 +422,13 @@ class PlaneClientTest(unittest.TestCase):
         self.assertEqual(self.client.calls, 1)
         req = self.server.requests[-1]
         self.assertEqual((req.method, req.path), ("GET", "/api/v1/users/me/"))
+
+    def test_whoami_rejects_missing_or_invalid_email(self) -> None:
+        for payload in ({}, {"email": ""}, {"email": None}, {"email": 123}):
+            with self.subTest(payload=payload):
+                self.server.me = payload
+                with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                    self.client.whoami()
 
     def test_list_project_infos(self) -> None:
         self.server.pages = [
@@ -424,6 +446,31 @@ class PlaneClientTest(unittest.TestCase):
             accepts(self.client),
             [ProjectInfo(id="p1", identifier="HUB", name="허브")],
         )
+
+    def test_list_project_infos_validates_required_fields(self) -> None:
+        self.server.pages = [
+            {"results": [{"id": "p1", "identifier": "HUB"}], "next_cursor": None, "next_page_results": False}
+        ]
+        self.assertEqual(
+            self.client.list_project_infos(),
+            [ProjectInfo(id="p1", identifier="HUB", name="")],
+        )
+
+        bad_items: list[dict[str, object]] = [
+            {"identifier": "HUB"},
+            {"id": "", "identifier": "HUB"},
+            {"id": None, "identifier": "HUB"},
+            {"id": 123, "identifier": "HUB"},
+            {"id": "p1"},
+            {"id": "p1", "identifier": ""},
+            {"id": "p1", "identifier": None},
+            {"id": "p1", "identifier": 456},
+        ]
+        for item in bad_items:
+            with self.subTest(item=item):
+                self.server.pages = [{"results": [item], "next_cursor": None, "next_page_results": False}]
+                with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                    self.client.list_project_infos()
 
     def test_redirect_not_followed(self) -> None:
         other = FakePlaneServer()

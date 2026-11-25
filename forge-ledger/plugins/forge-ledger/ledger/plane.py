@@ -118,6 +118,13 @@ def _text(data: dict[str, Any], key: str) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _required_text(data: dict[str, Any], key: str) -> str:
+    value = data.get(key)
+    if not isinstance(value, str) or not value:
+        raise PlaneError(_FORMAT_ERROR)
+    return value
+
+
 def _int_or_zero(data: dict[str, Any], key: str) -> int:
     value = data.get(key)
     if value is None:
@@ -143,15 +150,20 @@ def _cycle_time(data: dict[str, Any], key: str) -> str:
         raise PlaneError(_FORMAT_ERROR) from None
 
 
-def _extract_list_entries(data: Any) -> list[dict[str, Any]]:
-    if isinstance(data, list):
-        return [entry for entry in data if isinstance(entry, dict)]
-    if not isinstance(data, dict):
-        raise PlaneError(_LIST_FORMAT_ERROR)
-    results = data.get("results", [])
-    if not isinstance(results, list):
-        raise PlaneError(_LIST_FORMAT_ERROR)
-    return [entry for entry in results if isinstance(entry, dict)]
+def _first_cycle_entry(data: Any) -> Optional[dict[str, Any]]:
+    if isinstance(data, dict):
+        if "results" not in data:
+            raise PlaneError(_FORMAT_ERROR)
+        entries = data["results"]
+    else:
+        entries = data
+    if not isinstance(entries, list):
+        raise PlaneError(_FORMAT_ERROR)
+    if not entries:
+        return None
+    if not isinstance(entries[0], dict):
+        raise PlaneError(_FORMAT_ERROR)
+    return entries[0]
 
 
 def _notify_stderr(message: str) -> None:
@@ -299,9 +311,15 @@ class PlaneClient:
             if cursor is not None:
                 query["cursor"] = cursor
             data = self._request("GET", path, query=query)
-            items.extend(_extract_list_entries(data))
             if isinstance(data, list):
+                items.extend(entry for entry in data if isinstance(entry, dict))
                 break
+            if not isinstance(data, dict):
+                raise PlaneError(_LIST_FORMAT_ERROR)
+            results = data.get("results", [])
+            if not isinstance(results, list):
+                raise PlaneError(_LIST_FORMAT_ERROR)
+            items.extend(entry for entry in results if isinstance(entry, dict))
             next_cursor = data.get("next_cursor")
             if not data.get("next_page_results") or not isinstance(next_cursor, str) or not next_cursor:
                 break
@@ -311,7 +329,7 @@ class PlaneClient:
     def whoami(self) -> str:
         """현재 API 키 사용자의 이메일을 돌려준다."""
         data = self._request_dict("GET", "/api/v1/users/me/")
-        return _text(data, "email")
+        return _required_text(data, "email")
 
     def list_projects(self) -> list[dict[str, Any]]:
         return self._list_paginated(self._projects_path())
@@ -320,8 +338,8 @@ class PlaneClient:
         """프로젝트 목록을 공통 `ProjectInfo` 목록으로 변환한다."""
         return [
             ProjectInfo(
-                id=_text(project, "id"),
-                identifier=_text(project, "identifier"),
+                id=_required_text(project, "id"),
+                identifier=_required_text(project, "identifier"),
                 name=_text(project, "name"),
             )
             for project in self.list_projects()
@@ -330,10 +348,9 @@ class PlaneClient:
     def current_cycle(self, project_id: str) -> Optional[CycleInfo]:
         """프로젝트의 현재 cycle을 돌려준다. 없으면 `None`이다."""
         data = self._request("GET", self._projects_path(project_id, "cycles"), query={"cycle_view": "current"})
-        entries = _extract_list_entries(data)
-        if not entries:
+        first = _first_cycle_entry(data)
+        if first is None:
             return None
-        first = entries[0]
         return CycleInfo(
             id=_text(first, "id"),
             name=_text(first, "name"),
