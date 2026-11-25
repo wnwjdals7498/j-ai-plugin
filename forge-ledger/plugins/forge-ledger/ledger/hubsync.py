@@ -127,19 +127,8 @@ def _ledger_config(root: Path) -> Optional[LedgerConfig]:
 
 
 def project_root(start: Path) -> Path:
-    """허브가 저장소로 등록하는 폴더.
-
-    `start`에서 git 최상위까지 올라가며 `.ledger/ledger.yml`이 있는 가장 가까운 폴더이고, 없으면 git 최상위다.
-    큰 저장소의 하위 폴더가 `.ledger/`를 가질 수 있다. git 저장소가 아니면 `start`다.
-    """
-    top = Repo.discover(start).root.resolve()
-    current = start.resolve()
-    for folder in (current, *current.parents):
-        if (folder / ".ledger" / "ledger.yml").is_file():
-            return folder
-        if folder == top:
-            break
-    return top
+    """허브가 저장소로 등록하는 폴더. 규칙은 `Repo.discover`를 따른다."""
+    return Repo.discover(start).root
 
 
 def resolve_repo(path: Path, git_remote: Callable[[Path], str] = _git_remote_url) -> RepoRef:

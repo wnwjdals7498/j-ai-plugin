@@ -65,6 +65,39 @@ class FlowsTest(unittest.TestCase):
         self.assertEqual(discovered_git.root, git_root.resolve())
         self.assertEqual(discovered_git.name, "git-repo")
 
+    def test_repo_discover_prefers_nearest_ledger_folder(self) -> None:
+        top = Path(self._tmp.name).resolve() / "mono"
+        sub = top / "sub"
+        nested = sub / "a" / "b"
+        nested.mkdir(parents=True)
+        subprocess.run(["git", "init"], cwd=top, check=True, capture_output=True)
+
+        # `.ledger/` 폴더만 있고 ledger.yml이 없으면 루트로 보지 않는다.
+        (sub / ".ledger").mkdir()
+        self.assertEqual(Repo.discover(nested), Repo(root=top, name="mono"))
+
+        (sub / ".ledger" / "ledger.yml").write_text("", encoding="utf-8")
+        self.assertEqual(Repo.discover(nested), Repo(root=sub, name="sub"))
+        self.assertEqual(Repo.discover(sub), Repo(root=sub, name="sub"))
+        self.assertEqual(Repo.discover(top), Repo(root=top, name="mono"))
+
+        (top / ".ledger").mkdir()
+        (top / ".ledger" / "ledger.yml").write_text("", encoding="utf-8")
+        self.assertEqual(Repo.discover(nested), Repo(root=sub, name="sub"))
+
+    def test_repo_discover_does_not_search_above_git_or_without_git(self) -> None:
+        outer = Path(self._tmp.name).resolve() / "outer"
+        (outer / ".ledger").mkdir(parents=True)
+        (outer / ".ledger" / "ledger.yml").write_text("", encoding="utf-8")
+        plain = outer / "plain"
+        plain.mkdir()
+        self.assertEqual(Repo.discover(plain), Repo(root=plain, name="plain"))
+
+        inner = outer / "inner"
+        (inner / "a").mkdir(parents=True)
+        subprocess.run(["git", "init"], cwd=inner, check=True, capture_output=True)
+        self.assertEqual(Repo.discover(inner / "a"), Repo(root=inner, name="inner"))
+
     def test_init_creates_skeleton_and_maintenance_project(self) -> None:
         cfg = init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
         self.assertTrue((self.repo.root / ".ledger/design/security.md").exists())
