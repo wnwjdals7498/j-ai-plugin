@@ -7,7 +7,6 @@ const EMPTY_TEXT = "등록된 저장소 없음 — ledger sync로 등록하세�
 const SOURCE_NAMES = { gitea: "Gitea", plane: "Plane" };
 const STATE_TONES = { ok: "good", stale: "warn", partial: "warn", failed: "bad" };
 const ALERT_STATES = ["stale", "failed"];
-const COLUMNS = ["Plane 프로젝트", "현재 cycle", "진행", "빠진 문서", "게이트 1"];
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -27,13 +26,18 @@ function gateText(days) {
   return days < 0 ? `${-days}일 지남` : `${days}일 뒤`;
 }
 
-function projectRow(project) {
+function projectColumns(pending) {
+  const unclassified = pending.includes("unclassified") ? ["미분류"] : [];
+  return ["Plane 프로젝트", "현재 cycle", "진행", "빠진 문서", ...unclassified, "게이트 1"];
+}
+
+function projectRow(project, columns) {
   const row = el("tr");
   const title = `${project.key} ${project.title}`.trim();
   row.append(el("td", "", project.default ? `${title} · 기본` : title));
   if (!project.found) {
     const missing = el("td", "muted", "프로젝트 없음");
-    missing.colSpan = COLUMNS.length - 1;
+    missing.colSpan = columns.length - 1;
     row.append(missing);
     return row;
   }
@@ -42,19 +46,21 @@ function projectRow(project) {
     el("td", cycle ? "" : "muted", cycle ? cycle.name : "cycle 없음"),
     el("td", "", cycle ? `${cycle.completed} / ${cycle.total}` : "-"),
     el("td", "muted", LATER_TEXT),
+    ...(columns.includes("미분류") ? [el("td", "muted", LATER_TEXT)] : []),
     el("td", "", cycle ? gateText(cycle.gate_days) : "-"),
   );
   return row;
 }
 
-function projectTable(projects) {
+function projectTable(projects, pending) {
   if (projects.length === 0) {
     return el("p", "muted", "연결된 Plane 프로젝트 없음");
   }
+  const columns = projectColumns(pending);
   const table = el("table");
   const head = el("tr");
-  head.append(...COLUMNS.map((name) => el("th", "", name)));
-  table.append(head, ...projects.map(projectRow));
+  head.append(...columns.map((name) => el("th", "", name)));
+  table.append(head, ...projects.map((project) => projectRow(project, columns)));
   const wrap = el("div", "scroll");
   wrap.append(table);
   return wrap;
@@ -118,7 +124,7 @@ function repoCard(repo) {
   const card = el("section", "repo");
   const bar = el("div", "bar");
   bar.append(el("h2", "", repo.repo), el("span", "muted", `Plane 프로젝트 ${repo.projects.length}개`));
-  card.append(bar, ...sourceBanners(repo.sources), projectTable(repo.projects), commonTiles(repo));
+  card.append(bar, ...sourceBanners(repo.sources), projectTable(repo.projects, repo.pending), commonTiles(repo));
   return card;
 }
 

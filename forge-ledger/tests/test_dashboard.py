@@ -132,6 +132,7 @@ class DashboardServerTest(unittest.TestCase):
             self.assertEqual((status, headers["content-type"]), (200, content_type), path)
             self.assertEqual(body, (_STATIC / name).read_bytes())
             self._assert_security_headers(headers)
+        self.assertIn("미분류", self._request("/static/app.js", _bearer())[2].decode("utf-8"))
 
     def test_index_has_no_inline_script_or_style(self) -> None:
         # CSP `default-src 'self'`는 인라인 스크립트와 스타일을 막는다.
