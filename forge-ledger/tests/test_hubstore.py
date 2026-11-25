@@ -226,6 +226,20 @@ class EntityTest(_StoreCase):
         self.assertEqual(self._keys("issue"), {"1"})
         self.assertEqual(self._keys("issue", other), set())
 
+    def test_close_other_sources_only_touches_same_source_kind_repo_and_kind(self) -> None:
+        moved = self.store.source_id("gitea", "http://moved.invalid")
+        plane = self.store.source_id("plane", "http://pm.invalid")
+        other_repo = self.store.upsert_repo("owner", "other", "/work/other", "")
+        self._apply("issue", [_issue("1")])
+        self._apply("pull", [EntityRow("pull", "2", "open", {})])
+        self._apply("issue", [_issue("1")], repo=other_repo)
+        self.store.apply_kind(plane, self.repo, "issue", [_issue("9")], T1)
+        self.store.apply_kind(moved, self.repo, "issue", [_issue("3")], T1)
+        self.store.close_other_sources(moved, self.repo, "issue", T2)
+        self.assertEqual(self._keys("issue"), {"3", "9"})
+        self.assertEqual(self._keys("pull"), {"2"})
+        self.assertEqual(self._keys("issue", other_repo), {"1"})
+
     def test_parent_link(self) -> None:
         self._apply("plane_project", [EntityRow("plane_project", "HUB", "open", {"key": "HUB"})])
         self._apply("cycle", [EntityRow("cycle", "c1", "open", {}, parent=("plane_project", "HUB"))])

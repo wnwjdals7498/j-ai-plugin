@@ -321,6 +321,18 @@ class HubStore:
                     [(now, found["id"]) for found in open_rows if found["ext_key"] not in seen],
                 )
 
+    def close_other_sources(self, source_id: int, repo_id: int, kind: str, now: str) -> None:
+        """서버 주소가 바뀌기 전의 같은 종류 소스에 남은, 이 저장소·kind의 열린 행을 닫는다."""
+        with self._write() as conn:
+            conn.execute(
+                """UPDATE entity SET state = 'closed', updated_at = ?
+                WHERE repo_id = ? AND kind = ? AND state = 'open' AND source_id IN (
+                    SELECT old.id FROM source AS old JOIN source AS cur ON cur.kind = old.kind
+                    WHERE cur.id = ? AND old.id != cur.id
+                )""",
+                (now, repo_id, kind, source_id),
+            )
+
     def entities(self, repo_id: int, kind: str, states: Optional[Sequence[str]] = ("open",)) -> list[EntityView]:
         """`states`가 None이면 모든 상태를 돌려준다."""
         with _open(self.path) as conn:
