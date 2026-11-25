@@ -1,0 +1,13 @@
+{
+  "name": "forge",
+  "description": "forge 플러그인 마켓플레이스",
+  "owner": {
+    "name": "forge"
+  },
+  "plugins": [
+    {
+      "name": "forge-ledger",
+      "source": "./plugins/forge-ledger"
+    }
+  ]
+}

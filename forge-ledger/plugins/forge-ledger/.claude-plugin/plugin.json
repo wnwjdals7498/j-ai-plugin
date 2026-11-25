@@ -1,0 +1,35 @@
+{
+  "name": "forge-ledger",
+  "version": "0.1.0",
+  "description": "작업 계획서 작성방식으로 프로젝트를 이끌고 Plane·Gitea·Penpot을 잇는 플러그인",
+  "author": {
+    "name": "forge"
+  },
+  "userConfig": {
+    "plane_url": {
+      "type": "string",
+      "required": true,
+      "title": "Plane 주소",
+      "description": "Plane 서버의 기본 URL"
+    },
+    "plane_workspace": {
+      "type": "string",
+      "default": "forge",
+      "title": "Plane 워크스페이스",
+      "description": "Plane 워크스페이스 슬러그"
+    },
+    "plane_api_key": {
+      "type": "string",
+      "required": true,
+      "sensitive": true,
+      "title": "Plane API 키",
+      "description": "Plane API 인증 키"
+    },
+    "plane_mcp_url": {
+      "type": "string",
+      "required": true,
+      "title": "Plane MCP 주소",
+      "description": "Plane MCP 엔드포인트 URL (/http/api-key/mcp로 끝남)"
+    }
+  }
+}

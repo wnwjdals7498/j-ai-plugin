@@ -1,0 +1,102 @@
+<h1>forge-ledger 설계서 v4.2</h1>
+
+<h2>PRD 1 문서 머리</h2>
+<table>
+  <thead>
+    <tr><th>항목</th><th>내용</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>결정권자</td><td>사용자(프로젝트 소유자)</td></tr>
+    <tr><td>작성자</td><td>Claude Code</td></tr>
+    <tr><td>검토자</td><td>codex 구현자 검토</td></tr>
+    <tr><td>진행 상태</td><td>검토</td></tr>
+    <tr><td>목표 출시일</td><td>미정</td></tr>
+    <tr><td>저장소</td><td>forge-ledger</td></tr>
+    <tr><td>Plane 프로젝트 키</td><td>APP</td></tr>
+  </tbody>
+</table>
+
+<h2>PRD 2 목표 · 성공 지표</h2>
+<table>
+  <thead>
+    <tr><th>목표</th><th>성공 지표</th><th>확인 방법</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>G1 작성방식으로 이끈다</td><td>다섯 흐름에서 필요한 문서가 작성 또는 해당 없음+이유가 된다</td><td>ledger plan check 종료 코드</td></tr>
+    <tr><td>G2 한 화면 현황</td><td>Gitea·Plane 변경이 95% 60초 이내 반영된다</td><td>이벤트 수신 시각과 반영 시각 로그</td></tr>
+    <tr><td>G5 비밀값 보호</td><td>가짜 토큰 쓰기가 모두 차단된다</td><td>PreToolUse 훅 시험, ledger doctor</td></tr>
+  </tbody>
+</table>
+<p><strong>비목표</strong>: Plane 작업 관리 기능 재구현 금지, 코드 리뷰·화면 설계 도구 제작 제외</p>
+<p><strong>반목표</strong>: 대시보드가 원천이 되는 경우, 같은 내용 이중 입력, 해당 없음만으로 검사 통과</p>
+
+<h2>PRD 3 배경 · 환경 · 지원 범위</h2>
+<p>저장소 하나에 Plane 프로젝트 여러 개가 붙고, 작성방식 자체가 프로젝트를 이끄는 플러그인 기능이 되도록 1부 작성방식과 2부 연결·대시보드로 구성한다.</p>
+<table>
+  <thead>
+    <tr><th>환경</th><th>현재 상태</th><th>확인 근거</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>개발 서버</td><td>Linux, 8코어, 메모리 15GB</td><td>nproc, free, docker ps</td></tr>
+    <tr><td>Gitea</td><td>1.27.2 systemd 서비스</td><td>systemctl is-active gitea</td></tr>
+    <tr><td>Plane</td><td>v1.5.0 Docker Compose 상시 구동</td><td>docker compose ps</td></tr>
+    <tr><td>Penpot</td><td>2.19.3 자체 설치 상시 구동</td><td>docker compose ps</td></tr>
+  </tbody>
+</table>
+<p><strong>지원 범위</strong>: Gitea 1.27 이상, Plane CE v1.5, 자체 설치 Penpot, Linux Claude Code</p>
+<p><strong>미지원 범위</strong>: Plane 유료 기능, Plane 페이지, Figma 캔버스 쓰기, 모바일 앱</p>
+
+<h2>PRD 4 전략 · 선정 이유</h2>
+<p><strong>고른 안</strong>: 1부 작성방식과 2부 상주 수집 서비스(허브)로 나누고, 이끄는 강도는 혼합(단계 종료·릴리스 두 곳만 게이트)으로 둔다.</p>
+<p><strong>고르지 않은 안</strong>:</p>
+<ul>
+  <li>A안(명령 실행 시 정적 HTML 생성) — 실시간 반영과 팀 공유가 어렵다</li>
+  <li>Plane 페이지에 현황 기록 — 사람 편집과 덮어쓰기 충돌이 난다</li>
+</ul>
+
+<h2>PRD 5 가정</h2>
+<table>
+  <thead>
+    <tr><th>구분</th><th>가정</th><th>틀리면 바뀌는 것</th><th>확인 시점</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>사용자</td><td>사내 소규모 팀이 사내망에서 대시보드를 본다</td><td>인증·권한 설계가 커진다</td><td>P0</td></tr>
+    <tr><td>기술</td><td>단위 프로젝트 계획서를 작업 항목 본문에 둘 수 있다</td><td>PRD를 절별 작업 항목으로 나눈다</td><td>P0</td></tr>
+    <tr><td>사업</td><td>유료 기능 없이 Plane CE·Gitea·Penpot 안에서 운영한다</td><td>유료 연동을 다시 검토한다</td><td>상시</td></tr>
+  </tbody>
+</table>
+
+<h2>PRD 6 사용자 스토리 · 요구사항</h2>
+<table>
+  <thead>
+    <tr><th>스토리</th><th>요구사항</th><th>단계</th><th>Plane 작업 항목</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>US-01 대화로 계획해 Plane 프로젝트와 PRD 항목 생성</td><td>FR-01 PRD 9항목 작성, FR-02 ledger.yml 연결</td><td>프로토타입</td><td>APP-1</td></tr>
+    <tr><td>US-10 토큰이 저장소·Plane·로그에 남지 않도록 차단</td><td>NFR-01 비밀값 쓰기 차단 훅</td><td>프로토타입</td><td>APP-2</td></tr>
+  </tbody>
+</table>
+
+<h2>PRD 7 목업 · 다이어그램</h2>
+<ul>
+  <li>drawio 원본: .ledger/design/data-model.drawio, .ledger/design/logging-flow.drawio</li>
+  <li>화면 목업: 구현 문서 3의 S1·S2·S9 와이어프레임</li>
+</ul>
+
+<h2>PRD 8 미결 질문</h2>
+<table>
+  <thead>
+    <tr><th>ID</th><th>질문</th><th>영향</th><th>기본값</th><th>필요 시점</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Q1</td><td>목표 출시일은 언제인가?</td><td>단계별 범위 조정</td><td>D13 날짜 없이 단계 완료 기준으로 진행</td><td>P0</td></tr>
+    <tr><td>Q17</td><td>Penpot으로 옮길 기존 Figma 파일이 있는가?</td><td>1차 전 이관 범위</td><td>없음으로 보고 진행</td><td>P0</td></tr>
+  </tbody>
+</table>
+
+<h2>PRD 9 제외 범위</h2>
+<ul>
+  <li>GitHub·GitLab 어댑터 구현(자리만 둠)</li>
+  <li>대시보드에서 상태 변경(허브는 읽기 전용)</li>
+  <li>Plane 유료 기능 및 Plane 페이지 사용</li>
+</ul>

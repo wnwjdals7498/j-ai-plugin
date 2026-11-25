@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "plane": {
+      "type": "http",
+      "url": "${user_config.plane_mcp_url}",
+      "headers": {
+        "Authorization": "Bearer ${user_config.plane_api_key}",
+        "X-Workspace-slug": "${user_config.plane_workspace}"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+<h2>구현 5 알림 처리</h2>
+<table>
+  <thead>
+    <tr><th>상황</th><th>심각도</th><th>채널</th><th>중복 방지</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>수집 중단, 서명 불일치 반복</td><td>심각</td><td>대시보드, 세션 요약, Telegram 즉시</td><td>규칙 코드 + 대상 엔터티</td></tr>
+    <tr><td>어긋남, 게이트 1 기록 없음</td><td>경고</td><td>대시보드, 세션 요약, Telegram 15분 묶음</td><td>규칙 코드 + 대상 엔터티</td></tr>
+    <tr><td>빠진 문서, 게이트 우회</td><td>정보</td><td>대시보드, 세션 요약</td><td>규칙 코드 + 대상 엔터티</td></tr>
+  </tbody>
+</table>
+<p><strong>상태</strong>: 열림 → 확인(ack) → 해소(조건 해소 시 자동)</p>
+<p><strong>알림 화면 프레임</strong>: S5 알림 화면 와이어프레임(2차에 Penpot 이관)</p>
