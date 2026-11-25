@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import sqlite3
 import subprocess
 import tempfile
@@ -251,8 +252,8 @@ class SyncRepoTest(_SyncCase):
         self.assertEqual(
             [e.attrs for e in self.store.entities(repo_id, "plane_project")],
             [
-                {"key": "HUB", "title": "HUB 제목", "default": True, "found": True},
-                {"key": "OPS", "title": "OPS 제목", "default": False, "found": True},
+                {"key": "HUB", "title": "HUB 제목", "default": True, "id": "p1", "found": True},
+                {"key": "OPS", "title": "OPS 제목", "default": False, "id": "p2", "found": True},
             ],
         )
         [cycle] = self.store.entities(repo_id, "cycle")
@@ -330,8 +331,10 @@ class SyncRepoTest(_SyncCase):
         outcome = self._sync(self._ref(("GONE", "HUB")))["plane"]
         self.assertEqual((outcome.result, outcome.error_kind), ("partial", "not_found"))
         projects = {e.ext_key: e.attrs for e in self.store.entities(self._repo_id(), "plane_project")}
-        self.assertEqual(projects["GONE"], {"key": "GONE", "title": "GONE 제목", "default": True, "found": False})
-        self.assertTrue(projects["HUB"]["found"])
+        self.assertEqual(
+            projects["GONE"], {"key": "GONE", "title": "GONE 제목", "default": True, "id": "", "found": False}
+        )
+        self.assertEqual((projects["HUB"]["id"], projects["HUB"]["found"]), ("p1", True))
         self.assertEqual([e.parent_ext_key for e in self.store.entities(self._repo_id(), "cycle")], ["HUB"])
 
     def test_removed_ledger_closes_plane_rows_without_calls(self) -> None:
@@ -407,16 +410,93 @@ class SyncPathsTest(_SyncCase):
 
         return sync_paths(self.store, paths, make_forge, make_pm, _now, self.events.append)
 
+    def _synced_then_removed(self, name: str, keys: tuple[str, ...]) -> str:
+        """한 번 대조한 저장소의 폴더를 지우고 그 경로를 돌려준다."""
+        root = _git_repo(self.tmp / name, f"git@host:o/{name}.git")
+        if keys:
+            _write_ledger(root, keys)
+        self._sync_paths([str(root)])
+        shutil.rmtree(root)
+        self.events.clear()
+        return str(root)
+
+    def _ids(self) -> dict[str, int]:
+        return {repo.name: repo.id for repo in self.store.repos()}
+
     def test_path_missing_skipped(self) -> None:
-        gone = str(self.tmp / "gone")
+        gone = self._synced_then_removed("gone", ("HUB",))
         good = _git_repo(self.tmp / "good", "git@host:o/n.git")
         outcomes = self._sync_paths([gone, str(good)])
-        self.assertEqual(outcomes[0], SyncOutcome(gone, "", "skipped", 0, "path_missing"))
         self.assertEqual(
-            [(o.repo, o.source, o.result) for o in outcomes[1:]], [("o/n", s, "ok") for s in ("gitea", "plane")]
+            outcomes[:2], [SyncOutcome("o/gone", s, "skipped", 0, "path_missing") for s in ("gitea", "plane")]
         )
-        self.assertEqual(self._keys("issue"), ["1", "2"])
-        self.assertEqual(self.events[0]["result"], "skipped")
+        self.assertEqual(
+            [(o.repo, o.source, o.result) for o in outcomes[2:]], [("o/n", s, "ok") for s in ("gitea", "plane")]
+        )
+        repo_id = self._ids()["gone"]
+        for source, line in zip(("gitea", "plane"), self.events):
+            run = self.store.last_run(repo_id, source)
+            assert run is not None
+            self.assertEqual(
+                (run.result, run.error_kind, run.api_calls, run.finished_at),
+                ("skipped", "path_missing", 0, "2026-11-25T01:02:03Z"),
+            )
+            good_run = self.store.last_good_run(repo_id, source)
+            assert good_run is not None
+            self.assertEqual(good_run.result, "ok")
+            self.assertEqual(set(line), LOG_KEYS | {"repo", "error_kind"})
+            self.assertEqual(
+                (line["source"], line["repo"], line["result"], line["error_kind"], line["level"]),
+                (source, "o/gone", "skipped", "path_missing", "warning"),
+            )
+        # 첫 대조가 run-1·2를 썼으므로 건너뛴 실행은 run-3·4다.
+        self.assertEqual([line["correlation_id"] for line in self.events[:2]], ["run-3", "run-4"])
+        self.assertNotIn(gone, json.dumps(self.events))
+        # 건너뛴 저장소의 이전 행은 닫지 않는다.
+        self.assertEqual(len(self.store.entities(repo_id, "issue")), 2)
+        self.assertEqual([e.ext_key for e in self.store.entities(repo_id, "plane_project")], ["HUB"])
+
+    def test_path_missing_uses_current_source_and_stored_form_of_path(self) -> None:
+        gone = self._synced_then_removed("gone", ("HUB",))
+        outcomes = self._sync_paths([gone + "/"])
+        self.assertEqual([o.error_kind for o in outcomes], ["path_missing", "path_missing"])
+        self.assertEqual((self.forge_made, self.workspaces), (1, ["ws"]))
+        conn = sqlite3.connect(self.store.path)
+        try:
+            [(sources,)] = conn.execute("SELECT COUNT(*) FROM source").fetchall()
+        finally:
+            conn.close()
+        self.assertEqual(sources, 2)  # 첫 대조와 같은 주소의 source를 쓴다
+
+    def test_path_missing_without_plane_workspace_records_gitea_only(self) -> None:
+        gone = self._synced_then_removed("gone", ())
+        outcomes = self._sync_paths([gone])
+        self.assertEqual(outcomes, [SyncOutcome("o/gone", "gitea", "skipped", 0, "path_missing")])
+        self.assertEqual(self.workspaces, [])
+        run = self.store.last_run(self._ids()["gone"], "plane")
+        assert run is not None
+        self.assertEqual(run.result, "ok")
+
+    def test_path_missing_without_any_source_still_names_repo_in_log(self) -> None:
+        gone = self._synced_then_removed("gone", ())
+        runs_before = self._run_count()
+        outcomes = sync_paths(self.store, [gone], lambda: (None, ""), lambda _: (None, ""), _now, self.events.append)
+        self.assertEqual(outcomes, [SyncOutcome("o/gone", "", "skipped", 0, "path_missing")])
+        self.assertEqual(self._run_count(), runs_before)
+        [line] = self.events
+        self.assertEqual(
+            (line["repo"], line["source"], line["correlation_id"], line["error_kind"]),
+            ("o/gone", "", "", "path_missing"),
+        )
+
+    def test_never_synced_missing_path_has_no_run(self) -> None:
+        gone = str(self.tmp / "never")
+        outcomes = self._sync_paths([gone])
+        self.assertEqual(outcomes, [SyncOutcome(gone, "", "skipped", 0, "path_missing")])
+        self.assertEqual(self._run_count(), 0)
+        [line] = self.events
+        self.assertEqual(set(line), LOG_KEYS | {"error_kind"})
+        self.assertNotIn(gone, json.dumps(line))
 
     def test_unresolvable_path_does_not_stop_others(self) -> None:
         plain = self.tmp / "plain"
@@ -499,9 +579,7 @@ class LogTest(_SyncCase):
         for line in lines:
             self.assertEqual(set(line), LOG_KEYS)
             self.assertIsInstance(line["duration_ms"], int)
-            self.assertEqual(
-                (line["ts"], line["component"], line["action"]), ("2026-11-25T01:02:03Z", "hubsync", "sync")
-            )
+            self.assertEqual((line["ts"], line["component"], line["action"]), ("2026-11-25T01:02:03Z", "sync", "sync"))
         self.assertEqual(
             [(ln["source"], ln["level"], ln["result"], ln["correlation_id"], ln["api_calls"]) for ln in lines],
             [("gitea", "warning", "partial", "run-1", 4), ("plane", "error", "failed", "run-2", 1)],

@@ -14,7 +14,7 @@ import urllib.parse
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from functools import partial
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Callable, Iterator, Optional, Protocol, Sequence, TextIO, TypeVar
 
@@ -48,8 +48,8 @@ class RepoRef:
 
 @dataclass(frozen=True)
 class SyncOutcome:
-    repo: str  # `owner/name`. 저장소를 해석하지 못했으면 로컬 경로
-    source: str  # `gitea`·`plane`. 저장소를 해석하지 못했으면 빈 문자열
+    repo: str  # `owner/name`. 어느 저장소인지 모르면 로컬 경로
+    source: str  # `gitea`·`plane`. `sync_run`을 남기지 않았으면 빈 문자열
     result: str  # ok, partial, failed, skipped
     api_calls: int
     error_kind: str
@@ -199,6 +199,7 @@ def _sync_plane(ref: RepoRef, pm: PmAdapter, apply: _Apply) -> tuple[str, str]:
                     "key": key,
                     "title": "" if project is None else project.title,
                     "default": False if project is None else project.default,
+                    "id": ids.get(key, ""),
                     "found": key in ids,
                 }
                 rows.append(EntityRow("plane_project", key, "open", attrs))
@@ -226,21 +227,27 @@ def _sync_plane(ref: RepoRef, pm: PmAdapter, apply: _Apply) -> tuple[str, str]:
 
 
 def _emit(
-    log: _Log, now: _Now, source: str, result: str, duration_ms: int, correlation_id: str, api_calls: int
+    log: _Log,
+    now: _Now,
+    source: str,
+    result: str,
+    duration_ms: int,
+    correlation_id: str,
+    api_calls: int,
+    extra: Optional[dict[str, str]] = None,
 ) -> None:
-    log(
-        {
-            "ts": _stamp(now),
-            "level": _LOG_LEVELS[result],
-            "component": "hubsync",
-            "source": source,
-            "action": "sync",
-            "result": result,
-            "duration_ms": duration_ms,
-            "correlation_id": correlation_id,
-            "api_calls": api_calls,
-        }
-    )
+    event: dict[str, Any] = {
+        "ts": _stamp(now),
+        "level": _LOG_LEVELS[result],
+        "component": "sync",
+        "source": source,
+        "action": "sync",
+        "result": result,
+        "duration_ms": duration_ms,
+        "correlation_id": correlation_id,
+        "api_calls": api_calls,
+    }
+    log({**event, **(extra or {})})
 
 
 def _run_source(
@@ -289,6 +296,37 @@ def sync_repo(
     ]
 
 
+def _record_missing_path(
+    store: HubStore,
+    path: str,
+    forge_for: Callable[[], tuple[Optional[ForgeAdapter], str]],
+    pm_for: Callable[[str], tuple[Optional[PmAdapter], str]],
+    now: _Now,
+    log: _Log,
+) -> list[SyncOutcome]:
+    """사라진 경로의 저장소를 알면 소스마다 건너뛴 `sync_run`을 남긴다. 로그에는 경로 대신 `owner/name`을 쓴다."""
+    extra = {"error_kind": "path_missing"}
+    sources: list[tuple[str, str]] = []
+    repo = store.find_repo_by_path(str(Path(path)))
+    if repo is not None:
+        extra["repo"] = f"{repo.owner}/{repo.name}"
+        forge_url = forge_for()[1]
+        if forge_url:
+            sources.append(("gitea", forge_url))
+        if repo.plane_workspace:
+            sources.append(("plane", pm_for(repo.plane_workspace)[1]))
+    if repo is None or not sources:
+        _emit(log, now, "", "skipped", 0, "", 0, extra)
+        return [SyncOutcome(extra.get("repo", path), "", "skipped", 0, "path_missing")]
+    outcomes: list[SyncOutcome] = []
+    for source, base_url in sources:
+        run_id = store.start_run(store.source_id(source, base_url), repo.id, _stamp(now))
+        store.finish_run(run_id, "skipped", 0, "path_missing", _stamp(now))
+        _emit(log, now, source, "skipped", 0, f"run-{run_id}", 0, extra)
+        outcomes.append(SyncOutcome(extra["repo"], source, "skipped", 0, "path_missing"))
+    return outcomes
+
+
 def sync_paths(
     store: HubStore,
     paths: Sequence[str],
@@ -297,28 +335,22 @@ def sync_paths(
     now: Callable[[], datetime],
     log: Callable[[dict[str, Any]], None],
 ) -> list[SyncOutcome]:
-    """경로들을 차례로 대조한다. 해석하지 못한 경로는 `sync_run` 없이 결과와 로그만 남긴다."""
+    """경로들을 차례로 대조한다. 한 경로를 읽지 못해도 다음 경로는 대조한다."""
     # 어댑터는 호출 한도를 스스로 세므로 저장소끼리 같은 것을 쓴다.
-    forge_pair: Optional[tuple[Optional[ForgeAdapter], str]] = None
-    pm_pairs: dict[str, tuple[Optional[PmAdapter], str]] = {}
+    forge_for = lru_cache(maxsize=None)(make_forge)
+    pm_for = lru_cache(maxsize=None)(make_pm)
     outcomes: list[SyncOutcome] = []
     for path in paths:
-        ref: Optional[RepoRef] = None
-        result, error_kind = "skipped", "path_missing"
         try:
-            if Path(path).is_dir():
-                ref = resolve_repo(Path(path))
+            ref = resolve_repo(Path(path)) if Path(path).is_dir() else None
         except (RepoResolveError, OSError):
-            result, error_kind = "failed", "error"
-        if ref is None:
-            _emit(log, now, "", result, 0, "", 0)
-            outcomes.append(SyncOutcome(path, "", result, 0, error_kind))
+            _emit(log, now, "", "failed", 0, "", 0)
+            outcomes.append(SyncOutcome(path, "", "failed", 0, "error"))
             continue
-        if forge_pair is None:
-            forge_pair = make_forge()
-        if ref.plane_workspace not in pm_pairs:
-            pm_pairs[ref.plane_workspace] = make_pm(ref.plane_workspace)
-        outcomes.extend(sync_repo(store, ref, *forge_pair, *pm_pairs[ref.plane_workspace], now, log))
+        if ref is None:
+            outcomes.extend(_record_missing_path(store, path, forge_for, pm_for, now, log))
+        else:
+            outcomes.extend(sync_repo(store, ref, *forge_for(), *pm_for(ref.plane_workspace), now, log))
     return outcomes
 
 
