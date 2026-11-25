@@ -89,10 +89,13 @@ class FakePlaneServer:
         self.item: Optional[dict[str, Any]] = None
         self.force_status: Optional[int] = None
         self.status_queue: list[int] = []
+        self.redirect_location: str = ""
         self.error_body: str = ""
         self.retry_after: Optional[str] = None
         self.projects: dict[str, dict[str, Any]] = {}
         self.items: dict[str, dict[str, dict[str, Any]]] = {}
+        self.cycles: dict[str, list[dict[str, Any]]] = {}
+        self.me: dict[str, Any] = {"email": "tester@example.com"}
         self._item_seq: dict[str, int] = {}
         self._tick = 0
         self.touch_next_get_item: bool = False
@@ -133,6 +136,12 @@ class FakePlaneServer:
                 )
 
                 status_override = owner.status_queue.pop(0) if owner.status_queue else owner.force_status
+                if status_override is not None and 300 <= status_override < 400:
+                    self.send_response(status_override)
+                    self.send_header("Location", owner.redirect_location)
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
                 if status_override is not None and status_override >= 400:
                     detail = owner.error_body or f"forced status {status_override}"
                     self._send_json(status_override, {"detail": detail})
@@ -141,6 +150,9 @@ class FakePlaneServer:
                 clean_path = urlsplit(self.path).path
                 parts = clean_path.strip("/").split("/")
                 if method == "GET":
+                    if clean_path == "/api/v1/users/me/":
+                        self._send_json(200, owner.me)
+                        return
                     if clean_path.endswith("/projects/"):
                         if owner.pages:
                             page = owner.pages.pop(0)
@@ -150,6 +162,15 @@ class FakePlaneServer:
                                 "next_cursor": None,
                                 "next_page_results": False,
                             }
+                        self._send_json(200, page)
+                        return
+                    if clean_path.endswith("/cycles/"):
+                        pid = parts[-2] if len(parts) >= 2 else ""
+                        page = {
+                            "results": [dict(c) for c in owner.cycles.get(pid, [])],
+                            "next_cursor": None,
+                            "next_page_results": False,
+                        }
                         self._send_json(200, page)
                         return
                     if clean_path.endswith("/work-items/"):

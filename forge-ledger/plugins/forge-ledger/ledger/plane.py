@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import re
 import sys
 import time
 import urllib.error
@@ -10,6 +11,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, Optional, Protocol
 
+from ledger.adapters import CycleInfo, ProjectInfo, to_utc_iso
 from ledger.ratelimit import LocalRateLimiter, RateLimiter
 from ledger.secrets import find_secrets
 
@@ -22,6 +24,9 @@ _RATE_LIMIT_MAX_WAIT = 65.0
 _RATE_LIMIT_RETRIES = 3
 _PER_PAGE = 100
 _DEFAULT_TIMEOUT = 30.0
+_FORMAT_ERROR = "Plane 응답 형식 오류"
+_LIST_FORMAT_ERROR = "Plane 목록 응답 형식 오류"
+_DATE_ONLY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class PlaneError(Exception):
@@ -97,8 +102,56 @@ class PlaneLike(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """리다이렉트를 거부한다. urllib은 인증 헤더를 다른 호스트로도 보낸다."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
 def _seg(value: str) -> str:
     return urllib.parse.quote(value, safe="")
+
+
+def _text(data: dict[str, Any], key: str) -> str:
+    value = data.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _int_or_zero(data: dict[str, Any], key: str) -> int:
+    value = data.get(key)
+    if value is None:
+        return 0
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise PlaneError(_FORMAT_ERROR)
+    return value
+
+
+def _cycle_time(data: dict[str, Any], key: str) -> str:
+    """cycle 시작/종료 일시를 UTC `YYYY-MM-DDTHH:MM:SSZ`로 바꾼다. 날짜만 있으면 UTC 자정으로 본다."""
+    value = data.get(key)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise PlaneError(_FORMAT_ERROR)
+    if not value:
+        return ""
+    raw = f"{value}T00:00:00Z" if _DATE_ONLY_RE.fullmatch(value) else value
+    try:
+        return to_utc_iso(raw)
+    except ValueError:
+        raise PlaneError(_FORMAT_ERROR) from None
+
+
+def _extract_list_entries(data: Any) -> list[dict[str, Any]]:
+    if isinstance(data, list):
+        return [entry for entry in data if isinstance(entry, dict)]
+    if not isinstance(data, dict):
+        raise PlaneError(_LIST_FORMAT_ERROR)
+    results = data.get("results", [])
+    if not isinstance(results, list):
+        raise PlaneError(_LIST_FORMAT_ERROR)
+    return [entry for entry in results if isinstance(entry, dict)]
 
 
 def _notify_stderr(message: str) -> None:
@@ -131,6 +184,7 @@ class PlaneClient:
     ) -> None:
         if per_minute < 1:
             raise ValueError("per_minute는 1 이상이어야 한다")
+        self.calls = 0
         self._settings = settings
         self._base_url = settings.base_url.rstrip("/")
         parsed_url = urllib.parse.urlsplit(self._base_url)
@@ -143,9 +197,9 @@ class PlaneClient:
             limiter if limiter is not None else LocalRateLimiter(per_minute=per_minute, clock=clock, sleep=sleep)
         )
         if parsed_url.hostname in ("127.0.0.1", "localhost", "::1"):
-            self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect)
         else:
-            self._opener = urllib.request.build_opener()
+            self._opener = urllib.request.build_opener(_NoRedirect)
 
     def _projects_path(self, *parts: str) -> str:
         base = f"/api/v1/workspaces/{self._workspace}/projects/"
@@ -185,6 +239,7 @@ class PlaneClient:
         while True:
             self._limiter.acquire()
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            self.calls += 1
             try:
                 with self._opener.open(req, timeout=_DEFAULT_TIMEOUT) as resp:
                     raw = resp.read()
@@ -233,7 +288,7 @@ class PlaneClient:
     ) -> dict[str, Any]:
         result = self._request(method, path, payload=payload)
         if not isinstance(result, dict):
-            raise PlaneError("Plane 응답 형식 오류")
+            raise PlaneError(_FORMAT_ERROR)
         return result
 
     def _list_paginated(self, path: str) -> list[dict[str, Any]]:
@@ -244,23 +299,49 @@ class PlaneClient:
             if cursor is not None:
                 query["cursor"] = cursor
             data = self._request("GET", path, query=query)
+            items.extend(_extract_list_entries(data))
             if isinstance(data, list):
-                items.extend(entry for entry in data if isinstance(entry, dict))
                 break
-            if not isinstance(data, dict):
-                raise PlaneError("Plane 목록 응답 형식 오류")
-            results = data.get("results", [])
-            if not isinstance(results, list):
-                raise PlaneError("Plane 목록 응답 형식 오류")
-            items.extend(entry for entry in results if isinstance(entry, dict))
             next_cursor = data.get("next_cursor")
             if not data.get("next_page_results") or not isinstance(next_cursor, str) or not next_cursor:
                 break
             cursor = next_cursor
         return items
 
+    def whoami(self) -> str:
+        """현재 API 키 사용자의 이메일을 돌려준다."""
+        data = self._request_dict("GET", "/api/v1/users/me/")
+        return _text(data, "email")
+
     def list_projects(self) -> list[dict[str, Any]]:
         return self._list_paginated(self._projects_path())
+
+    def list_project_infos(self) -> list[ProjectInfo]:
+        """프로젝트 목록을 공통 `ProjectInfo` 목록으로 변환한다."""
+        return [
+            ProjectInfo(
+                id=_text(project, "id"),
+                identifier=_text(project, "identifier"),
+                name=_text(project, "name"),
+            )
+            for project in self.list_projects()
+        ]
+
+    def current_cycle(self, project_id: str) -> Optional[CycleInfo]:
+        """프로젝트의 현재 cycle을 돌려준다. 없으면 `None`이다."""
+        data = self._request("GET", self._projects_path(project_id, "cycles"), query={"cycle_view": "current"})
+        entries = _extract_list_entries(data)
+        if not entries:
+            return None
+        first = entries[0]
+        return CycleInfo(
+            id=_text(first, "id"),
+            name=_text(first, "name"),
+            start_date=_cycle_time(first, "start_date"),
+            end_date=_cycle_time(first, "end_date"),
+            total_issues=_int_or_zero(first, "total_issues"),
+            completed_issues=_int_or_zero(first, "completed_issues"),
+        )
 
     def create_project(self, name: str, identifier: str) -> dict[str, Any]:
         return self._request_dict(
