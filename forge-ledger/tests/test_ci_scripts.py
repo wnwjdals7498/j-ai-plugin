@@ -304,7 +304,7 @@ class TestShellScripts(unittest.TestCase):
     def test_secrets_gitleaks_limited_to_subfolder(self) -> None:
         proc = self._run("ci/run-checks.sh", "secrets", BASE_SHA=self.base)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("--log-opts=-- .", self._calls())
+        self.assertIn("--log-opts=--full-history --relative -- .", self._calls())
 
     def test_secrets_trusts_repo_toplevel_on_foreign_owner(self) -> None:
         proc = self._run(

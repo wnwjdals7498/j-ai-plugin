@@ -80,7 +80,7 @@ job_test() {
 
 job_secrets() {
     ensure_git_safe_dir
-    gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 --log-opts="-- ." .
+    gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 --log-opts="--full-history --relative -- ." .
     local base head
     local base_branch="${BASE_BRANCH:-master}"
     if [ -n "${BASE_SHA:-}" ]; then
