@@ -150,7 +150,7 @@ Plane 구현은 기존 `PlaneClient`에 읽기 메서드를 더해 만든다. Gi
 
 ### 6.9 로그
 
-대조 로그는 설계서 구현 4의 형식을 따른다. 한 줄에 JSON 하나를 stderr로 쓴다: `ts`, `level`, `component`(`sync`, `dashboard`), `source`, `action`, `result`, `duration_ms`, `correlation_id`(sync_run id). 토큰, 이슈 제목 같은 본문은 쓰지 않는다.
+대조 로그는 설계서 구현 4의 형식을 따른다. 한 줄에 JSON 하나를 stderr로 쓴다: `ts`, `level`, `component`(`sync`, `dashboard`), `source`, `action`, `result`, `duration_ms`, `correlation_id`(sync_run id). 대조를 건너뛴 줄에는 `repo`(`owner/name`)와 `error_kind`를 더한다. 토큰, 이슈 제목 같은 본문은 쓰지 않는다.
 
 ## 7. 완료 기준
 
