@@ -163,6 +163,20 @@ class GiteaClientTest(unittest.TestCase):
             self.client.get_repo("o", "n")
         self.assertNotIsInstance(ctx.exception, (GiteaAuthError, GiteaUnavailable))
 
+    def test_redirect_not_followed(self) -> None:
+        other = FakeGiteaServer()
+        self.addCleanup(other.close)
+        self.server.redirect_location = f"{other.base_url}/x"
+        for status in (301, 302, 303, 307, 308):
+            with self.subTest(status=status):
+                self.server.status_queue = [status]
+                with self.assertRaisesRegex(GiteaError, f"Gitea 요청 오류: HTTP {status}$") as ctx:
+                    self.client.whoami()
+                self.assertNotIsInstance(ctx.exception, (GiteaAuthError, GiteaUnavailable))
+                self.assertEqual(other.requests, [])
+        self.assertEqual(self.client.calls, 5)
+        self.assertEqual(self.sleeps, [])
+
     def test_invalid_header_value_does_not_leak_token(self) -> None:
         token = TEST_TOKEN + "\n" + "x"
         client = GiteaClient(GiteaSettings(base_url=self.server.base_url, token=token), sleep=self.sleeps.append)

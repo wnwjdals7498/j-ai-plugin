@@ -58,6 +58,13 @@ class GiteaSettings:
         return cls(base_url=values[0], token=values[1])
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """리다이렉트를 거부한다. urllib은 Authorization 헤더를 다른 호스트로도 보낸다."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
 def _seg(value: str) -> str:
     return urllib.parse.quote(value, safe="")
 
@@ -161,9 +168,9 @@ class GiteaClient:
             limiter if limiter is not None else LocalRateLimiter(per_minute=_PER_MINUTE, sleep=sleep)
         )
         if parsed_url.hostname in ("127.0.0.1", "localhost", "::1"):
-            self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            self._opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect)
         else:
-            self._opener = urllib.request.build_opener()
+            self._opener = urllib.request.build_opener(_NoRedirect)
 
     def _sanitize(self, text: str) -> str:
         token = self._settings.token

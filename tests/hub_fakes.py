@@ -18,6 +18,7 @@ class FakeGiteaServer:
         self.pulls: list[dict[str, Any]] = []
         self.runs: list[dict[str, Any]] = []
         self.status_queue: list[int] = []
+        self.redirect_location = ""
         self.requests: list[tuple[str, str, dict[str, str]]] = []
         self._closed = False
 
@@ -47,6 +48,12 @@ class FakeGiteaServer:
                 owner.requests.append(("GET", self.path, dict(self.headers.items())))
                 if owner.status_queue:
                     status = owner.status_queue.pop(0)
+                    if 300 <= status < 400:
+                        self.send_response(status)
+                        self.send_header("Location", owner.redirect_location)
+                        self.send_header("Content-Length", "0")
+                        self.end_headers()
+                        return
                     if status >= 400:
                         self._send_json(status, {"message": f"forced status {status}"})
                         return
