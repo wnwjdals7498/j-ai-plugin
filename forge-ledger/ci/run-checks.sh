@@ -17,7 +17,13 @@ export COVERAGE_FILE="$CI_VENV_DIR/.coverage"
 
 ensure_git_safe_dir() {
     if ! git rev-parse --git-dir >/dev/null 2>&1; then
-        git config --global --add safe.directory "$(pwd)"
+        # safe.directory는 저장소 최상위와 일치해야 한다. git이 거부하는 상태라 .git을 직접 찾는다.
+        local dir
+        dir="$(pwd)"
+        while [ "$dir" != "/" ] && [ ! -e "$dir/.git" ]; do
+            dir="$(dirname "$dir")"
+        done
+        git config --global --add safe.directory "$dir"
     fi
 }
 
@@ -49,8 +55,10 @@ job_lint() {
     "$CI_VENV_DIR/py39/bin/ruff" format --check .
     "$CI_VENV_DIR/py39/bin/mypy"
     git ls-files -z '*.sh' | xargs -0 shellcheck
+    local toplevel
+    toplevel="$(git rev-parse --show-toplevel)"
     shopt -s nullglob
-    local workflows=(.gitea/workflows/*.yml)
+    local workflows=("$toplevel/.gitea/workflows/"*.yml)
     shopt -u nullglob
     if [ "${#workflows[@]}" -gt 0 ]; then
         actionlint -config-file ci/actionlint.yaml "${workflows[@]}"
@@ -72,18 +80,19 @@ job_test() {
 
 job_secrets() {
     ensure_git_safe_dir
-    gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
+    gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 --log-opts="-- ." .
     local base head
+    local base_branch="${BASE_BRANCH:-master}"
     if [ -n "${BASE_SHA:-}" ]; then
         base="$BASE_SHA"
     else
-        if ! base="$(git merge-base origin/main HEAD)"; then
-            echo "BASE_SHA가 비어 있고 origin/main과의 merge-base를 구할 수 없음" >&2
+        if ! base="$(git merge-base "origin/$base_branch" HEAD)"; then
+            echo "BASE_SHA가 비어 있고 origin/${base_branch}과의 merge-base를 구할 수 없음" >&2
             return 1
         fi
     fi
     if [ -z "$base" ]; then
-        echo "BASE_SHA 또는 origin/main merge-base가 비어 있음" >&2
+        echo "BASE_SHA 또는 origin/${base_branch} merge-base가 비어 있음" >&2
         return 1
     fi
     head="${HEAD_SHA:-HEAD}"

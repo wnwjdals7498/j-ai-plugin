@@ -13,11 +13,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
+top_root=$(git -C "$repo_root" rev-parse --show-toplevel)
+sub_dir=$(git -C "$repo_root" rev-parse --show-prefix)
+sub_dir=${sub_dir%/}
+
 head_sha=$(git -C "$repo_root" rev-parse HEAD)
-base_sha="${BASE_SHA:-$(git -C "$repo_root" merge-base origin/main HEAD)}"
+base_sha="${BASE_SHA:-$(git -C "$repo_root" merge-base "origin/${BASE_BRANCH:-master}" HEAD)}"
 target_head="${HEAD_SHA:-$head_sha}"
 
-git clone --no-local --quiet "$repo_root" "$tmp_dir"
+git clone --no-local --quiet "$top_root" "$tmp_dir"
 if [ "$(git -C "$tmp_dir" rev-parse HEAD)" != "$head_sha" ]; then
     git -C "$tmp_dir" checkout --quiet "$head_sha"
 fi
@@ -26,6 +30,6 @@ docker run --rm \
     -e BASE_SHA="$base_sha" \
     -e HEAD_SHA="$target_head" \
     -v "$tmp_dir:/src" \
-    -w /src \
+    -w "/src/$sub_dir" \
     "forge-ledger-ci:$tag" \
     ci/run-checks.sh "$job"

@@ -46,7 +46,7 @@ def scan_files(root: Path, paths: Sequence[str]) -> list[Finding]:
 
 
 def changed_files(root: Path, base: str, head: str) -> list[str]:
-    """Return sorted list of added/copied/modified/renamed files between base and head."""
+    """Return sorted added/copied/modified/renamed files under root, relative to root."""
     proc = subprocess.run(  # nosec B603 B607 # 고정 git diff 명령을 인자 목록으로 실행(shell=False)
         [
             "git",
@@ -54,6 +54,7 @@ def changed_files(root: Path, base: str, head: str) -> list[str]:
             str(root),
             "diff",
             "--name-only",
+            "--relative",
             "--diff-filter=ACMR",
             f"{base}...{head}",
         ],

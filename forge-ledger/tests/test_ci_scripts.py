@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -189,12 +191,147 @@ class TestScanChangedSecrets(unittest.TestCase):
                 ["a.md", "c.md", "e.md"],
             )
 
+    def test_changed_files_in_subfolder_are_relative_to_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            sub = repo / "forge-ledger"
+            _git(repo, "init")
+            _write(repo / "README.md", "top original\n")
+            _write(sub / "docs" / "a.md", "alpha original\n")
+            _git(repo, "add", "-A")
+            base = _git_commit(repo, "base")
+
+            token = "plane_api_" + "a" * 32
+            _write(repo / "README.md", "top modified\n")
+            _write(repo / "other" / "x.md", "outside\n")
+            _write(sub / "docs" / "a.md", f"key {token}\n")
+            _git(repo, "add", "-A")
+            head = _git_commit(repo, "head")
+
+            paths = scan_changed_secrets.changed_files(sub, base, head)
+            self.assertEqual(paths, ["docs/a.md"])
+            self.assertEqual(
+                scan_changed_secrets.scan_files(sub, paths),
+                [scan_changed_secrets.Finding("docs/a.md", 1, "plane_token")],
+            )
+
     def test_missing_args_returns_2(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             err = io.StringIO()
             with contextlib.redirect_stderr(err):
                 rc = scan_changed_secrets.main(["--root", tmp])
             self.assertEqual(rc, 2)
+
+
+def _fake_command(bin_dir: Path, name: str, log: Path) -> None:
+    """Create an executable that appends its arguments to log, one per line."""
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    fd = os.open(bin_dir / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o700)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(f'#!/bin/sh\nprintf \'%s\\n\' "$@" >> "{log}"\n')
+
+
+class TestShellScripts(unittest.TestCase):
+    """Run the CI shell scripts in a repo whose forge-ledger folder is a subfolder."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name).resolve()
+        self.repo = self.tmp / "repo"
+        self.sub = self.repo / "forge-ledger"
+        for rel in ("ci/run-checks.sh", "scripts/ci-local.sh", "ci/image/TAG"):
+            (self.sub / rel).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / rel, self.sub / rel)
+        _git(self.repo, "init")
+        _git(self.repo, "add", "-A")
+        self.base = _git_commit(self.repo, "base")
+        _write(self.sub / "a.md", "next\n")
+        _git(self.repo, "add", "-A")
+        _git_commit(self.repo, "head")
+
+        self.log = self.tmp / "calls.log"
+        bin_dir = self.tmp / "bin"
+        for name in ("gitleaks", "python3.9", "docker"):
+            _fake_command(bin_dir, name, self.log)
+        home = self.tmp / "home"
+        home.mkdir()
+        dropped = {"BASE_SHA", "HEAD_SHA", "BASE_BRANCH"}
+        self.env = {k: v for k, v in os.environ.items() if k not in dropped and not k.startswith("GIT_")}
+        self.env.update(
+            HOME=str(home),
+            XDG_CONFIG_HOME=str(home / ".config"),
+            GIT_CONFIG_NOSYSTEM="1",
+            TMPDIR=str(self.tmp),
+            CI_VENV_DIR=str(self.tmp / "venv"),
+            PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        )
+
+    def _run(self, *args: str, **env: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", *args],
+            cwd=self.sub,
+            env={**self.env, **env},
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    def _calls(self) -> list[str]:
+        return self.log.read_text(encoding="utf-8").splitlines()
+
+    def _base_arg(self) -> str:
+        calls = self._calls()
+        return calls[calls.index("--base") + 1]
+
+    def test_secrets_default_base_branch_is_master(self) -> None:
+        _git(self.repo, "update-ref", "refs/remotes/origin/master", self.base)
+        proc = self._run("ci/run-checks.sh", "secrets")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(self._base_arg(), self.base)
+
+    def test_secrets_base_branch_override(self) -> None:
+        _git(self.repo, "update-ref", "refs/remotes/origin/dev", self.base)
+        proc = self._run("ci/run-checks.sh", "secrets", BASE_BRANCH="dev")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(self._base_arg(), self.base)
+
+    def test_secrets_missing_base_branch_names_it(self) -> None:
+        proc = self._run("ci/run-checks.sh", "secrets")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("origin/master과의 merge-base를 구할 수 없음", proc.stderr)
+
+    def test_secrets_gitleaks_limited_to_subfolder(self) -> None:
+        proc = self._run("ci/run-checks.sh", "secrets", BASE_SHA=self.base)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("--log-opts=-- .", self._calls())
+
+    def test_secrets_trusts_repo_toplevel_on_foreign_owner(self) -> None:
+        proc = self._run(
+            "ci/run-checks.sh",
+            "secrets",
+            BASE_SHA=self.base,
+            GIT_TEST_ASSUME_DIFFERENT_OWNER="1",
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        config = (self.tmp / "home" / ".gitconfig").read_text(encoding="utf-8")
+        self.assertIn(f"directory = {self.repo}\n", config)
+
+    def test_ci_local_mounts_toplevel_and_works_in_subfolder(self) -> None:
+        _git(self.repo, "update-ref", "refs/remotes/origin/master", self.base)
+        proc = self._run("scripts/ci-local.sh", "lint")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        calls = self._calls()
+        self.assertEqual(calls[calls.index("-w") + 1], "/src/forge-ledger")
+        self.assertTrue(calls[calls.index("-v") + 1].endswith(":/src"))
+        self.assertIn(f"BASE_SHA={self.base}", calls)
+        self.assertEqual(calls[-2:], ["ci/run-checks.sh", "lint"])
+
+    def test_ci_local_base_branch_override(self) -> None:
+        _git(self.repo, "update-ref", "refs/remotes/origin/dev", self.base)
+        proc = self._run("scripts/ci-local.sh", "lint", BASE_BRANCH="dev")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn(f"BASE_SHA={self.base}", self._calls())
 
 
 if __name__ == "__main__":

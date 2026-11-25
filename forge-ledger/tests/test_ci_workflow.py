@@ -7,7 +7,7 @@ from pathlib import Path
 from ledger.secrets import find_secrets
 
 ROOT = Path(__file__).resolve().parent.parent
-WORKFLOW_PATH = ROOT / ".gitea" / "workflows" / "pr-check.yml"
+WORKFLOW_PATH = ROOT.parent / ".gitea" / "workflows" / "pr-check.yml"
 TAG_PATH = ROOT / "ci" / "image" / "TAG"
 EXPECTED_JOBS = {"lint", "test", "secrets", "sast", "deps", "matrix", "install"}
 PY39_JOBS = {"lint", "test"}
@@ -53,6 +53,11 @@ class TestWorkflow(unittest.TestCase):
         self.assertRegex(text, r"(?m)^permissions:\s*\n  contents:\s*read\s*$")
         self.assertNotIn("write", text.lower())
 
+    def test_run_steps_use_subfolder(self) -> None:
+        text = _read_workflow()
+        self.assertRegex(text, r"(?m)^defaults:\n  run:\n    working-directory: forge-ledger$")
+        self.assertEqual(text.count("working-directory:"), 1)
+
     def test_seven_jobs(self) -> None:
         text = _read_workflow()
         blocks = _extract_job_blocks(text)
@@ -87,7 +92,7 @@ class TestWorkflow(unittest.TestCase):
                 self.assertIn(CACHE_ACTION, block)
                 self.assertRegex(block, r"(?m)^\s+path:\s*/root/\.cache/uv\s*$")
                 self.assertIn(
-                    "key: uv-py39-${{ hashFiles('ci/requirements-py39.txt') }}",
+                    "key: uv-py39-${{ hashFiles('forge-ledger/ci/requirements-py39.txt') }}",
                     block,
                 )
         for job_id in PY3X_JOBS:
@@ -96,7 +101,7 @@ class TestWorkflow(unittest.TestCase):
                 self.assertIn(CACHE_ACTION, block)
                 self.assertRegex(block, r"(?m)^\s+path:\s*/root/\.cache/uv\s*$")
                 self.assertIn(
-                    "key: uv-py3x-${{ hashFiles('ci/requirements-py3x.txt') }}",
+                    "key: uv-py3x-${{ hashFiles('forge-ledger/ci/requirements-py3x.txt') }}",
                     block,
                 )
         for job_id in NO_CACHE_JOBS:
