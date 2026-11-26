@@ -673,14 +673,14 @@ class _PlaneRun:
             return conflict
         fresh = applied is not None and recorded_wanted == wanted
         unchanged = applied is not None and applied.remote_updated_at == updated_at
-        if fresh and unchanged:  # 매니페스트도 Plane도 그대로다.
-            return Outcome(key, "same", item_id)
         # 저장 내용 그대로인가. 서버가 저장하며 글을 다듬었어도 알아본다.
         as_stored = applied is not None and _item_digest(found) == stored
-        # 관리 필드가 매니페스트와 같으면 수정 시각과 상관없이 같다. 쓰지 않고 기록만 맞춘다.
+        # 관리 필드를 먼저 비교한다. 매니페스트와 같으면 수정 시각과 상관없이 같다. 쓰지 않고 기록만 맞춘다.
         # `link_to` 항목에서 관리하는 것은 원천 표식뿐이고, 여기까지 왔으면 표식은 맞다.
         if mode == "link" or self._matches(found, desired) or (fresh and as_stored):
-            _remember(self._state, key, item_id, f"{mode}:{wanted}:{_item_digest(found)}", updated_at)
+            digest = f"{mode}:{wanted}:{_item_digest(found)}"
+            if applied is None or (applied.digest, applied.remote_updated_at) != (digest, updated_at):
+                _remember(self._state, key, item_id, digest, updated_at)
             return Outcome(key, "same", item_id)
         # 다르다. 마지막으로 기록한 뒤 손대지 않았을 때만 갱신한다.
         # 댓글을 쓰다가 멈춘 기록은 시각이 없으므로 저장 내용이 그대로인지로 본다.

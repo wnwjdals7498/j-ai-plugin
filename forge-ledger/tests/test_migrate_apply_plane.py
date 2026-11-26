@@ -267,7 +267,9 @@ class FullSampleTest(_PlaneCase):
         self.run_plane()
         before = self.snapshot_plane()
         self.plane.calls.clear()
-        self.assert_all_same()
+        with patch.object(AppliedState, "save") as save:
+            self.assert_all_same()
+        save.assert_not_called()  # 달라진 것이 없으면 적용 기록도 다시 쓰지 않는다.
         self.assertEqual(self.snapshot_plane(), before)
         self.assertEqual(sorted(c[0] for c in self.plane.calls), ["list_items", "list_labels", "list_states"])
 
@@ -530,6 +532,18 @@ class ConflictTest(_PlaneCase):
             self.plane.calls.clear()
             self.assert_all_same(**{key: "conflict"})
             self.assertEqual((self.snapshot_plane(), self.writes()), (before, []))
+
+    def test_different_content_with_the_same_updated_at_is_updated(self) -> None:
+        # 수정 시각이 같다고 내용까지 같은 것은 아니다. 관리 필드를 먼저 비교한다.
+        self.by_key(_I1)["description_html"] = "<p>시각은 그대로인데 달라진 설명</p>"
+        manifest = load_manifest(self.manifest_file())
+        planned = plan_apply(manifest, self.repo, self.plane, self.pid, AppliedState.load(self.state_path))
+        self.assertIn(_I1, planned.update)
+        self.plane.calls.clear()
+        self.assert_all_same(**{_I1: "updated"})
+        self.assertEqual(self.by_key(_I1)["description_html"], "<h2>기본 내용</h2><p>자식 설명</p>")
+        self.assertEqual(len(self.method_calls("update_item")), 1)
+        self.assert_all_same()
 
     def test_later_updated_at_with_changed_content_is_a_conflict(self) -> None:
         self.edit_in_plane(self.by_key(_I1))
