@@ -37,6 +37,12 @@ class PlaneError(Exception):
     """Plane API 요청 중 발생한 일반 오류."""
 
 
+class PlaneDuplicate(PlaneError):
+    def __init__(self, existing_id: str) -> None:
+        super().__init__("Plane 원천 표식 중복")
+        self.existing_id = existing_id
+
+
 class PlaneUnavailable(PlaneError):
     """Plane 연결 실패 또는 재시도 후에도 복구되지 않은 서버/속도 오류."""
 
@@ -105,6 +111,8 @@ def find_by_code(
 class PlaneLike(Protocol):
     """Plane 클라이언트 인터페이스(PlaneClient와 테스트 FakePlane이 따른다)."""
 
+    def whoami_profile(self) -> dict[str, str]: ...
+
     def list_projects(self) -> list[dict[str, Any]]: ...
 
     def create_project(self, name: str, identifier: str) -> dict[str, Any]: ...
@@ -142,7 +150,15 @@ class PlaneLike(Protocol):
 
     def list_comments(self, project_id: str, item_id: str) -> list[dict[str, Any]]: ...
 
-    def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]: ...
+    def create_comment(
+        self,
+        project_id: str,
+        item_id: str,
+        html: str,
+        *,
+        external_source: Optional[str] = None,
+        external_id: Optional[str] = None,
+    ) -> dict[str, Any]: ...
 
     def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]: ...
 
@@ -327,6 +343,14 @@ class PlaneClient:
             except urllib.error.HTTPError as exc:
                 status = exc.code
                 retry_after = exc.headers.get("Retry-After") if exc.headers is not None else None
+                if status == 409:
+                    try:
+                        body = json.loads(exc.read().decode("utf-8"))
+                    except (UnicodeDecodeError, json.JSONDecodeError):
+                        body = None
+                    if isinstance(body, dict) and isinstance(body.get("id"), str):
+                        exc.close()
+                        raise PlaneDuplicate(body["id"]) from None
                 exc.close()
                 if status in (401, 403):
                     raise PlaneAuthError("Plane 토큰 확인 필요") from None
@@ -400,6 +424,10 @@ class PlaneClient:
         """현재 API 키 사용자의 id를 돌려준다. 담당자 지정과 댓글 작성자 비교에 쓴다."""
         data = self._request_dict("GET", "/api/v1/users/me/")
         return _required_text(data, "id")
+
+    def whoami_profile(self) -> dict[str, str]:
+        data = self._request_dict("GET", "/api/v1/users/me/")
+        return {key: _required_text(data, key) for key in ("id", "display_name")}
 
     def list_projects(self) -> list[dict[str, Any]]:
         return self._list_paginated(self._projects_path())
@@ -522,11 +550,24 @@ class PlaneClient:
     def list_comments(self, project_id: str, item_id: str) -> list[dict[str, Any]]:
         return self._list_paginated(self._projects_path(project_id, "work-items", item_id, "comments"))
 
-    def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]:
+    def create_comment(
+        self,
+        project_id: str,
+        item_id: str,
+        html: str,
+        *,
+        external_source: Optional[str] = None,
+        external_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        payload = {"comment_html": html}
+        if external_source is not None:
+            payload["external_source"] = external_source
+        if external_id is not None:
+            payload["external_id"] = external_id
         return self._request_dict(
             "POST",
             self._projects_path(project_id, "work-items", item_id, "comments"),
-            payload={"comment_html": html},
+            payload=payload,
             retry_transient=False,
         )
 

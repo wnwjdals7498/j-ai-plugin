@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 
 from ledger.adapters import ProjectInfo
 from ledger.check import SourceUnavailable
-from ledger.plane import PlaneConflict, PlaneError, check_update_fields, find_by_code, match_external
+from ledger.plane import PlaneConflict, PlaneDuplicate, PlaneError, check_update_fields, find_by_code, match_external
 from ledger.spec import TEMPLATE_FOR
 
 _PLANE_TEMPLATES = (
@@ -109,7 +109,7 @@ class FakePlaneServer:
         self.states: dict[str, list[dict[str, Any]]] = {}  # 프로젝트 id별
         self.labels: dict[str, list[dict[str, Any]]] = {}  # 프로젝트 id별
         self.comments: dict[str, list[dict[str, Any]]] = {}  # 항목 id별
-        self.me: dict[str, Any] = {"id": _FAKE_ACTOR, "email": "tester@example.com"}
+        self.me: dict[str, Any] = {"id": _FAKE_ACTOR, "email": "tester@example.com", "display_name": "테스트"}
         self._item_seq: dict[str, int] = {}
         self._tick = 0
         self.touch_next_get_item: bool = False
@@ -163,7 +163,11 @@ class FakePlaneServer:
                     return
                 if status_override is not None and status_override >= 400:
                     detail = owner.error_body or f"forced status {status_override}"
-                    self._send_json(status_override, {"detail": detail})
+                    try:
+                        body = json.loads(detail)
+                    except json.JSONDecodeError:
+                        body = {"detail": detail}
+                    self._send_json(status_override, body)
                     return
 
                 clean_path = urlsplit(self.path).path
@@ -267,6 +271,19 @@ class FakePlaneServer:
                         return
                     if clean_path.endswith("/work-items/"):
                         pid = parts[-2] if len(parts) >= 2 else ""
+                        if (
+                            isinstance(parsed_json, dict)
+                            and parsed_json.get("external_source") is not None
+                            and parsed_json.get("external_id") is not None
+                        ):
+                            existing = match_external(
+                                list(owner.items.get(pid, {}).values()),
+                                parsed_json["external_source"],
+                                parsed_json["external_id"],
+                            )
+                            if existing is not None:
+                                self._send_json(409, {"error": "duplicate", "id": existing["id"]})
+                                return
                         item_seq = owner._item_seq.get(pid, 0) + 1
                         owner._item_seq[pid] = item_seq
                         item_id = f"id-{seq}"
@@ -281,7 +298,21 @@ class FakePlaneServer:
                         self._send_json(201, payload)
                         return
                     if clean_path.endswith("/comments/"):
-                        payload = {"id": f"id-{seq}", "created_at": _next_timestamp(), "actor": _FAKE_ACTOR}
+                        if (
+                            isinstance(parsed_json, dict)
+                            and parsed_json.get("external_source") is not None
+                            and parsed_json.get("external_id") is not None
+                        ):
+                            for item_id in owner.items.get(parts[-4], {}):
+                                existing = match_external(
+                                    owner.comments.get(item_id, []),
+                                    parsed_json["external_source"],
+                                    parsed_json["external_id"],
+                                )
+                                if existing is not None:
+                                    self._send_json(409, {"error": "duplicate", "id": existing["id"]})
+                                    return
+                        payload = {"id": f"id-{seq}", "created_at": _next_timestamp(), "actor": owner.me["id"]}
                         if isinstance(parsed_json, dict):
                             payload.update(parsed_json)
                         owner.comments.setdefault(parts[-2], []).append(dict(payload))
@@ -404,14 +435,25 @@ class FakePlane:
         self._id_seq = 0
         self._tick = 0
         self._touch_next_get: set[tuple[str, str]] = set()
+        self._root = self
+        self._actor = _FAKE_ACTOR
+        self._display_name = "테스트"
+
+    def as_user(self, actor_id: str, display_name: str) -> FakePlane:
+        from copy import copy
+
+        result = copy(self)
+        result._actor = actor_id
+        result._display_name = display_name
+        return result
 
     def _next_id(self, prefix: str) -> str:
-        self._id_seq += 1
-        return f"{prefix}-{self._id_seq}"
+        self._root._id_seq += 1
+        return f"{prefix}-{self._root._id_seq}"
 
     def _next_timestamp(self) -> str:
-        self._tick += 1
-        ts = datetime(2026, 11, 23, 0, 0, 0, tzinfo=timezone.utc) + timedelta(seconds=self._tick)
+        self._root._tick += 1
+        ts = datetime(2026, 11, 23, 0, 0, 0, tzinfo=timezone.utc) + timedelta(seconds=self._root._tick)
         return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     def _record_and_check(self, method: str, *args: Any) -> None:
@@ -510,6 +552,10 @@ class FakePlane:
     ) -> dict[str, Any]:
         self._record_and_check("create_item", project_id, name)
         proj = self._project_by_id(project_id)
+        if external_source is not None and external_id is not None:
+            existing = match_external(proj.items, external_source, external_id)
+            if existing is not None:
+                raise PlaneDuplicate(existing["id"])
         seq = proj.next_seq
         proj.next_seq += 1
         item: dict[str, Any] = {
@@ -572,7 +618,11 @@ class FakePlane:
 
     def whoami_id(self) -> str:
         self._record_and_check("whoami_id")
-        return _FAKE_ACTOR
+        return self._actor
+
+    def whoami_profile(self) -> dict[str, str]:
+        self._record_and_check("whoami_profile")
+        return {"id": self._actor, "display_name": self._display_name}
 
     def list_states(self, project_id: str) -> list[dict[str, Any]]:
         self._record_and_check("list_states", project_id)
@@ -601,14 +651,30 @@ class FakePlane:
         self._stored_item(project_id, item_id)
         return [dict(comment) for comment in self._project_by_id(project_id).comments.get(item_id, [])]
 
-    def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]:
+    def create_comment(
+        self,
+        project_id: str,
+        item_id: str,
+        html: str,
+        *,
+        external_source: Optional[str] = None,
+        external_id: Optional[str] = None,
+    ) -> dict[str, Any]:
         self._record_and_check("create_comment", project_id, item_id)
         item = self._stored_item(project_id, item_id)
+        proj = self._project_by_id(project_id)
+        if external_source is not None and external_id is not None:
+            for comments in proj.comments.values():
+                existing = match_external(comments, external_source, external_id)
+                if existing is not None:
+                    raise PlaneDuplicate(existing["id"])
         comment = {
             "id": self._next_id("cmt"),
             "comment_html": html,
             "created_at": self._next_timestamp(),
-            "actor": _FAKE_ACTOR,
+            "actor": self._actor,
+            "external_source": external_source,
+            "external_id": external_id,
         }
         self._project_by_id(project_id).comments.setdefault(item_id, []).append(comment)
         item["updated_at"] = comment["created_at"]
