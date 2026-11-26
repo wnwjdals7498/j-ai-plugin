@@ -9,6 +9,10 @@ PLUGIN = ROOT / "plugins" / "forge-ledger"
 
 
 class LayoutTest(unittest.TestCase):
+    def test_migration_skill_and_command_exist(self) -> None:
+        self.assertTrue((PLUGIN / "skills/ledger-migrate/SKILL.md").is_file())
+        self.assertTrue((PLUGIN / "commands/migrate.md").is_file())
+
     def test_plugin_manifest_user_config(self) -> None:
         m = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())
         self.assertEqual(m["name"], "forge-ledger")

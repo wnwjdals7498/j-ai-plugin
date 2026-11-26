@@ -46,6 +46,36 @@ class SkillTest(unittest.TestCase):
         for sid in ("prd-goals", "prd-out", "impl-data", "impl-security", "impl-phases"):
             self.assertIn(f'id="{sid}"', html)
 
+    def test_migration_skill_contract(self) -> None:
+        path = PLUGIN / "skills" / "ledger-migrate" / "SKILL.md"
+        text = path.read_text(encoding="utf-8")
+        fm = text.split("---")[1]
+        self.assertIn("name: ledger-migrate", fm)
+        self.assertIn("description:", fm)
+        for value in (
+            "migrate check",
+            "migrate preview",
+            "migrate apply",
+            "redactions",
+            "pmt end",
+            "source_dir",
+            "body_html",
+            "description_html",
+            "blocked_by",
+            "replaced_by",
+            "link_to",
+            "migrate/<slug>",
+        ):
+            self.assertIn(value, text)
+        self.assertEqual(find_secrets(text), [])
+
+    def test_migration_command_references_skill(self) -> None:
+        path = COMMANDS / "migrate.md"
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("description:", text.split("---")[1])
+        self.assertIn("ledger-migrate", text)
+        self.assertEqual(find_secrets(text), [])
+
     def test_mcp_config_uses_user_config(self) -> None:
         mcp = json.loads((PLUGIN / ".mcp.json").read_text(encoding="utf-8"))
         s = json.dumps(mcp)
