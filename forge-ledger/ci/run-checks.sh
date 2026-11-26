@@ -96,7 +96,7 @@ job_secrets() {
         return 1
     fi
     head="${HEAD_SHA:-HEAD}"
-    python3.9 ci/scan_changed_secrets.py --base "$base" --head "$head"
+    python3.9 ci/scan_exposure.py --range "$base..$head"
 }
 
 job_sast() {

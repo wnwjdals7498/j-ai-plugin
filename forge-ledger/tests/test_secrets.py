@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import json
 import unittest
 
-from ledger.secrets import PATTERNS, find_secrets
+from ledger.secrets import PATTERN_NAMES, PATTERNS, find_exposures, find_secrets
 
 
 class TestSecrets(unittest.TestCase):
@@ -15,8 +16,15 @@ class TestSecrets(unittest.TestCase):
             "gitlab_token": "glpat-" + "x" * 20,
             "figma_token": "figd_" + "y" * 40,
             "telegram_bot_token": "123456789:" + "Z" * 35,
+            "home_path": "/home/alice/x",
+            "email": "a.b@corp.co.kr",
+            "internal_host": "build.lan",
+            "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----",
+            "jwt": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl",
+            "secret_assignment": "API_TOKEN=abcd1234efgh",
         }
-        self.assertEqual(set(PATTERNS), set(cases))
+        self.assertEqual(tuple(cases), PATTERN_NAMES)
+        self.assertEqual(tuple(PATTERNS), PATTERN_NAMES)
         for name, text in cases.items():
             self.assertEqual(find_secrets(text), [name], name)
 
@@ -35,6 +43,114 @@ class TestSecrets(unittest.TestCase):
 
     def test_plain_text_clean(self):
         self.assertEqual(find_secrets("D-261123-7f3a 버전 1.5.0 APP-12"), [])
+
+    def assert_each(self, name, positives, negatives):
+        for text in positives:
+            with self.subTest(positive=text):
+                self.assertEqual(find_exposures(text), [name])
+        for text in negatives:
+            with self.subTest(negative=text):
+                self.assertEqual(find_exposures(text), [])
+
+    def test_home_path(self):
+        self.assert_each(
+            "home_path",
+            ["/home/alice/x", "/data/home/u/a", "/Users/bob/a", "C:\\Users\\bob", '"C:\\\\Users\\\\bob"'],
+            ["~/docs", "/home", "/home/<이름>", "GET /users/42"],
+        )
+
+    def test_email(self):
+        self.assert_each(
+            "email",
+            ["a.b@corp.co.kr", "<a.b@corp.co.kr>", "dev@example.com.evil.io", "dev@notexample.com"],
+            [
+                "dev@example.com",
+                "noreply@github.com",
+                "x@noreply.example",
+                "1+bot@users.noreply.github.com",
+                "actions/checkout@3d3c42e5",
+                "forge-ledger@forge",
+            ],
+        )
+
+    def test_internal_host(self):
+        self.assert_each(
+            "internal_host",
+            ["build.lan", "svc.internal:8080", "pc.local", "http://git.corp.internal/repo", "접속: pc.local."],
+            [
+                "localhost",
+                "~/.local/state",
+                ".claude/settings.local.json",
+                "CLAUDE.local.md",
+                "self._tls = threading.local()",
+                "docs.local-setup",
+            ],
+        )
+
+    def test_private_key(self):
+        self.assert_each(
+            "private_key",
+            ["-----BEGIN OPENSSH PRIVATE KEY-----", "-----BEGIN PRIVATE KEY-----", "-----BEGIN RSA PRIVATE KEY-----"],
+            ["-----BEGIN CERTIFICATE-----", "-----BEGIN PUBLIC KEY-----"],
+        )
+
+    def test_jwt(self):
+        self.assert_each(
+            "jwt",
+            ["eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl", "Bearer eyJhbGci.eyJzdWIi.sig_-9"],
+            ["eyJhbGciOiJIUzI1NiJ9", "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0"],
+        )
+
+    def test_secret_assignment(self):
+        self.assert_each(
+            "secret_assignment",
+            [
+                "API_TOKEN=abcd1234efgh",
+                "password: hunter2hunter2",
+                'client_secret = "abcd1234efgh"',
+                '{"api_key": "abcd1234efgh"}',
+                "export DB_PASSWD='p@ss-w0rd-1'",
+                "PASSWORD=correcthorsebattery",
+                "(password=hunter2hunter2)",
+            ],
+            [
+                "TOKEN=${PLANE_TOKEN}",
+                'TOKEN="$PLANE_TOKEN"',
+                "token = os.environ[...]",
+                "PASSWORD=",
+                "PASSWORD=short1",
+                "token = self._settings.token",
+                "token = candidate.rstrip('.')",
+                "token: Optional[str] = None",
+                "token=settings_token",
+                "api_token: <발급받은 토큰>",
+                "token == expected1234",
+                '_ENV_TOKEN = "FORGE_LEDGER_GITEA_TOKEN"',
+                "client(token=TEST_TOKEN)",
+                '{"TOKEN": TEST_TOKEN}',
+                "Client(token=get_token())",
+                "`TOKEN=`·`PASSWORD:`처럼 비밀값을 대입하는 줄",
+                "secret: <REDACTED>",
+            ],
+        )
+
+    def test_names_keep_definition_order_without_duplicates(self):
+        text = "a.b@corp.co.kr c.d@corp.co.kr 10.1.2.3"
+        self.assertEqual(find_exposures(text), ["ipv4", "email"])
+
+    def test_one_allowed_match_does_not_hide_another(self):
+        self.assertEqual(find_exposures("dev@example.com a.b@corp.co.kr"), ["email"])
+        self.assertEqual(find_exposures("TOKEN=${X} PASSWORD=hunter2hunter2"), ["secret_assignment"])
+
+    def test_json_escaped_line_break_before_match(self):
+        # PreToolUse 훅은 JSON으로 직렬화한 본문을 검사한다.
+        jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl"
+        self.assertEqual(find_exposures(json.dumps("앞\n" + jwt)), ["jwt"])
+        self.assertEqual(find_exposures(json.dumps("앞\nnoreply@github.com\tno-reply@corp.co.kr")), [])
+        self.assertEqual(find_exposures(json.dumps("앞\na.b@corp.co.kr")), ["email"])
+
+    def test_find_secrets_is_alias(self):
+        self.assertIs(find_secrets, find_exposures)
 
 
 if __name__ == "__main__":

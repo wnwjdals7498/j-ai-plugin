@@ -17,7 +17,6 @@ if _CI_DIR not in sys.path:
     sys.path.insert(0, _CI_DIR)
 
 import inputs_hash  # noqa: E402
-import scan_changed_secrets  # noqa: E402
 
 
 def _write(path: Path, content: str) -> None:
@@ -36,7 +35,7 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def _git_commit(repo: Path, message: str) -> str:
-    _git(repo, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-m", message)
+    _git(repo, "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-m", message)
     return _git(repo, "rev-parse", "HEAD")
 
 
@@ -117,112 +116,6 @@ class TestInputsHash(unittest.TestCase):
             self.assertIn("검사 이미지 재빌드 필요", err.getvalue())
 
 
-class TestScanChangedSecrets(unittest.TestCase):
-    def test_finds_token_with_line(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            token = "plane_api_" + "a" * 32
-            _write(root / "docs" / "a.md", f"line one\nkey {token}\nline three\n")
-            findings = scan_changed_secrets.scan_files(root, ["docs/a.md"])
-            self.assertEqual(
-                findings,
-                [scan_changed_secrets.Finding("docs/a.md", 2, "plane_token")],
-            )
-
-    def test_skips_tests_dir(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            token = "plane_api_" + "a" * 32
-            _write(root / "tests" / "x.py", f"TOKEN = '{token}'\n")
-            self.assertEqual(scan_changed_secrets.scan_files(root, ["tests/x.py"]), [])
-
-    def test_skips_missing_and_binary(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            bin_path = root / "data.bin"
-            bin_path.write_bytes(b"\xff\xfe\x00\x81")
-            self.assertEqual(
-                scan_changed_secrets.scan_files(root, ["missing.txt", "data.bin"]),
-                [],
-            )
-
-    def test_output_hides_value(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            token = "plane_api_" + "a" * 32
-            _write(root / "docs" / "a.md", f"first\nkey {token}\n")
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out):
-                rc = scan_changed_secrets.main(["--root", str(root), "--files", "docs/a.md"])
-            self.assertEqual(rc, 1)
-            stdout = out.getvalue()
-            self.assertIn("docs/a.md:2: plane_token", stdout)
-            self.assertNotIn("plane_api_", stdout)
-
-    def test_clean_returns_0(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _write(root / "docs" / "clean.md", "just normal text\n")
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out):
-                rc = scan_changed_secrets.main(["--root", str(root), "--files", "docs/clean.md"])
-            self.assertEqual(rc, 0)
-            self.assertIn("비밀값 없음", out.getvalue())
-
-    def test_changed_files_uses_diff_filter(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            _git(repo, "init")
-            _write(repo / "a.md", "alpha original\n")
-            _write(repo / "b.md", "beta original\n")
-            _write(repo / "d.md", "delta line 1\ndelta line 2\ndelta line 3\n")
-            _git(repo, "add", "a.md", "b.md", "d.md")
-            base = _git_commit(repo, "base")
-
-            _write(repo / "a.md", "alpha modified\n")
-            (repo / "b.md").unlink()
-            _write(repo / "c.md", "charlie added\n")
-            (repo / "d.md").rename(repo / "e.md")
-            _git(repo, "add", "-A")
-            head = _git_commit(repo, "head")
-
-            self.assertEqual(
-                scan_changed_secrets.changed_files(repo, base, head),
-                ["a.md", "c.md", "e.md"],
-            )
-
-    def test_changed_files_in_subfolder_are_relative_to_root(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            sub = repo / "forge-ledger"
-            _git(repo, "init")
-            _write(repo / "README.md", "top original\n")
-            _write(sub / "docs" / "a.md", "alpha original\n")
-            _git(repo, "add", "-A")
-            base = _git_commit(repo, "base")
-
-            token = "plane_api_" + "a" * 32
-            _write(repo / "README.md", "top modified\n")
-            _write(repo / "other" / "x.md", "outside\n")
-            _write(sub / "docs" / "a.md", f"key {token}\n")
-            _git(repo, "add", "-A")
-            head = _git_commit(repo, "head")
-
-            paths = scan_changed_secrets.changed_files(sub, base, head)
-            self.assertEqual(paths, ["docs/a.md"])
-            self.assertEqual(
-                scan_changed_secrets.scan_files(sub, paths),
-                [scan_changed_secrets.Finding("docs/a.md", 1, "plane_token")],
-            )
-
-    def test_missing_args_returns_2(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            err = io.StringIO()
-            with contextlib.redirect_stderr(err):
-                rc = scan_changed_secrets.main(["--root", tmp])
-            self.assertEqual(rc, 2)
-
-
 def _fake_command(bin_dir: Path, name: str, log: Path) -> None:
     """Create an executable that appends its arguments to log, one per line."""
     bin_dir.mkdir(parents=True, exist_ok=True)
@@ -280,21 +173,22 @@ class TestShellScripts(unittest.TestCase):
     def _calls(self) -> list[str]:
         return self.log.read_text(encoding="utf-8").splitlines()
 
-    def _base_arg(self) -> str:
+    def _range_arg(self) -> str:
         calls = self._calls()
-        return calls[calls.index("--base") + 1]
+        self.assertIn("ci/scan_exposure.py", calls)
+        return calls[calls.index("--range") + 1]
 
     def test_secrets_default_base_branch_is_master(self) -> None:
         _git(self.repo, "update-ref", "refs/remotes/origin/master", self.base)
         proc = self._run("ci/run-checks.sh", "secrets")
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(self._base_arg(), self.base)
+        self.assertEqual(self._range_arg(), f"{self.base}..HEAD")
 
     def test_secrets_base_branch_override(self) -> None:
         _git(self.repo, "update-ref", "refs/remotes/origin/dev", self.base)
         proc = self._run("ci/run-checks.sh", "secrets", BASE_BRANCH="dev")
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertEqual(self._base_arg(), self.base)
+        self.assertEqual(self._range_arg(), f"{self.base}..HEAD")
 
     def test_secrets_missing_base_branch_names_it(self) -> None:
         proc = self._run("ci/run-checks.sh", "secrets")

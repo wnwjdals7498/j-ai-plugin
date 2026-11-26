@@ -1,0 +1,24 @@
+# 노출 검사(forge-ledger/ci/scan_exposure.py) 예외.
+# 형식: <경로 glob>\t<패턴 이름>\t<사유>. 사유가 비면 검사가 실패한다.
+
+forge-ledger/tests/test_secrets.py	ipv4	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	ipv6	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	home_path	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	email	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	internal_host	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	private_key	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	jwt	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	secret_assignment	패턴 양성·음성 시험용 가짜 값
+
+forge-ledger/tests/test_scan_exposure.py	ipv4	스캐너 시험용 가짜 값
+forge-ledger/tests/test_scan_exposure.py	home_path	스캐너 시험용 가짜 값
+forge-ledger/tests/test_scan_exposure.py	email	스캐너 시험용 가짜 값
+forge-ledger/tests/test_scan_exposure.py	secret_assignment	스캐너 시험용 가짜 값
+
+forge-ledger/docs/superpowers/specs/2026-11-26-pmt-migration-design.md	home_path	설명용 패턴 예시
+
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	home_path	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	email	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	internal_host	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	private_key	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	secret_assignment	설명용 패턴 예시
