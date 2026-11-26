@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import inspect
 import io
 import re
 import subprocess
@@ -129,7 +130,7 @@ class WorkTest(unittest.TestCase):
                 "[착수] alpha 2026-11-26T12:00:00+00:00",
                 "[인계] did: 모듈 작성 / next: 시험 추가",
                 "[검증] head=aaaaaaa exit=0 cmd=pytest -q",
-                "[종료] done result: 완료",
+                f"[종료] done result: 완료 ref={self.t.ids()[0]}",
             ],
         )
 
@@ -401,7 +402,7 @@ class WorkTest(unittest.TestCase):
         del self.t.fail_on["update_item"]
         work.end(self.t, "FL-1", "pause", self._later(2), HEAD, host="alpha")
         self.assertEqual((self.t.group(), self.t.label_names()), ("unstarted", ["paused"]))
-        self.assertEqual(self.t.lines()[1:], ["[종료] pause"])
+        self.assertEqual(self.t.lines()[1:], [f"[종료] pause ref={self.t.ids()[0]}"])
 
     def test_end_comment_failure_asks_for_rerun_which_writes_only_the_comment(self) -> None:
         self.t.fail_on["create_comment"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
@@ -441,13 +442,14 @@ class WorkTest(unittest.TestCase):
         self.assertEqual(self.t.item(), before)
         self.assertEqual([line.split()[0] for line in self.t.lines()], ["[착수]", "[종료]"])
 
-    def test_end_rerun_without_a_start_is_recognised_by_the_same_end_line(self) -> None:
+    def test_end_rerun_without_a_start_rewrites_only_the_comment_and_is_refused_after_a_new_start(self) -> None:
         self.t.lose_response = True
         with self.assertRaises(work.WorkError):
             work.end(self.t, "FL-1", "skip", NOW, "", reason="불필요", host="alpha")
         self.t.calls.clear()
         work.end(self.t, "FL-1", "skip", self._later(1), "", reason="불필요", host="alpha")
-        self.assertEqual(self.t.writes(), [])
+        self.assertEqual(self.t.writes(), ["create_comment"])
+        self.assertEqual(self.t.lines(), ["[종료] skip reason: 불필요"] * 2)
 
         work.start(self.t, "FL-1", "beta", self._later(2))
         self.t.calls.clear()
@@ -461,13 +463,81 @@ class WorkTest(unittest.TestCase):
             work.start(self.t, "FL-1", "beta", self._later(5))
         work.end(self.t, "FL-1", "pause", self._later(6), HEAD, host="alpha")
         self.assertEqual(self.t.group(), "unstarted")
-        self.assertEqual(self.t.lines()[-1], "[종료] pause")
+        self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={self.t.ids()[0]}")
 
     def test_same_host_name_of_another_user_counts_as_another_computer(self) -> None:
         work.start(self.t, "FL-1", "alpha", NOW)
         self.t.add("[착수] alpha 2026-11-26T12:40:00+00:00", NOW + timedelta(minutes=40), OTHER)
         with self.assertRaisesRegex(work.WorkError, "거부"):
             work.end(self.t, "FL-1", "pause", self._later(41), HEAD, host="alpha")
+
+    def test_previous_cycle_end_at_the_same_time_does_not_end_the_new_cycle(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
+        self.t.same_time = True  # 다음 착수가 이전 `[종료]`와 같은 작성 시각을 받는다
+        work.start(self.t, "FL-1", "alpha", self._later(1))
+        comments = self.t._project_by_id(self.t.project_id).comments[self.t.item_id]
+        self.assertEqual(comments[1]["created_at"], comments[2]["created_at"])
+
+        self.t.same_time = False
+        work.end(self.t, "FL-1", "pause", self._later(2), HEAD, host="alpha")
+        self.assertEqual(self.t.group(), "unstarted")
+        self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={comments[2]['id']}")
+        self.assertEqual(len(comments), 4)
+
+    def test_previous_cycle_end_at_the_same_time_keeps_the_new_claim_whatever_the_ids(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
+        self.t.same_time, self.t.next_ids = True, ["a-new"]  # 새 착수의 id가 이전 `[종료]`보다 앞에 정렬된다
+        work.start(self.t, "FL-1", "alpha", self._later(1))
+
+        self.t.same_time = False
+        with self.assertRaisesRegex(work.WorkError, "alpha"):
+            work.start(self.t, "FL-1", "beta", self._later(2))
+
+    def test_start_ended_at_the_same_time_is_not_a_claim_whatever_the_ids(self) -> None:
+        at = NOW - timedelta(minutes=5)
+        self.t.add("[착수] beta 2026-11-26T11:55:00+00:00", at, comment_id="z-start")
+        self.t.add("[종료] pause ref=z-start", at, comment_id="a-end")
+        work.start(self.t, "FL-1", "alpha", NOW)
+        self.assertEqual(self.t.item()["assignees"], [ME])
+
+    def test_end_with_another_mode_after_ending_is_refused(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
+        before = (self.t.item(), self.t.lines())
+        self.t.calls.clear()
+        with self.assertRaisesRegex(work.WorkError, "pause.*start"):
+            work.end(self.t, "FL-1", "done", self._later(2), HEAD, host="alpha", result="완료", unverified="x")
+        self.assertEqual(self.t.writes(), [])
+        self.assertEqual((self.t.item(), self.t.lines()), before)
+
+    def test_end_keeps_the_specified_signature_and_defaults_to_this_host(self) -> None:
+        parameters = inspect.signature(work.end).parameters.values()
+        self.assertEqual(
+            [p.name for p in parameters if p.kind != p.KEYWORD_ONLY],
+            ["t", "code", "mode", "now", "head", "result", "unverified", "cause", "fix", "reason"],
+        )
+        self.assertTrue(all(p.default is not p.empty for p in parameters if p.kind == p.KEYWORD_ONLY))
+        with patch("socket.gethostname", return_value="alpha.local"):
+            work.start(self.t, "FL-1", "alpha", NOW)
+            self.t.lose_response = True
+            with self.assertRaises(work.WorkError):
+                work.end(self.t, "FL-1", "pause", self._later(1), HEAD)
+            self.t.calls.clear()
+            work.end(self.t, "FL-1", "pause", self._later(2), HEAD)  # 이 컴퓨터의 착수를 알아본다
+        self.assertEqual(self.t.writes(), [])
+
+    def test_end_from_a_computer_without_a_start_references_the_live_start(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="beta")
+        self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={self.t.ids()[0]}")
+
+        self.t.calls.clear()
+        work.end(self.t, "FL-1", "pause", self._later(2), HEAD, host="alpha")
+        with self.assertRaisesRegex(work.WorkError, "pause"):
+            work.end(self.t, "FL-1", "skip", self._later(2), "", host="alpha", reason="불필요")
+        self.assertEqual(self.t.writes(), [])
 
     def test_next_cycle_on_the_same_host_can_end_again(self) -> None:
         for minute in (0, 2):
@@ -508,7 +578,7 @@ class WorkCliTest(unittest.TestCase):
         self.server.items["p1"] = {
             "i1": {"id": "i1", "sequence_id": 1, "assignees": [], "labels": [], "updated_at": "2026-11-23T00:00:00Z"}
         }
-        host = patch("ledger.cli.socket.gethostname", return_value="alpha.local")
+        host = patch("ledger.work.socket.gethostname", return_value="alpha.local")
         host.start()
         self.addCleanup(host.stop)
 

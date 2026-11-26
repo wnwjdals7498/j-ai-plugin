@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import html
 import re
+import socket
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -34,7 +35,8 @@ _RECORD_RE = re.compile(r"\[(착수 취소|착수|인계|검증|종료)\] (.*)")
 _BREAK_RE = re.compile(r"<br\s*/?>|</p>", re.IGNORECASE)
 _TAG_RE = re.compile(r"<[^>]*>")
 _VERIFY_HEAD_RE = re.compile(r"head=([0-9a-f]+) ")
-_CANCEL_REF_RE = re.compile(r" ref=(\S+)$")
+# `[착수 취소]`와 `[종료]` 첫 줄 끝에 붙는, 대상 착수 댓글의 id
+_REF_RE = re.compile(r" ref=(\S+)$")
 
 
 class WorkError(Exception):
@@ -55,6 +57,17 @@ class _Record:
     def host(self) -> str:
         """`착수` 줄의 `<host> <시각>`에서 host."""
         return self.detail.rsplit(" ", 1)[0]
+
+    @property
+    def mode(self) -> str:
+        """`종료` 줄의 종료 방식."""
+        return self.detail.split(" ", 1)[0]
+
+    @property
+    def ref(self) -> str:
+        """가리키는 착수 댓글 id. 없으면 빈 문자열이다."""
+        found = _REF_RE.search(self.detail)
+        return found.group(1) if found else ""
 
 
 # --- 댓글 읽기·쓰기 ---
@@ -85,18 +98,27 @@ def _records(t: WorkTracker, project_id: str, item_id: str) -> list[_Record]:
 
 def _cancelled(records: list[_Record]) -> set[str]:
     """`[착수 취소]`가 `ref=`로 가리키는 착수 댓글 id. 작성 시각이나 정렬 순서와 상관없다."""
-    refs = (_CANCEL_REF_RE.search(record.detail) for record in records if record.kind == "착수 취소")
-    return {ref.group(1) for ref in refs if ref}
+    return {record.ref for record in records if record.kind == "착수 취소" and record.ref}
+
+
+def _starts(records: list[_Record]) -> list[_Record]:
+    """취소되지 않은 착수. 끝난 것도 포함한다."""
+    cancelled = _cancelled(records)
+    return [r for r in records if r.kind == "착수" and r.comment_id not in cancelled]
 
 
 def _active(records: list[_Record]) -> list[_Record]:
-    """아직 유효한 착수·인계·검증. 취소된 착수는 빼고, `[종료]`는 그 앞의 기록을 모두 끝낸다."""
-    cancelled = _cancelled(records)
+    """아직 유효한 착수·인계·검증. 취소됐거나 끝난 착수는 빼고, `[종료]`는 그 앞의 기록을 모두 끝낸다.
+
+    `ref`로 가리킨 착수는 정렬 위치와 상관없이 빠진다. `ref`가 있는 `[종료]`와 작성 시각이 같은 다른 착수는
+    앞뒤를 알 수 없으므로 남긴다. 다음 회차의 점유를 지우면 두 곳이 함께 착수할 수 있다.
+    """
+    finished = _cancelled(records) | {r.ref for r in records if r.kind == "종료" and r.ref}
     active: list[_Record] = []
     for record in records:
         if record.kind == "종료":
-            active.clear()
-        elif record.kind != "착수 취소" and record.comment_id not in cancelled:
+            active = [r for r in active if record.ref and r.kind == "착수" and r.at == record.at]
+        elif record.kind != "착수 취소" and record.comment_id not in finished:
             active.append(record)
     return active
 
@@ -113,6 +135,11 @@ def _post(t: WorkTracker, project_id: str, item_id: str, *lines: str) -> str:
     require_clean("\n".join(lines))
     body = "".join(f"<p>{html.escape(line, quote=False)}</p>" for line in lines)
     return str(t.create_comment(project_id, item_id, body)["id"])
+
+
+def short_host() -> str:
+    """이 컴퓨터의 짧은 이름. `.local` 같은 전체 이름은 내부 호스트 이름이라 기록에 남기지 않는다."""
+    return socket.gethostname().split(".")[0]
 
 
 def _line(name: str, value: Optional[str]) -> str:
@@ -256,25 +283,43 @@ def _is_verified(records: list[_Record], head: str) -> bool:
     return any(found is not None and found.group(1) == head[:7] for found in heads)
 
 
-def _recorded_end(records: list[_Record], me: str, host: str, detail: str) -> Optional[_Record]:
-    """내 마지막 착수 뒤에 이미 남은 내 `[종료]`. 없으면 `None`이고 종료를 계속한다.
+def _current_start(records: list[_Record], me: str, host: str) -> Optional[_Record]:
+    """이 컴퓨터(host와 사용자가 모두 같음)의 마지막 착수."""
+    return next((r for r in reversed(_starts(records)) if (r.host, r.actor) == (host, me)), None)
 
-    그 착수 뒤에 다른 컴퓨터(host나 사용자가 다름)의 취소되지 않은 착수가 있으면 `WorkError`다.
-    응답을 잃은 `end`를 다시 실행할 때 새 착수의 상태와 점유를 덮지 않기 위해서다.
+
+def _require_not_superseded(records: list[_Record], me: str, host: str, mine: Optional[_Record], detail: str) -> None:
+    """내 착수 뒤에 다른 컴퓨터의 착수가 있으면 `WorkError`다. 그 착수의 상태와 점유를 덮으면 안 된다.
+
     착수 없이 끝낸 항목은 같은 내용(`detail`)의 내 `[종료]`를 기준으로 삼는다.
     """
-    cancelled = _cancelled(records)
-    starts = [r for r in records if r.kind == "착수" and r.comment_id not in cancelled]
-    my_ends = [r for r in records if r.kind == "종료" and r.actor == me]
-    my_starts = [r for r in starts if (r.host, r.actor) == (host, me)]
-    anchors = my_starts or [r for r in my_ends if r.detail == detail]
-    if not anchors:
-        return None
-    since = anchors[-1].at
-    other = next((r for r in starts if r.at >= since and (r.host, r.actor) != (host, me)), None)
-    if other is not None:
-        raise WorkError(f"end 거부: 그 뒤에 {other.host}에서 착수함. 상태와 댓글을 바꾸지 않았습니다")
-    return next((r for r in reversed(my_ends) if r.at >= since), None)
+    anchor = mine
+    if anchor is None:
+        same_ends = (
+            r
+            for r in reversed(records)
+            if r.kind == "종료" and r.actor == me and detail in (r.detail, _REF_RE.sub("", r.detail))
+        )
+        anchor = next(same_ends, None)
+    if anchor is None:
+        return
+    for other in _starts(records):
+        if other.at >= anchor.at and (other.host, other.actor) != (host, me):
+            raise WorkError(f"end 거부: 그 뒤에 {other.host}에서 착수함. 상태와 댓글을 바꾸지 않았습니다")
+
+
+def _recorded_end(records: list[_Record], start_record: _Record, mode: str) -> Optional[_Record]:
+    """`start_record`를 이미 `mode`로 끝낸 `[종료]`. 아직 끝나지 않았으면 `None`이다.
+
+    다른 방식으로 끝났으면 `WorkError`다. `ref`로 짝을 찾으므로 작성 시각이 같은 이전 회차의 `[종료]`와 섞이지 않는다.
+    """
+    ends = [r for r in records if r.kind == "종료" and r.ref == start_record.comment_id]
+    same = next((r for r in ends if r.mode == mode), None)
+    if ends and same is None:
+        raise WorkError(
+            f"end 거부: 이 착수는 이미 {ends[-1].mode}(으)로 끝남. 다른 방식으로 끝내려면 start부터 다시 실행하세요"
+        )
+    return same
 
 
 def end(
@@ -289,20 +334,22 @@ def end(
     fix: Optional[str] = None,
     reason: Optional[str] = None,
     *,
-    host: str,
+    host: Optional[str] = None,
 ) -> str:
     """작업을 끝낸다. `done`은 현재 HEAD의 검증 기록이 없으면 `unverified`(사유)가 필요하다.
 
     `head`는 `done`에서만 쓴다. 상태·라벨을 먼저 바꾸고 `[종료]`를 나중에 남긴다. `[종료]`는 점유를 풀기 때문에
     상태를 바꾸지 못했으면 남기지 않는다.
 
-    다시 실행해도 안전하다. 내 `[종료]`가 이미 있으면 아무것도 바꾸지 않고, 없고 이미 목표 상태면 댓글만 쓴다.
-    그 사이에 다른 컴퓨터가 착수했으면 거부한다(`_recorded_end`).
+    `[종료]`는 끝내는 착수를 `ref=`로 가리킨다. 내 착수가 없으면 아직 끝나지 않은 마지막 착수이고, 그것도 없으면
+    붙이지 않는다. 내 착수를 같은 방식으로 이미 끝냈으면 아무것도 바꾸지 않고 성공하며, 방식이 다르면 거부한다.
+    그 밖에 이미 목표 상태면 댓글만 쓴다. 내 착수 뒤에 다른 컴퓨터가 착수했으면 거부한다.
+    `host`를 주지 않으면 이 컴퓨터의 짧은 이름이다.
     """
     if mode not in _END_MODES:
         raise WorkError(f"알 수 없는 종료 방식: {mode}")
     status, required = _END_MODES[mode]
-    host = _line("host", host)
+    host = _line("host", host if host is not None else short_host())
     given = {"result": result, "cause": cause, "fix": fix, "reason": reason}
     details = [f"{name}: {_line(name, given[name])}" for name in required]
     if mode == "done":
@@ -311,15 +358,21 @@ def end(
             details.append(f"unverified: {_line('unverified', unverified)}")
 
     detail = " ".join(part for part in (mode, " / ".join(details)) if part)
-    line = f"[종료] {detail}"
-    require_clean(line)  # 기록하지 못할 내용이면 상태도 바꾸지 않는다.
+    require_clean(f"[종료] {detail}")  # 기록하지 못할 내용이면 상태도 바꾸지 않는다.
 
     project_id, item = t.resolve_code(code)
     item_id = str(item["id"])
     records = _records(t, project_id, item_id)
-    recorded = _recorded_end(records, t.whoami_id(), host, detail)
-    if recorded is not None:
-        return f"종료 기록이 이미 있어 아무것도 바꾸지 않음: {code} ([종료] {recorded.detail})"
+    me = t.whoami_id()
+    mine = _current_start(records, me, host)
+    _require_not_superseded(records, me, host, mine, detail)
+    if mine is not None:
+        recorded = _recorded_end(records, mine, mode)
+        if recorded is not None:
+            return f"종료 기록이 이미 있어 아무것도 바꾸지 않음: {code} ([종료] {recorded.detail})"
+    target = mine or next((r for r in reversed(_active(records)) if r.kind == "착수"), None)
+    line = f"[종료] {detail}" if target is None else f"[종료] {detail} ref={target.comment_id}"
+    require_clean(line)
     if mode == "done" and not unverified and not _is_verified(records, head):
         raise WorkError(
             f"현재 HEAD({head[:7]})의 검증 기록이 없음. work verify를 실행하거나 unverified 사유를 적으세요"
