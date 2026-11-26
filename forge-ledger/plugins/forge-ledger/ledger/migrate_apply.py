@@ -38,7 +38,7 @@ from ledger.migrate import (
 from ledger.plane import PlaneLike, match_external
 from ledger.secrets import find_secrets
 from ledger.sections import split_html_headings, split_html_sections
-from ledger.statusmap import STATUS_MAP, pick_state
+from ledger.statusmap import LABEL_COLOR, STATUS_MAP, pick_state
 
 _PROJECT_FILE = ".ledger/project.md"
 _FACTS_FILE = ".ledger/facts.md"
@@ -52,7 +52,6 @@ _TAG_RE = re.compile(r"<[^>]+>")
 _PLANE_REF_PATTERN = r" · plane:[^\s·]+@[^\s·]+"  # `plane_ref`가 만드는 모양 하나만
 _SOURCE = "forge-ledger-pmt"  # Plane 원천 표식의 `external_source`. `external_id`는 원천 키다.
 _BLOCKED_LABEL = "blocked"
-_LABEL_COLOR = "#6b7280"
 _NEW_ID = "new:"  # 미리 보기에서 아직 없는 항목의 자리 id
 _MARKER_ATTRIBUTE_RE = re.compile(r"""data-fl-key\s*=\s*(?:"([^"]*)"|'([^']*)')""")
 _VISIBLE_MARKER = "fl:"
@@ -704,7 +703,7 @@ class _PlaneRun:
         """없는 라벨은 만든다."""
         for name in names:
             if name not in self._label_ids:
-                label = self._tracker.create_label(self._project_id, name, _LABEL_COLOR)
+                label = self._tracker.create_label(self._project_id, name, LABEL_COLOR)
                 self._label_ids[name] = str(label["id"])
         return [self._label_ids[name] for name in names]
 

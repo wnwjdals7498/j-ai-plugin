@@ -1,0 +1,17 @@
+---
+description: 작업 항목의 착수·인계·검증·종료를 Plane에 기록한다
+argument-hint: "start|note|verify|end <코드> [옵션]"
+---
+
+아래 명령을 실행하고 결과를 간결히 보고한다.
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/ledger.py" work $ARGUMENTS
+```
+
+- `start <코드> [--take]`: 착수. `--take`는 30분 넘게 기록이 없는 다른 사람의 점유를 넘겨받는다.
+- `note <코드> --did "<한 일>" --next "<다음 할 일>"`: 인계 메모. 각 400자 이하.
+- `verify <코드> --cmd "<명령>" (--exit N | --run) [--limits "<확인하지 못한 범위>"]`: 검증 기록. `--run`은 명령을 실행하고, 명령이 실패하면 기록한 뒤 종료 코드 1로 끝난다.
+- `end <코드> --done --result "…" [--unverified "…"]` · `--pause` · `--fail --cause "…" --fix "…"` · `--skip --reason "…"`: 종료. `--done`은 현재 HEAD의 검증 기록이 없으면 `--unverified`가 필요하다.
+
+점유 거부나 착수 취소가 나오면 우회하지 말고 사용자에게 그대로 알린다. 기록에는 IP, 접속 주소, 토큰, 계정, 홈 경로를 넣지 않는다.

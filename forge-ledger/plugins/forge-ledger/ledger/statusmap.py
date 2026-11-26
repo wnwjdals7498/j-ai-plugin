@@ -17,6 +17,9 @@ STATUS_MAP: dict[str, tuple[str, Optional[str]]] = {
     "폐기": ("cancelled", None),
 }
 
+# 없는 라벨을 만들 때 쓰는 색
+LABEL_COLOR = "#6b7280"
+
 
 def pick_state(states: Sequence[Mapping[str, Any]], group: str) -> str:
     """`group`에 속한 첫 상태의 id. 그 그룹의 상태가 없으면 `ValueError`다."""

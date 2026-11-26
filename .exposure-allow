@@ -44,6 +44,9 @@ forge-ledger/tests/test_migrate.py	internal_host	매니페스트 노출 검사 �
 forge-ledger/tests/test_migrate.py	secret_assignment	매니페스트 노출 검사 시험용 가짜 값
 forge-ledger/tests/test_plane.py	secret_assignment	시험용 가짜 값
 forge-ledger/tests/test_ratelimit.py	secret_assignment	시험용 가짜 값
+forge-ledger/tests/test_work.py	home_path	작업 댓글 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_work.py	internal_host	호스트 이름 줄이기 시험용 가짜 값
+forge-ledger/tests/test_work.py	secret_assignment	시험용 가짜 값
 
 # 설명 문서
 model-handoff/skills/handoff/references/pi-headless.md	secret_assignment	설정 예시의 환경 변수 참조
