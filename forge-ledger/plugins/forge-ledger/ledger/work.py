@@ -284,8 +284,22 @@ def _is_verified(records: list[_Record], head: str) -> bool:
 
 
 def _current_start(records: list[_Record], me: str, host: str) -> Optional[_Record]:
-    """이 컴퓨터(host와 사용자가 모두 같음)의 마지막 착수."""
-    return next((r for r in reversed(_starts(records)) if (r.host, r.actor) == (host, me)), None)
+    """유효한 내 착수를 우선 찾고, 없으면 종료 재실행 판정에 쓸 착수를 찾는다."""
+    mine = [r for r in _starts(records) if (r.host, r.actor) == (host, me)]
+    ended = {r.ref for r in records if r.kind == "종료" and r.ref}
+    live = [r for r in mine if r.comment_id not in ended]
+    return _latest_start(live if live else mine)
+
+
+def _latest_start(starts: list[_Record]) -> Optional[_Record]:
+    """최신 착수가 같은 시각에 여럿이면 댓글 id로 순서를 추측하지 않는다."""
+    if not starts:
+        return None
+    latest = max(r.at for r in starts)
+    candidates = [r for r in starts if r.at == latest]
+    if len(candidates) != 1:
+        raise WorkError("같은 시각의 착수를 구분할 수 없습니다. 작업 댓글을 확인하세요")
+    return candidates[0]
 
 
 def _require_not_superseded(records: list[_Record], me: str, host: str, mine: Optional[_Record], detail: str) -> None:
@@ -370,7 +384,7 @@ def end(
         recorded = _recorded_end(records, mine, mode)
         if recorded is not None:
             return f"종료 기록이 이미 있어 아무것도 바꾸지 않음: {code} ([종료] {recorded.detail})"
-    target = mine or next((r for r in reversed(_active(records)) if r.kind == "착수"), None)
+    target = mine or _latest_start([r for r in _active(records) if r.kind == "착수"])
     line = f"[종료] {detail}" if target is None else f"[종료] {detail} ref={target.comment_id}"
     require_clean(line)
     if mode == "done" and not unverified and not _is_verified(records, head):

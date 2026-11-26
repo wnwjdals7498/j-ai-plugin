@@ -485,6 +485,26 @@ class WorkTest(unittest.TestCase):
         self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={comments[2]['id']}")
         self.assertEqual(len(comments), 4)
 
+    def test_same_timestamp_previous_start_end_and_new_start_selects_live_start(self) -> None:
+        self.t.same_time = True
+        self.t.next_ids = ["z-old", "m-end", "a-new", "n-end"]
+        work.start(self.t, "FL-1", "alpha", NOW)
+        work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
+        work.start(self.t, "FL-1", "alpha", NOW)
+        work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
+        comments = self.t._project_by_id(self.t.project_id).comments[self.t.item_id]
+        self.assertEqual(len({c["created_at"] for c in comments}), 1)
+        self.assertEqual(self.t.group(), "unstarted")
+        self.assertEqual(self.t.lines()[-1], "[종료] pause ref=a-new")
+
+    def test_simultaneous_live_starts_on_same_host_are_ambiguous(self) -> None:
+        self.t.add("[착수] alpha 2026-11-26T12:00:00+00:00", NOW, ME, "z-start")
+        self.t.add("[착수] alpha 2026-11-26T12:00:00+00:00", NOW, ME, "a-start")
+        self.t.calls.clear()
+        with self.assertRaisesRegex(work.WorkError, "착수.*구분"):
+            work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
+        self.assertEqual(self.t.writes(), [])
+
     def test_previous_cycle_end_at_the_same_time_keeps_the_new_claim_whatever_the_ids(self) -> None:
         work.start(self.t, "FL-1", "alpha", NOW)
         work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
