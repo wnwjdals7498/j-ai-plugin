@@ -44,15 +44,20 @@ class UsageError(Exception):
 
 
 def load_allow(path: Path) -> list[AllowRule]:
-    """Read `<path glob>TAB<pattern name>TAB<reason>` lines; a missing file means no rules."""
+    """Read the allow file at path; a missing file means no rules."""
     if not path.is_file():
         return []
+    return _parse_allow(path.read_text(encoding="utf-8"))
+
+
+def _parse_allow(text: str) -> list[AllowRule]:
+    """Parse `<path glob>TAB<pattern name>TAB<reason>` lines."""
     rules: list[AllowRule] = []
-    for lineno, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
+    for lineno, line in enumerate(text.split("\n"), start=1):
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         fields = [field.strip() for field in line.split("\t")]
-        where = f"{path.name}:{lineno}"
+        where = f"{ALLOW_FILE}:{lineno}"
         if len(fields) != 3 or not all(fields):
             raise UsageError(f"{where}: '<경로 glob>\\t<패턴 이름>\\t<사유>' 형식이 아니거나 빈 칸이 있음")
         rule = AllowRule(*fields)
@@ -130,15 +135,29 @@ def _resolve_commit(top: Path, revision: str) -> str:
     return _run_git(top, "rev-parse", "--verify", f"{revision}^{{commit}}").decode("ascii").strip()
 
 
-def _range_files(top: Path, spec: str) -> Iterator[tuple[str, bytes]]:
+def _resolve_range(top: Path, spec: str) -> tuple[str, str]:
     base, separator, head = spec.partition("..")
     if not separator or not base or not head or base.startswith("-") or head.startswith(("-", ".")):
         raise UsageError("--range 값은 BASE..HEAD 형식이어야 함")
-    base_sha = _resolve_commit(top, base)
-    head_sha = _resolve_commit(top, head)
+    return _resolve_commit(top, base), _resolve_commit(top, head)
+
+
+def _range_files(top: Path, base_sha: str, head_sha: str) -> Iterator[tuple[str, bytes]]:
     # 세 점 비교: 갈라진 뒤 base 쪽에서만 바뀐 파일은 빼고, 내용은 head의 것을 읽는다.
     for rel in _changed_paths(top, f"{base_sha}...{head_sha}"):
         yield rel, _run_git(top, "cat-file", "blob", f"{head_sha}:{rel}")
+
+
+def _staged_allow(top: Path) -> list[AllowRule]:
+    if not _run_git(top, "ls-files", "-z", "--", ALLOW_FILE):
+        return []
+    return _parse_allow(_run_git(top, "cat-file", "blob", f":0:{ALLOW_FILE}").decode("utf-8"))
+
+
+def _commit_allow(top: Path, commit: str) -> list[AllowRule]:
+    if not _run_git(top, "ls-tree", "-z", commit, "--", ALLOW_FILE):
+        return []
+    return _parse_allow(_run_git(top, "cat-file", "blob", f"{commit}:{ALLOW_FILE}").decode("utf-8"))
 
 
 def _decode(data: bytes) -> Optional[str]:
@@ -183,13 +202,17 @@ def _scan_history(top: Path, rules: Sequence[AllowRule]) -> list[str]:
         "--no-ext-diff",
         "--no-textconv",
         "--no-show-signature",
+        "--full-index",
+        "--ignore-submodules=all",
         "--src-prefix=a/",
         "--dst-prefix=b/",
     )
     report: dict[str, None] = {}
-    commit = path = ""
+    is_text: dict[str, bool] = {}
+    commit = path = blob = ""
     in_hunk = False
     for raw in output.split(b"\n"):
+        # 패치에는 여러 파일의 바이트가 섞여 있다. 파일의 인코딩은 아래에서 blob 전체로 판정한다.
         line = raw.decode("utf-8", errors="replace")
         if line.startswith("commit:"):
             commit, in_hunk = line[len("commit:") :], False
@@ -198,9 +221,18 @@ def _scan_history(top: Path, rules: Sequence[AllowRule]) -> list[str]:
         elif line.startswith("@@"):
             in_hunk = True
         elif in_hunk:
-            if line.startswith("+"):
-                for finding in scan_text(path, line[1:], rules):
+            if not line.startswith("+"):
+                continue
+            findings = scan_text(path, line[1:], rules)
+            if not findings:
+                continue
+            if blob not in is_text:
+                is_text[blob] = _decode(_run_git(top, "cat-file", "blob", blob)) is not None
+            if is_text[blob]:
+                for finding in findings:
                     report[f"{commit}:{path}:{finding.pattern}"] = None
+        elif line.startswith("index "):
+            blob = line.split()[1].partition("..")[2]  # `index <이전>..<이후> [mode]`
         elif line.startswith("+++ "):
             path = _diff_path(line[len("+++ ") :])
     return list(report)
@@ -249,13 +281,15 @@ def _report(args: argparse.Namespace) -> list[str]:
     if args.stdin:
         return _scan_stdin(args.label or "stdin")
     top = _toplevel()
+    # --staged·--range는 작업 폴더가 아니라 검사 대상과 같은 상태의 허용 파일을 쓴다.
+    if args.staged:
+        return _scan_files(_staged_files(top), _staged_allow(top))
+    if args.range is not None:
+        base_sha, head_sha = _resolve_range(top, args.range)
+        return _scan_files(_range_files(top, base_sha, head_sha), _commit_allow(top, head_sha))
     rules = load_allow(top / ALLOW_FILE)
     if args.history:
         return _scan_history(top, rules)
-    if args.staged:
-        return _scan_files(_staged_files(top), rules)
-    if args.range is not None:
-        return _scan_files(_range_files(top, args.range), rules)
     return _scan_files(_tracked_files(top), rules)
 
 

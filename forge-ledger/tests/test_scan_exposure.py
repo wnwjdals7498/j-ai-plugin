@@ -242,6 +242,69 @@ class TestRangeMode(_RepoCase):
                 self.assertTrue(err)
 
 
+class TestAllowFileSource(_RepoCase):
+    """--staged·--range는 검사 대상과 같은 상태의 .exposure-allow를 쓴다."""
+
+    _RULE = "a.md\tipv4\t가짜 값\n"
+
+    def test_staged_ignores_allow_file_only_in_worktree(self) -> None:
+        _write(self.repo / "a.md", "10.1.2.3\n")
+        _git(self.repo, "add", "a.md")
+        _write(self.repo / ".exposure-allow", self._RULE)
+        rc, out, _ = self.run_main("--staged")
+        self.assertEqual((rc, out.splitlines()), (1, ["a.md:1:ipv4"]))
+
+    def test_staged_ignores_unstaged_edit_of_allow_file(self) -> None:
+        _write(self.repo / ".exposure-allow", "# 규칙 없음\n")
+        _commit(self.repo, "base")
+        _write(self.repo / "a.md", "10.1.2.3\n")
+        _git(self.repo, "add", "a.md")
+        _write(self.repo / ".exposure-allow", self._RULE)
+        rc, out, _ = self.run_main("--staged")
+        self.assertEqual((rc, out.splitlines()), (1, ["a.md:1:ipv4"]))
+
+    def test_staged_uses_allow_file_from_index(self) -> None:
+        _write(self.repo / "a.md", "10.1.2.3\n")
+        _write(self.repo / ".exposure-allow", self._RULE)
+        _git(self.repo, "add", "-A")
+        (self.repo / ".exposure-allow").unlink()
+        rc, out, _ = self.run_main("--staged")
+        self.assertEqual(rc, 0, out)
+
+    def test_range_ignores_allow_file_not_in_target_commit(self) -> None:
+        base = _commit(self.repo, "base")
+        _write(self.repo / "a.md", "10.1.2.3\n")
+        head = _commit(self.repo, "head")
+        _write(self.repo / ".exposure-allow", self._RULE)
+        _git(self.repo, "add", ".exposure-allow")
+        rc, out, _ = self.run_main("--range", f"{base}..{head}")
+        self.assertEqual((rc, out.splitlines()), (1, ["a.md:1:ipv4"]))
+
+    def test_range_uses_allow_file_from_target_commit(self) -> None:
+        base = _commit(self.repo, "base")
+        _write(self.repo / "a.md", "10.1.2.3\n")
+        _write(self.repo / ".exposure-allow", self._RULE)
+        head = _commit(self.repo, "head")
+        _write(self.repo / ".exposure-allow", "a.md\tipv4\t\n")
+        _commit(self.repo, "later commit breaks the allow file")
+        (self.repo / ".exposure-allow").unlink()
+        rc, out, err = self.run_main("--range", f"{base}..{head}", cwd=self.repo)
+        self.assertEqual(rc, 0, out + err)
+
+    def test_bad_allow_file_in_checked_state_returns_2(self) -> None:
+        base = _commit(self.repo, "base")
+        _write(self.repo / ".exposure-allow", "a.md\tipv4\t\n")
+        _git(self.repo, "add", ".exposure-allow")
+        rc, _, err = self.run_main("--staged")
+        self.assertEqual(rc, 2)
+        self.assertIn(".exposure-allow:1", err)
+        head = _commit(self.repo, "head")
+        (self.repo / ".exposure-allow").unlink()
+        rc, _, err = self.run_main("--range", f"{base}..{head}")
+        self.assertEqual(rc, 2)
+        self.assertIn(".exposure-allow:1", err)
+
+
 class TestHistoryMode(_RepoCase):
     def test_reports_added_lines_of_all_commits_without_values(self) -> None:
         _write(self.repo / "a.md", f"keep\nkey {_TOKEN}\n")
@@ -280,6 +343,30 @@ class TestHistoryMode(_RepoCase):
         _commit(self.repo, "first")
         rc, out, err = self.run_main("--history")
         self.assertEqual((rc, err), (0, ""), out)
+
+    def test_skips_whole_non_utf8_file_even_on_valid_lines(self) -> None:
+        # 잘못된 바이트와 패턴이 같은 파일에 있으면 그 파일 전체를 건너뛴다.
+        (self.repo / "mixed.txt").write_bytes(b"10.1.2.3\n\xff\xfe\n")
+        (self.repo / "same-line.txt").write_bytes(b"\xff 10.1.2.3\n")
+        _write(self.repo / "ok.md", "a.b@corp.co.kr\n")
+        head = _commit(self.repo, "first")
+        rc, out, _ = self.run_main("--history")
+        self.assertEqual((rc, out.splitlines()), (1, [f"{head}:ok.md:email"]))
+
+    def test_judges_encoding_per_file_version(self) -> None:
+        (self.repo / "a.txt").write_bytes(b"10.1.2.3\n")
+        first = _commit(self.repo, "valid")
+        (self.repo / "a.txt").write_bytes(b"10.1.2.3\n\xff\na.b@corp.co.kr\n")
+        _commit(self.repo, "becomes invalid")
+        rc, out, _ = self.run_main("--history")
+        self.assertEqual((rc, out.splitlines()), (1, [f"{first}:a.txt:ipv4"]))
+
+    def test_skips_file_with_late_nul_byte(self) -> None:
+        # git은 앞부분에 널 바이트가 없으면 글자 파일로 보여 준다.
+        (self.repo / "late.dat").write_bytes(b"10.1.2.3\n" + b"x" * 9000 + b"\x00\n")
+        _commit(self.repo, "first")
+        rc, out, _ = self.run_main("--history")
+        self.assertEqual(rc, 0, out)
 
     def test_allow_rule_applies(self) -> None:
         _write(self.repo / "a.md", "10.1.2.3\n")
