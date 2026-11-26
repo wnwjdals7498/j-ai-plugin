@@ -185,6 +185,38 @@ class LogCliTest(unittest.TestCase):
         self.assertIn("전송 실패: 설정 오류", self.err.getvalue())
         self.assertEqual(len(LocalLog(Path(self.tmp.name)).pending("forge")), 1)
 
+    def test_add_shows_new_entry_sent_when_old_entry_fails(self):
+        self.assertEqual(self.run_cmd("add", "이전 기록", store=False), 0)
+        original = self.store.post_entry
+
+        def post(entry):
+            if entry.text == "이전 기록":
+                raise PlaneError("Plane 요청 오류: HTTP 400")
+            return original(entry)
+
+        with patch.object(self.store, "post_entry", side_effect=post):
+            self.assertEqual(self.run_cmd("add", "새 기록"), 0)
+        self.assertIn("(전송)", self.out.getvalue())
+        self.assertEqual(self.err.getvalue(), "전송 실패: Plane 요청 오류: HTTP 400\n")
+        pending = LocalLog(Path(self.tmp.name)).pending("forge")
+        self.assertEqual([entry.text for entry in pending], ["이전 기록"])
+        self.assertEqual([entry.text for entry in self.store.comments.values()], ["새 기록"])
+
+    def test_add_shows_sent_when_later_entry_has_auth_failure(self):
+        self.assertEqual(self.run_cmd("add", "이전 기록", "--at", "2026-11-27T10:00:00+00:00", store=False), 0)
+        original = self.store.post_entry
+
+        def post(entry):
+            if entry.text == "이전 기록":
+                raise PlaneAuthError("인증 실패")
+            return original(entry)
+
+        with patch.object(self.store, "post_entry", side_effect=post):
+            self.assertEqual(self.run_cmd("add", "새 기록"), 0)
+        self.assertIn("(전송)", self.out.getvalue())
+        self.assertEqual(self.err.getvalue(), "전송 실패: 인증 실패\n")
+        self.assertEqual([entry.text for entry in LocalLog(Path(self.tmp.name)).pending("forge")], ["이전 기록"])
+
     def test_sync_continues_after_generic_failure(self):
         self.run_cmd("add", "첫째", store=False)
         self.run_cmd("add", "둘째", store=False)

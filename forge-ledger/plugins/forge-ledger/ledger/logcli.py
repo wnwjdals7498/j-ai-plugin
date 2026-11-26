@@ -197,8 +197,11 @@ def run_log(
             try:
                 store = make_store(env)
                 if store is not None:
-                    sync_pending(local, store, workspace, on_error=errors.append)
-                sent = not errors and entry.id not in {pending.id for pending in local.pending(workspace)}
+                    try:
+                        sync_pending(local, store, workspace, on_error=errors.append)
+                    except Exception as exc:
+                        errors.append(exc)
+                sent = entry.id not in {pending.id for pending in local.pending(workspace)}
             except Exception as exc:
                 errors.append(exc)
             if errors:
