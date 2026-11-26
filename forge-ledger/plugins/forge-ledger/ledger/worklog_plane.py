@@ -7,7 +7,7 @@ import re
 from datetime import date, datetime
 from typing import Any, Optional
 
-from ledger.plane import PlaneDuplicate, PlaneLike
+from ledger.plane import PlaneDuplicate, PlaneError, PlaneLike
 from ledger.worklog import Entry, RemoteEntry
 
 PROJECT_NAME = "작업 일지"
@@ -66,10 +66,16 @@ class PlaneWorklog:
     def current_user(self) -> str:
         return self.client.whoami_profile()["display_name"]
 
-    def ensure_project(self) -> str:
+    def _find_project(self) -> Optional[str]:
         for project in self.client.list_projects():
             if project.get("identifier") == self.project_key:
                 return str(project["id"])
+        return None
+
+    def ensure_project(self) -> str:
+        project = self._find_project()
+        if project is not None:
+            return project
         return str(self.client.create_project(PROJECT_NAME, self.project_key)["id"])
 
     def ensure_month_item(self, month: str) -> str:
@@ -104,7 +110,9 @@ class PlaneWorklog:
             return exc.existing_id
 
     def list_entries(self, from_: date, to: date, user: Optional[str] = None) -> list[RemoteEntry]:
-        project = self.ensure_project()
+        project = self._find_project()
+        if project is None:
+            raise PlaneError(f"작업 일지 프로젝트 없음: {self.project_key}")
         entries: list[RemoteEntry] = []
         for item in self.client.list_items(project):
             external_id = item.get("external_id")

@@ -27,6 +27,29 @@ class WorklogPlaneTest(unittest.TestCase):
         }
         self.assertEqual(parse_comment(comment, "workspace"), self.entry)
 
+    def test_parse_sanitized_comment(self) -> None:
+        from ledger.worklog_plane import EXTERNAL_SOURCE, parse_comment
+
+        comment = {
+            "external_source": EXTERNAL_SOURCE,
+            "external_id": self.entry.id,
+            "comment_html": (
+                "<p>[일지] 2026-11-26T11:25:00+09:00 pc-1 manual repo=r item=FL-1</p>"
+                "<p>a 'q' \"d\" &lt;x&gt; &amp; y</p><p>둘째 줄</p>"
+            ),
+        }
+        entry = parse_comment(comment, "workspace")
+        self.assertIsNotNone(entry)
+        assert entry is not None
+        self.assertEqual((entry.text, entry.repo, entry.item), ("a 'q' \"d\" <x> & y\n둘째 줄", "r", "FL-1"))
+
+    def test_list_missing_project_does_not_create(self) -> None:
+        from ledger.plane import PlaneError
+
+        with self.assertRaisesRegex(PlaneError, "작업 일지 프로젝트 없음: WLOG"):
+            self.store.list_entries(date(2026, 11, 1), date(2026, 11, 30))
+        self.assertEqual(self.fake.calls, [("list_projects",)])
+
     def test_post_entry_idempotent(self) -> None:
         first = self.store.post_entry(self.entry)
         self.assertEqual(self.store.post_entry(self.entry), first)
