@@ -168,6 +168,9 @@ def _run_work(args: argparse.Namespace, client: PlaneClient) -> int:
         if args.run:
             work.require_clean(args.cmd, args.limits or "")  # 기록하지 못할 명령은 실행하지도 않는다.
             exit_code = _run_shell(args.cmd, here)
+            after = _git_head(here)
+            if after != head:
+                raise work.WorkError(f"검증 중 HEAD 변경: {head[:7]} → {after[:7]}. 기록하지 않았습니다")
         print(work.verify(client, args.code, args.cmd, exit_code, head, now, limits=args.limits))
         return 1 if args.run and exit_code != 0 else 0
     else:

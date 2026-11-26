@@ -15,6 +15,7 @@ from typing import Any, Optional
 from ledger.adapters import WorkTracker
 from ledger.flows import SecretFound
 from ledger.migrate import parse_comment_time
+from ledger.plane import PlaneError
 from ledger.secrets import find_exposures
 from ledger.statusmap import LABEL_COLOR, STATUS_MAP, pick_state
 
@@ -133,7 +134,7 @@ def _status_fields(
 ) -> dict[str, Any]:
     """상태와 상태 라벨을 `status`에 맞추는 수정 내용. 상태 라벨이 아닌 라벨은 그대로 둔다.
 
-    없는 라벨은 만들므로 댓글을 남긴 뒤에 부른다.
+    없는 라벨은 만들므로 거부될 수 있는 확인을 모두 마친 뒤에 부른다.
     """
     wanted = STATUS_MAP[status][1]
     fields: dict[str, Any] = {"state": state_id}
@@ -177,13 +178,16 @@ def _require_free(item: Mapping[str, Any], records: list[_Record], me: str, now:
 
 
 def _earlier_start(records: list[_Record], mine_id: str, host: str) -> Optional[_Record]:
-    """내 착수보다 30분 안에 먼저 남은, 아직 유효한 다른 host의 착수."""
+    """내 착수와 같거나 이른 시각이고 30분 안인, 아직 유효한 다른 host의 착수.
+
+    같은 시각이면 어느 쪽이 먼저인지 알 수 없다(댓글 id 순서는 작성 순서가 아니다). 그때는 내가 진다.
+    상대의 댓글이 없을 때 확인을 마친 쪽만 이기고, 둘 다 서로를 보면 둘 다 진다.
+    """
     mine = next((record for record in records if record.comment_id == mine_id), None)
     if mine is None:
         raise WorkError("방금 남긴 착수 댓글을 다시 읽지 못함. 댓글을 확인한 뒤 다시 실행하세요")
     for record in _active([r for r in records if r is not mine]):
-        is_earlier = (record.at, record.comment_id) < (mine.at, mine.comment_id)
-        if record.kind == "착수" and record.host != host and is_earlier and mine.at - record.at <= _STALE_AFTER:
+        if record.kind == "착수" and record.host != host and timedelta(0) <= mine.at - record.at <= _STALE_AFTER:
             return record
     return None
 
@@ -206,7 +210,7 @@ def start(t: WorkTracker, code: str, host: str, now: datetime, take: bool = Fals
     rival = _earlier_start(_records(t, project_id, item_id), mine_id, host)
     if rival is not None:
         _post(t, project_id, item_id, f"[착수 취소] {host} {stamp}")
-        raise WorkError(f"착수 취소: {rival.host}에서 {_minutes(rival.at, now)}분 전에 먼저 착수함")
+        raise WorkError(f"착수 취소: {rival.host}의 착수({_minutes(rival.at, now)}분 전)가 먼저이거나 같은 시각임")
     fields = _status_fields(t, project_id, item, "In Progress", state_id)
     t.update_item(project_id, item_id, {**fields, "assignees": [me]})
     return f"착수: {code} ({host})"
@@ -264,7 +268,8 @@ def end(
 ) -> str:
     """작업을 끝낸다. `done`은 현재 HEAD의 검증 기록이 없으면 `unverified`(사유)가 필요하다.
 
-    `head`는 `done`에서만 쓴다.
+    `head`는 `done`에서만 쓴다. 상태·라벨을 먼저 바꾸고 `[종료]`를 나중에 남긴다. `[종료]`는 점유를 풀기 때문에
+    상태를 바꾸지 못했으면 남기지 않는다. 다시 실행하면 이미 목표 상태인 항목에는 댓글만 쓴다.
     """
     if mode not in _END_MODES:
         raise WorkError(f"알 수 없는 종료 방식: {mode}")
@@ -282,8 +287,13 @@ def end(
         raise WorkError(
             f"현재 HEAD({head[:7]})의 검증 기록이 없음. work verify를 실행하거나 unverified 사유를 적으세요"
         )
-    state_id = _state_id(t, project_id, status)
-    # 기록을 먼저 남긴다. 댓글이 실패하면 라벨과 상태도 바꾸지 않는다.
-    _post(t, project_id, item_id, " ".join(part for part in ("[종료]", mode, " / ".join(details)) if part))
-    t.update_item(project_id, item_id, _status_fields(t, project_id, item, status, state_id))
+    line = " ".join(part for part in ("[종료]", mode, " / ".join(details)) if part)
+    require_clean(line)  # 기록하지 못할 내용이면 상태도 바꾸지 않는다.
+    fields = _status_fields(t, project_id, item, status, _state_id(t, project_id, status))
+    if "labels" in fields or str(item.get("state")) != fields["state"]:
+        t.update_item(project_id, item_id, fields)
+    try:
+        _post(t, project_id, item_id, line)
+    except PlaneError as exc:
+        raise WorkError(f"상태는 바꿨지만 [종료] 댓글을 남기지 못함. end를 다시 실행하세요: {exc}") from exc
     return f"종료: {code} ({mode})"

@@ -231,6 +231,18 @@ class WorkTest(unittest.TestCase):
             work.start(self.t, "FL-1", "alpha", NOW)
         self.assertEqual(self.t.item()["assignees"], [OTHER])
 
+    def test_same_timestamp_race_with_reversed_ids_makes_the_later_starter_lose(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        comments = self.t._project_by_id(self.t.project_id).comments[self.t.item_id]
+        comments[0]["id"] = "z-first"  # 먼저 쓴 댓글의 id가 뒤에 정렬된다
+        self.t._written = 0  # 다음 댓글도 같은 작성 시각을 받는다
+        with self.assertRaisesRegex(work.WorkError, "alpha"):
+            work.start(self.t, "FL-1", "beta", NOW)
+
+        self.assertEqual(comments[0]["created_at"], comments[1]["created_at"])
+        self.assertLess(comments[1]["id"], comments[0]["id"])
+        self.assertEqual(comments[-1]["comment_html"], "<p>[착수 취소] beta 2026-11-26T12:00:00+00:00</p>")
+
     def test_race_winner_ignores_later_start(self) -> None:
         self.t.after_create = [("[착수] beta 2026-11-26T12:00:01+00:00", NOW + timedelta(seconds=1), OTHER)]
         work.start(self.t, "FL-1", "alpha", NOW)
@@ -333,18 +345,38 @@ class WorkTest(unittest.TestCase):
                 work.end(self.t, "FL-1", mode, NOW, HEAD, **fields)  # type: ignore[arg-type]
         self.assertEqual(self.t.writes(), [])
 
-    # 댓글 쓰기 실패
+    # 쓰기 실패
 
-    def test_comment_failure_surfaces_and_changes_nothing(self) -> None:
+    def test_end_state_update_failure_leaves_no_end_comment_and_rerun_works(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        self.t.fail_on["update_item"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
+        with self.assertRaises(PlaneUnavailable):
+            work.end(self.t, "FL-1", "pause", self._later(1), HEAD)
+        self.assertEqual([line.split()[0] for line in self.t.lines()], ["[착수]"])
+        self.assertEqual(self.t.group(), "started")
+
+        del self.t.fail_on["update_item"]
+        work.end(self.t, "FL-1", "pause", self._later(2), HEAD)
+        self.assertEqual((self.t.group(), self.t.label_names()), ("unstarted", ["paused"]))
+        self.assertEqual(self.t.lines()[1:], ["[종료] pause"])
+
+    def test_end_comment_failure_asks_for_rerun_which_writes_only_the_comment(self) -> None:
         self.t.fail_on["create_comment"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
-        for call in (
-            lambda: work.start(self.t, "FL-1", "alpha", NOW),
-            lambda: work.end(self.t, "FL-1", "pause", NOW, HEAD),
-        ):
-            self.t.calls.clear()
-            with self.assertRaises(PlaneUnavailable):
-                call()
-            self.assertEqual(self.t.writes(), ["create_comment"])  # 한 번만 시도한다
+        with self.assertRaisesRegex(work.WorkError, "end를 다시 실행.*HTTP 500"):
+            work.end(self.t, "FL-1", "pause", NOW, HEAD)
+        self.assertEqual(self.t.writes(), ["create_label", "update_item", "create_comment"])  # 댓글은 한 번만 시도
+
+        del self.t.fail_on["create_comment"]
+        self.t.calls.clear()
+        work.end(self.t, "FL-1", "pause", self._later(1), HEAD)
+        self.assertEqual(self.t.writes(), ["create_comment"])
+        self.assertEqual(self.t.lines(), ["[종료] pause"])
+
+    def test_start_comment_failure_surfaces_and_changes_nothing(self) -> None:
+        self.t.fail_on["create_comment"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
+        with self.assertRaises(PlaneUnavailable):
+            work.start(self.t, "FL-1", "alpha", NOW)
+        self.assertEqual(self.t.writes(), ["create_comment"])  # 한 번만 시도한다
 
 
 class WorkCliTest(unittest.TestCase):
@@ -415,6 +447,15 @@ class WorkCliTest(unittest.TestCase):
             [f"<p>[검증] head={self.head[:7]} exit=3 cmd=true &amp;&amp; exit 3</p><p>한계: 일부</p>"],
         )
         self.assertEqual(self._run("verify", "FL-1", "--cmd", "test -d .git", "--run")[0], 0)
+
+    def test_verify_run_refuses_to_record_when_head_changes(self) -> None:
+        identity = "-c user.name=tester -c user.email=tester@example.com"
+        command = f"git {identity} commit --quiet --allow-empty -m next"
+        code, out, err = self._run("verify", "FL-1", "--cmd", command, "--run")
+        self.assertNotEqual(self._git("rev-parse", "HEAD"), self.head)
+        self.assertEqual(code, 1, out)
+        self.assertIn("검증 중 HEAD 변경", err)
+        self.assertEqual(self._comments(), [])
 
     def test_verify_run_checks_exposure_before_running(self) -> None:
         marker = self.repo / "ran"
