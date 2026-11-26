@@ -188,8 +188,12 @@ def main() -> int:
                     extra = render_next(
                         client, default_project_id(repo, client), repo, now, limit=max(0, 1498 - len(text or ""))
                     )
+                    if not extra:
+                        extra = "ledger next: 공간 부족으로 생략"
                 except Exception:
                     extra = "경고: Plane 작업 요약을 가져오지 못했습니다"
+                # 기존 요약이 지나치게 길어도 추가 안내는 온전한 한 줄로 남긴다.
+                text = (text or "")[: max(0, 1498 - len(extra))]
                 text = "\n".join(part for part in (text, extra) if part)
             if text:
                 print(text[:1499])

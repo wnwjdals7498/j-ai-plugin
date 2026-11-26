@@ -439,13 +439,15 @@ def render_next(t: WorkTracker, project_id: str, repo: Repo, now: datetime, *, l
     history = repo.root / ".ledger" / "history.md"
     if history.is_file():
         decisions = [e for e in parse_history(history.read_text(encoding="utf-8")) if e.kind == "decision"]
-        sections[2] = [f"- {e.ref_id} {e.title}" for e in sorted(decisions, key=lambda e: e.date, reverse=True)[:3]]
+        sections[2] = [
+            f"- {e.ref_id} {e.title}" for e in sorted(reversed(decisions), key=lambda e: e.date, reverse=True)[:3]
+        ]
     facts_path = repo.root / ".ledger" / "facts.md"
     if facts_path.is_file():
         facts = parse_facts(facts_path.read_text(encoding="utf-8"))
         sections[3] = [
             f"- {f.fact_id} {' '.join(f.text.splitlines())}"
-            for f in sorted(facts, key=lambda f: f.created, reverse=True)[:3]
+            for f in sorted(reversed(facts), key=lambda f: f.created, reverse=True)[:3]
         ]
     headings = ("점유 중", "착수 가능", "최근 결정", "최근 사실")
     totals = [len(section) for section in sections]
@@ -460,7 +462,7 @@ def render_next(t: WorkTracker, project_id: str, repo: Repo, now: datetime, *, l
     while len(output()) > limit:
         candidates = [i for i, lines in enumerate(sections) if lines]
         if not candidates:
-            break
+            return ""
         largest = max(candidates, key=lambda i: len(sections[i][-1]))
         sections[largest].pop()
     return output()

@@ -731,6 +731,51 @@ class NextTest(unittest.TestCase):
             self.assertLess(text.index("최근 결정"), text.index("최근 사실"))
             self.assertLess(text.index("D1"), text.index("D2"))
 
+    def test_same_day_recent_entries_use_reverse_file_order(self) -> None:
+        from ledger.facts import Fact, upsert_fact
+        from ledger.flows import Repo
+        from ledger.history import HistoryEntry, append_entry
+
+        t = _Tracker()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Repo.at(Path(tmp))
+            for n in range(1, 6):
+                append_entry(
+                    repo.root / ".ledger/history.md", HistoryEntry("2026-11-25", "decision", f"D{n}", "FL", "결정", "")
+                )
+                upsert_fact(repo.root / ".ledger/facts.md", Fact(f"F{n}", "Active", "2026-11-25", "사실", ""))
+            text = work.render_next(t, t.project_id, repo, NOW)
+        for prefix in ("D", "F"):
+            self.assertLess(text.index(prefix + "5"), text.index(prefix + "4"))
+            self.assertLess(text.index(prefix + "4"), text.index(prefix + "3"))
+            self.assertNotIn(prefix + "1 ", text)
+            self.assertNotIn(prefix + "2 ", text)
+
+    def test_small_limits_keep_complete_sections(self) -> None:
+        from ledger.facts import Fact, upsert_fact
+        from ledger.flows import Repo
+        from ledger.history import HistoryEntry, append_entry
+
+        t = _Tracker()
+        work.start(t, "FL-1", "alpha", NOW)
+        work.note(t, "FL-1", "가" * 100, "나" * 100, NOW)
+        t.create_item(t.project_id, "작업" * 40, "", [], state=t.project_id + "-state-unstarted")
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Repo.at(Path(tmp))
+            append_entry(
+                repo.root / ".ledger/history.md", HistoryEntry("2026-11-25", "decision", "D1", "FL", "제목" * 50, "")
+            )
+            upsert_fact(repo.root / ".ledger/facts.md", Fact("F1", "Active", "2026-11-25", "사실" * 50, ""))
+            for limit in (60, 120, 200):
+                text = work.render_next(t, t.project_id, repo, NOW, limit=limit)
+                self.assertLessEqual(len(text), limit)
+                self.assertTrue(text.endswith("건"), repr(text))
+                self.assertIn("최근 사실\n… 외 1건", text)
+            for limit in range(0, 60):
+                text = work.render_next(t, t.project_id, repo, NOW, limit=limit)
+                self.assertLessEqual(len(text), limit)
+                self.assertTrue(not text or text.endswith("건"), repr(text))
+
     def test_claim_handoff_and_planned_filters(self) -> None:
         from ledger.flows import Repo
 

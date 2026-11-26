@@ -183,6 +183,39 @@ class HooksTest(unittest.TestCase):
         self.assertIn("점유 중\n- 항목", out.getvalue())
         self.assertLess(out.getvalue().index("forge-ledger:"), out.getvalue().index("점유 중"))
 
+    def test_long_summary_keeps_complete_space_warning(self) -> None:
+        from ledger.facts import Fact, upsert_fact
+        from tests.test_work import _Tracker
+
+        tracker = _Tracker()
+        tracker.create_item(tracker.project_id, "작업" * 100, "", [], state=tracker.project_id + "-state-unstarted")
+        upsert_fact(self.repo / ".ledger/facts.md", Fact("F1", "Active", "2026-11-25", "사실" * 100, ""))
+        env = {**self.state_env, **self.opts, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        out = io.StringIO()
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "hub_summary", return_value="가" * 1460),
+            patch.object(session_start, "PlaneClient", return_value=tracker),
+            patch.object(session_start, "default_project_id", return_value=tracker.project_id),
+            redirect_stdout(out),
+        ):
+            self.assertEqual(session_start.main(), 0)
+        self.assertLessEqual(len(out.getvalue()), 1500)
+        self.assertTrue(out.getvalue().endswith("ledger next: 공간 부족으로 생략\n"))
+
+    def test_very_long_summary_keeps_complete_plane_warning(self) -> None:
+        env = {**self.state_env, **self.opts, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        out = io.StringIO()
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "hub_summary", return_value="가" * 1499),
+            patch.object(session_start, "default_project_id", side_effect=RuntimeError("secret")),
+            redirect_stdout(out),
+        ):
+            self.assertEqual(session_start.main(), 0)
+        self.assertLessEqual(len(out.getvalue()), 1500)
+        self.assertTrue(out.getvalue().endswith("경고: Plane 작업 요약을 가져오지 못했습니다\n"))
+
     def test_summary_missing_ledger_returns_empty(self) -> None:
         empty_repo = self.tmp_path / "no-ledger"
         empty_repo.mkdir()
