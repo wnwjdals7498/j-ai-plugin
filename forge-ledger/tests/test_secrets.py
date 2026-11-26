@@ -70,6 +70,28 @@ class TestSecrets(unittest.TestCase):
         self.assertEqual(find_exposures("192.0.2.10 10.20.30.40"), ["ipv4"])
         self.assertEqual(find_exposures("2001:db8::1 2001:db9::1"), ["ipv6"])
 
+    def test_documentation_cidr_must_stay_inside_documentation_range(self):
+        for text, expected in (
+            ("192.0.2.0/8", ["ipv4"]),
+            ("2001:db8::/16", ["ipv6"]),
+            ("198.51.100.0/25", []),
+            ("192.0.2.0/0", ["ipv4"]),
+            ("203.0.113.9/23", ["ipv4"]),
+            ("allow 192.0.2.0/8.", ["ipv4"]),
+            ('{"allowed_sources": ["198.51.100.0/16"]}', ["ipv4"]),
+            ("192.0.2.0/0.0.0.0", ["ipv4"]),
+            ("2001:db8::/0", ["ipv6"]),
+            ("2001:db8::1/31", ["ipv6"]),
+            ("[2001:db8::]/16", ["ipv6"]),
+            ("192.0.2.0/24 203.0.113.7/32", []),
+            ("2001:db8::/32 [2001:db8:1::]/48 2001:db8::1/128", []),
+            # 접두 길이가 아닌 URL 경로는 주소로만 판정한다.
+            ("https://192.0.2.10/health http://[2001:db8::1]/api", []),
+            ("https://192.0.2.10/2024/report https://192.0.2.10/8abc", []),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(find_exposures(text), expected)
+
     def test_home_path(self):
         self.assert_each(
             "home_path",
