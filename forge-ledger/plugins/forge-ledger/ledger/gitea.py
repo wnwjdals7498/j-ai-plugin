@@ -17,7 +17,7 @@ from ledger.ratelimit import LocalRateLimiter, RateLimiter
 from ledger.secrets import find_secrets
 
 _ENV_URL = "FORGE_LEDGER_GITEA_URL"
-_ENV_TOKEN = "FORGE_LEDGER_GITEA_TOKEN"  # nosec B105 # 환경 변수 이름이며 비밀값이 아님
+_ENV_AUTH = "FORGE_LEDGER_GITEA_TOKEN"  # 환경 변수 이름
 _RETRY_DELAYS: tuple[float, ...] = (1.0, 2.0, 4.0)
 _RATE_LIMIT_DEFAULT_WAIT = 60.0
 _RATE_LIMIT_MAX_WAIT = 65.0
@@ -50,12 +50,13 @@ class GiteaSettings:
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> GiteaSettings:
         values: list[str] = []
-        for key in (_ENV_URL, _ENV_TOKEN):
+        for key in (_ENV_URL, _ENV_AUTH):
             raw = env.get(key, "").strip()
             if not raw:
                 raise GiteaError(f"설정 없음: {key}")
             values.append(raw)
-        return cls(base_url=values[0], token=values[1])
+        url, token = values
+        return cls(base_url=url, token=token)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):

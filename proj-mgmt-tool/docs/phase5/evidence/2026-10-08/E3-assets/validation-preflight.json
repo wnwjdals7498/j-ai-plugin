@@ -19,7 +19,7 @@
       "exit_code": 0
     },
     {
-      "command": "D:/Application/Python314/python.exe D:~/.codex/skills/.system/skill-creator/scripts/quick_validate.py <server skill>",
+      "command": "D:/Application/Python314/python.exe ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py <server skill>",
       "exit_code": 0
     },
     {

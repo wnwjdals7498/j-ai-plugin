@@ -22,7 +22,7 @@
 ```bash
 export FORGE_RUNNER_DATA="/path/outside/repo/forge-runner-data"
 export GITEA_INSTANCE_URL="<Gitea 인스턴스 주소>"
-export GITEA_RUNNER_REGISTRATION_TOKEN="<발급받은 등록 토큰>"
+export GITEA_RUNNER_REGISTRATION_TOKEN=<발급받은_등록_토큰>
 
 docker compose -f ci/runner/compose.yml up -d
 ```

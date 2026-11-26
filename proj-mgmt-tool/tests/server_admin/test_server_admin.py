@@ -20,6 +20,12 @@ from pmt.server_admin.init import _base_config, _adopt_metadata
 from pmt.server_admin.secrets import _check_windows_acl, _dpapi, _set_windows_acl, check_source, store_key
 
 
+def test_shipped_example_config_passes_validation():
+    path = Path(__file__).resolve().parents[3] / "pmt-server" / "templates" / "host-config.example.json"
+    example = json.loads(path.read_text(encoding="utf-8"))
+    assert validate_config(example) is example
+
+
 def _config(root, data_root):
     return {
         "schema_version": 1, "revision": 1,

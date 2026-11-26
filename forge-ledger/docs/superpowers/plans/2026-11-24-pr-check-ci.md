@@ -91,16 +91,16 @@ git commit -m "chore: CI Python 도구 버전 고정과 로컬 준비 스크립�
 ### Task 2: 이미지 입력 해시와 변경 파일 비밀값 검사 스크립트
 
 **Files:**
-- Create: `ci/inputs_hash.py`, `ci/scan_changed_secrets.py`, `tests/test_ci_scripts.py`
+- Create: `ci/inputs_hash.py`, `ci/scan_exposure.py`, `tests/test_ci_scripts.py`
 - Modify: `pyproject.toml` (`[tool.mypy] files`에 `"ci"` 추가)
 
 **Interfaces:**
 - Consumes: `ledger.secrets.find_secrets(text: str) -> list[str]` (패턴 이름 목록, `plugins/forge-ledger/ledger/secrets.py:33`)
 - Produces:
   - `ci/inputs_hash.py`: `image_input_paths(root: Path) -> list[Path]`(`ci/Dockerfile` + `ci/image/` 아래 모든 파일, 상대 POSIX 경로 순 정렬), `inputs_digest(root: Path) -> str`(sha256 hex 64자, 파일마다 상대경로 바이트 + `\0` + 내용 + `\0`을 순서대로 넣음), `main(argv: Optional[Sequence[str]] = None) -> int`. CLI: 인자 없음 → 해시 출력, 0. `--check FILE` → 같으면 0, 다르거나 파일 없으면 stderr에 `검사 이미지 재빌드 필요: bash scripts/ci-image-build.sh`, 1. `--root DIR`(기본: 이 파일의 부모의 부모).
-  - `ci/scan_changed_secrets.py`: `class Finding(NamedTuple): path: str; line: int; kind: str`, `scan_files(root: Path, paths: Sequence[str]) -> list[Finding]`(`tests/`로 시작하는 경로, 없는 파일, UTF-8로 읽히지 않는 파일은 건너뜀, 줄마다 `find_secrets`), `changed_files(root: Path, base: str, head: str) -> list[str]`(`git -C root diff --name-only --diff-filter=ACMR base...head`, 정렬), `main(argv: Optional[Sequence[str]] = None) -> int`. CLI: `--root DIR`, `--base SHA --head SHA` 또는 `--files PATH...`. 발견마다 stdout에 `<path>:<line>: <kind>`, 없으면 `비밀값 없음`. 발견 1, 없음 0, 인자 오류 2. 일치한 문자열 자체는 절대 출력하지 않는다. `ledger` 패키지는 `<root>/plugins/forge-ledger`를 `sys.path`에 넣어 가져온다.
+  - `ci/scan_exposure.py`: 변경 파일 비밀값 검사. 2026-11-26에 이 이름의 저장소 전체 노출 검사로 대체했다. 인터페이스와 시험(`tests/test_scan_exposure.py`)은 `2026-11-26-pmt-migration.md` Task 1을 따른다.
 
-- [ ] **Step 1: 실패하는 시험 작성** — `tests/test_ci_scripts.py`는 `ROOT/ci`를 `sys.path`에 넣고 `import inputs_hash`, `import scan_changed_secrets`. 임시 폴더(`tempfile.TemporaryDirectory`)로 가짜 루트를 만든다.
+- [ ] **Step 1: 실패하는 시험 작성** — `tests/test_ci_scripts.py`는 `ROOT/ci`를 `sys.path`에 넣고 `import inputs_hash`. 임시 폴더(`tempfile.TemporaryDirectory`)로 가짜 루트를 만든다.
 
 ```python
 class TestInputsHash(unittest.TestCase):
@@ -111,19 +111,6 @@ class TestInputsHash(unittest.TestCase):
     def test_check_match_returns_0(self): ...               # 기록 파일 = 현재 해시 → main(["--root", r, "--check", f]) == 0
     def test_check_mismatch_returns_1_with_message(self): ...  # == 1, stderr에 "검사 이미지 재빌드 필요"
     def test_check_missing_record_returns_1(self): ...      # 없는 기록 파일 → 1
-
-class TestScanChangedSecrets(unittest.TestCase):
-    def test_finds_token_with_line(self): ...   # docs/a.md 2번째 줄 "key " + "plane_api_" + "a"*32
-                                                # → [Finding("docs/a.md", 2, "plane_token")]
-    def test_skips_tests_dir(self): ...         # tests/x.py 안의 같은 토큰 → []
-    def test_skips_missing_and_binary(self): ...  # 없는 경로, b"\xff\xfe\x00\x81" 파일 → []
-    def test_output_hides_value(self): ...      # main(["--root", r, "--files", "docs/a.md"]) == 1,
-                                                # stdout에 "docs/a.md:2: plane_token", "plane_api_" 없음
-    def test_clean_returns_0(self): ...         # 깨끗한 파일 → 0, stdout "비밀값 없음"
-    def test_changed_files_uses_diff_filter(self): ...  # 임시 git 저장소: base에 a.md, b.md, d.md 커밋,
-                                                # head에서 a.md 수정, b.md 삭제, c.md 추가, d.md → e.md 이름 변경
-                                                # → changed_files(r, base, head) == ["a.md", "c.md", "e.md"]
-    def test_missing_args_returns_2(self): ...  # main(["--root", r]) == 2
 ```
 
 - [ ] **Step 2: 실패 확인**
@@ -131,7 +118,7 @@ class TestScanChangedSecrets(unittest.TestCase):
 Run: `python3 -m unittest tests.test_ci_scripts -v`
 Expected: FAIL (`ModuleNotFoundError: No module named 'inputs_hash'`)
 
-- [ ] **Step 3: `ci/inputs_hash.py`, `ci/scan_changed_secrets.py` 구현** (위 Interfaces 그대로). `pyproject.toml`의 mypy `files`에 `"ci"`를 추가한다.
+- [ ] **Step 3: `ci/inputs_hash.py`, `ci/scan_exposure.py` 구현** (위 Interfaces 그대로). `pyproject.toml`의 mypy `files`에 `"ci"`를 추가한다.
 - [ ] **Step 4: 통과 확인**
 
 Run: `python3 -m unittest tests.test_ci_scripts -v && bash scripts/dev-check.sh`
@@ -139,7 +126,7 @@ Expected: 새 시험 14개 PASS, dev-check 종료 코드 0(mypy 대상 파일 �
 
 - [ ] **Step 5: Commit**
 ```bash
-git add ci/inputs_hash.py ci/scan_changed_secrets.py tests/test_ci_scripts.py pyproject.toml
+git add ci/inputs_hash.py ci/scan_exposure.py tests/test_ci_scripts.py pyproject.toml
 git commit -m "feat: 검사 이미지 입력 해시와 변경 파일 비밀값 검사"
 ```
 
@@ -205,7 +192,7 @@ git commit -m "feat: 검사 전용 이미지와 빌드 스크립트"
 |---|---|
 | `lint` | `python3.9 ci/inputs_hash.py --check /etc/forge-ci/inputs.sha256`, `ruff check .`, `ruff format --check .`, `mypy`, `git ls-files -z '*.sh' \| xargs -0 shellcheck`, `.gitea/workflows/*.yml`이 있으면 `actionlint -config-file ci/actionlint.yaml <파일들>` |
 | `test` | `coverage run -m unittest discover -s tests -t .`, `coverage report`, `claude plugin validate .` |
-| `secrets` | `gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .`, `python3.9 ci/scan_changed_secrets.py --base "$BASE" --head "$HEAD"` |
+| `secrets` | `gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .`, `python3.9 ci/scan_exposure.py --range "$BASE..$HEAD"` |
 | `sast` | `semgrep scan --config /opt/semgrep-rules --error --metrics=off --disable-version-check .`, `bandit -c pyproject.toml -r plugins ci scripts` |
 | `deps` | 고정 파일마다 `pip-audit --disable-pip --no-deps --require-hashes -r <파일>`, `trivy fs --scanners misconfig,secret --exit-code 1 --skip-check-update --skip-db-update --cache-dir /opt/trivy-cache --skip-dirs tests .` |
 

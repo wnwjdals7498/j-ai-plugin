@@ -1,0 +1,104 @@
+# 노출 검사(forge-ledger/ci/scan_exposure.py) 예외.
+# 형식: <경로 glob>\t<패턴 이름>\t<사유>. 사유가 비면 검사가 실패한다.
+
+forge-ledger/tests/test_secrets.py	ipv4	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	ipv6	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	home_path	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	email	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	internal_host	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	private_key	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	jwt	패턴 양성·음성 시험용 가짜 값
+forge-ledger/tests/test_secrets.py	secret_assignment	패턴 양성·음성 시험용 가짜 값
+
+forge-ledger/tests/test_scan_exposure.py	ipv4	스캐너 시험용 가짜 값
+forge-ledger/tests/test_scan_exposure.py	home_path	스캐너 시험용 가짜 값
+forge-ledger/tests/test_scan_exposure.py	email	스캐너 시험용 가짜 값
+forge-ledger/tests/test_scan_exposure.py	secret_assignment	스캐너 시험용 가짜 값
+
+forge-ledger/docs/superpowers/specs/2026-11-26-pmt-migration-design.md	home_path	설명용 패턴 예시
+
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	home_path	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	email	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	internal_host	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	private_key	설명용 패턴 예시
+forge-ledger/docs/superpowers/plans/2026-11-26-pmt-migration.md	secret_assignment	설명용 패턴 예시
+
+# forge-ledger 문서
+forge-ledger/docs/superpowers/plans/2026-11-23-forge-ledger-p1-method-core.md	ipv4	계획 문서의 시험 코드 예시(가짜 값)
+forge-ledger/docs/superpowers/plans/2026-11-23-forge-ledger-p1-method-core.md	secret_assignment	계획 문서의 시험 코드 예시(가짜 값)
+
+# forge-ledger 시험
+forge-ledger/tests/test_check.py	ipv4	시험용 가짜 값
+forge-ledger/tests/test_check.py	ipv6	시험용 가짜 값
+forge-ledger/tests/test_cli.py	ipv4	시험용 가짜 값
+forge-ledger/tests/test_cli.py	secret_assignment	시험용 가짜 값
+forge-ledger/tests/test_dashboard.py	secret_assignment	시험용 가짜 값
+forge-ledger/tests/test_flows.py	ipv4	시험용 가짜 값
+forge-ledger/tests/test_hooks.py	ipv4	시험용 가짜 값
+forge-ledger/tests/test_hooks.py	ipv6	시험용 가짜 값
+forge-ledger/tests/test_hooks.py	secret_assignment	시험용 가짜 값
+forge-ledger/tests/test_migrate.py	ipv4	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	home_path	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	email	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	internal_host	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	secret_assignment	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_plane.py	secret_assignment	시험용 가짜 값
+forge-ledger/tests/test_ratelimit.py	secret_assignment	시험용 가짜 값
+forge-ledger/tests/test_work.py	home_path	작업 댓글 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_work.py	internal_host	호스트 이름 줄이기 시험용 가짜 값
+forge-ledger/tests/test_work.py	secret_assignment	시험용 가짜 값
+
+# 설명 문서
+model-handoff/skills/handoff/references/pi-headless.md	secret_assignment	설정 예시의 환경 변수 참조
+
+# proj-mgmt-tool 시험 결과 기록
+proj-mgmt-tool/docs/phase3/evidence/2026-10-02/current-regression/junit.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase4/evidence/p4-full-final1.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/A0/initial-pytest.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/A0/pytest.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/A1/pytest-verified.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/B1/parent-pytest.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/BC1-integration/pytest.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/BC2-integration/junit.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/E2-integration/pre-client-review-313-junit.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/E2-integration/pre-client-review-314-junit.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/E3/final-junit.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+proj-mgmt-tool/docs/phase5/evidence/2026-10-08/E3/full-first-junit.xml	email	시험 이름에 들어간 가짜 접속 주소(시험 코드에 있는 값)
+
+# proj-mgmt-tool 시험
+proj-mgmt-tool/scripts/verify_phase3_local.py	secret_assignment	검증 스크립트의 가짜 값
+proj-mgmt-tool/tests/client_setup/test_b1_client_setup.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/client_setup/test_b2_local_commands.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/client_setup/test_d2_connect.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/client_setup/test_e2_switch.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/client_setup/test_e2_switch.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/server_admin/test_e1_operations.py	ipv4	시험용 가짜 값
+proj-mgmt-tool/tests/server_admin/test_e1_operations.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/server_admin/test_server_admin.py	internal_host	시험용 가짜 값
+proj-mgmt-tool/tests/server_admin/test_server_admin.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_acceptance_matrix.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_cli_integration.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_hooks.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_lifecycle.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_lifecycle_extensions.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase2_reconciliation.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase2_routing.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_context.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_context.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_documents.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_graph.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_hosted_runtime.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_http_store.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_migration.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_migration.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_pending.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_results.py	home_path	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_results.py	secret_assignment	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase3_workspace.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase4_current_context.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase4_hosted_alignment_actual.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase4_r2_r3_actual.py	email	시험용 가짜 값
+proj-mgmt-tool/tests/test_phase5_handoff.py	email	시험용 가짜 값
+
+# proj-mgmt-tool 코드
+proj-mgmt-tool/src/pmt/migration.py	secret_assignment	해시 앞에 붙이는 접두 문자열(비밀값 아님)

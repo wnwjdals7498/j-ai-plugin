@@ -47,6 +47,16 @@ def split_html_sections(html: str) -> dict[str, str]:
     return {key: html[start:end] for key, start, end in _iter_html_sections(html) if key is not None}
 
 
+def split_html_headings(html: str) -> dict[str, str]:
+    """`split_html_sections`의 키마다 h2 제목 글(태그 제거)을 돌려준다."""
+    headings: dict[str, str] = {}
+    for match in _H2_RE.finditer(html):
+        key = _heading_key(match.group(1), is_html=True)
+        if key is not None:
+            headings[key] = _strip_tags(match.group(1))
+    return headings
+
+
 def split_md_sections(md: str) -> dict[str, str]:
     """Markdown 문서에서 '## ' 절을 문서 코드 또는 결정 ID 키로 나눈다."""
     matches = list(_MD_H2_RE.finditer(md))

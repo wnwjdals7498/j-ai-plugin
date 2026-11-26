@@ -1,15 +1,35 @@
-"""Secret pattern detection for forge-ledger."""
+"""Secret and exposure pattern detection for forge-ledger."""
 
 from __future__ import annotations
 
 import ipaddress
 import re
+from collections.abc import Callable
 
 _PLANE_REGEX = r"plane_api_[0-9a-f]{32}"
 _GITHUB_REGEX = r"ghp_[A-Za-z0-9]{20,}"
 _GITLAB_REGEX = r"glpat-[A-Za-z0-9_-]{20,}"
 _FIGMA_REGEX = r"figd_[A-Za-z0-9_-]{20,}"
 _TELEGRAM_REGEX = r"\b\d{8,10}:[A-Za-z0-9_-]{35}\b"
+# `[/]`는 이 파일 자신이 검사에 걸리지 않게 하는 표기다.
+_HOME_PATH_REGEX = r"/home/\w[\w.-]*|/data/home[/]|/Users/\w[\w.-]*|(?<![A-Za-z])[A-Za-z]:\\+Users\\+"
+# 앞쪽 lookbehind는 긴 한 줄에서 검사 시간이 길이의 제곱으로 늘지 않게 한다.
+_EMAIL_REGEX = r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}(?![A-Za-z0-9-])"
+# 뒤에 `.글자`·`(`가 오면 파일 이름(settings.local.json)이나 코드(threading.local())로 본다.
+_INTERNAL_HOST_REGEX = (
+    r"(?<![\w.-])(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+(?i:local|internal|lan)(?![\w-]|\.\w|\()"
+)
+_PRIVATE_KEY_REGEX = r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----"
+# 두 번째 lookbehind는 JSON으로 직렬화한 줄바꿈·탭(`\n`·`\t`) 바로 뒤를 허용한다.
+_JWT_REGEX = r"(?:(?<![A-Za-z0-9_-])|(?<=\\[nrt]))eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
+# 따옴표 앞의 `\`는 JSON으로 직렬화한 본문(PreToolUse 훅)을 위한 것이다.
+_ASSIGNMENT_REGEX = (
+    r"(?i)(?<![A-Za-z0-9_-])[A-Za-z0-9_-]*(?:token|password|passwd|secret|api[_-]?key)"
+    r"(?:\\?[\"'])?[ \t]*[:=](?!=)[ \t]*"
+    r"(?:\\\"(?P<escaped_double>.*?)\\\"|\\'(?P<escaped_single>.*?)\\'"
+    r"|\"(?P<double>(?:\\.|[^\"\\])*)\"|'(?P<single>(?:\\.|[^'\\])*)'"
+    r"|(?P<bare>[^\s\"'`,;]*))"
+)
 
 PATTERNS: dict[str, str] = {
     "ipv4": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
@@ -19,33 +39,112 @@ PATTERNS: dict[str, str] = {
     "gitlab_token": _GITLAB_REGEX,
     "figma_token": _FIGMA_REGEX,
     "telegram_bot_token": _TELEGRAM_REGEX,
+    "home_path": _HOME_PATH_REGEX,
+    "email": _EMAIL_REGEX,
+    "internal_host": _INTERNAL_HOST_REGEX,
+    "private_key": _PRIVATE_KEY_REGEX,
+    "jwt": _JWT_REGEX,
+    "secret_assignment": _ASSIGNMENT_REGEX,
 }
+
+PATTERN_NAMES: tuple[str, ...] = tuple(PATTERNS)
 
 _ALLOWED_IPV4 = frozenset({"127.0.0.1", str(ipaddress.IPv4Address(0))})
 _ALLOWED_IPV6 = frozenset({ipaddress.IPv6Address("::1"), ipaddress.IPv6Address("::")})
+# 문서용 대역(RFC 5737, RFC 3849) 안의 주소·대역은 실제 환경을 가리키지 않으므로 어디에 있어도 허용한다.
+_DOCUMENTATION_IPV4 = tuple(
+    ipaddress.IPv4Network(block) for block in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")
+)
+_DOCUMENTATION_IPV6 = ipaddress.IPv6Network("2001:db8::/32")
+# 주소 바로 뒤의 접두 길이(/24)나 점 표기 넷마스크. IPv6의 `[주소]/길이` 표기도 읽는다.
+_CIDR_SUFFIX = re.compile(r"\]?/((?:\d{1,3}\.){3}\d{1,3}|\d{1,3}(?![A-Za-z0-9_]))")
+
+_MIN_ASSIGNED_LENGTH = 8
+# 아래 두 제외는 따옴표 없는 값에만 적용한다. 따옴표 값은 길이만 본다.
+# 명시적 참조·자리표시의 시작 글자: $VAR, ${VAR}, <자리표시>, {{ 템플릿 }}, %VAR%
+_REFERENCE_PREFIXES = ("$", "<", "{{", "%")
+# 코드의 이름 참조: 식별자·점 경로 뒤에 호출·첨자 또는 닫는 기호. 숫자 없는 ASCII일 때만 참조로 본다.
+_NAME_REFERENCE = re.compile(r"[A-Za-z_]+(?:\.[A-Za-z_]+)*(?:[(\[].*|(?:[)\]}.:]|</[A-Za-z]+>)*)")
 
 
-def _is_forbidden_ipv6(candidate: str) -> bool:
-    token = candidate.rstrip(".")
+def _written_network(address: str, match: re.Match[str]) -> str:
+    """주소 뒤에 접두 길이·넷마스크가 붙었으면 그 대역 표기를, 아니면 주소만 돌려준다."""
+    suffix = _CIDR_SUFFIX.match(match.string, match.end())
+    if suffix is None:
+        return address
+    written = f"{address}/{suffix.group(1)}"
+    try:
+        ipaddress.ip_network(written, strict=False)
+    except ValueError:
+        return address  # URL 경로처럼 접두 길이가 될 수 없는 숫자
+    return written
+
+
+def _is_forbidden_ipv4(match: re.Match[str]) -> bool:
+    value = match.group()
+    if value in _ALLOWED_IPV4:
+        return False
+    try:
+        ipaddress.IPv4Address(value)
+    except ValueError:
+        return True  # 주소로 읽히지 않는 점 4자리 숫자는 이전처럼 걸어 둔다
+    network = ipaddress.IPv4Network(_written_network(value, match), strict=False)
+    return not any(network.subnet_of(block) for block in _DOCUMENTATION_IPV4)
+
+
+def _is_forbidden_ipv6(match: re.Match[str]) -> bool:
+    token = match.group().rstrip(".")
     if not any(ch.isdigit() for ch in token):
         return False
     try:
         addr = ipaddress.IPv6Address(token)
     except ValueError:
         return False
-    return addr not in _ALLOWED_IPV6
+    if addr in _ALLOWED_IPV6:
+        return False
+    network = ipaddress.IPv6Network(_written_network(token, match), strict=False)
+    return not network.subnet_of(_DOCUMENTATION_IPV6)
 
 
-def find_secrets(text: str) -> list[str]:
-    """Return sorted unique pattern names matched in text."""
+def _is_forbidden_email(match: re.Match[str]) -> bool:
+    local, _, domain = match.group().lower().partition("@")
+    start = match.start()
+    if start and match.string[start - 1] == "\\" and local[0] in "nrt":
+        local = local[1:]  # JSON으로 직렬화한 `\n`·`\r`·`\t`의 글자는 주소가 아니다.
+    if local in ("noreply", "no-reply") or "noreply" in domain.split("."):
+        return False
+    return domain != "example.com" and not domain.endswith(".example.com")
+
+
+def _is_literal_assignment(match: re.Match[str]) -> bool:
+    for group in ("escaped_double", "escaped_single", "double", "single"):
+        quoted = match.group(group)
+        if quoted is not None:
+            return len(quoted) >= _MIN_ASSIGNED_LENGTH
+    value = match.group("bare")
+    if len(value.rstrip(")]}")) < _MIN_ASSIGNED_LENGTH or value.startswith(_REFERENCE_PREFIXES):
+        return False
+    is_digit_free_ascii = value.isascii() and not any(ch.isdigit() for ch in value)
+    return not (is_digit_free_ascii and _NAME_REFERENCE.fullmatch(value))
+
+
+# 정규식에 걸린 것 중 실제 노출만 남기는 판정. 없는 패턴은 걸리면 곧 노출이다.
+_EXPOSED_IF: dict[str, Callable[[re.Match[str]], bool]] = {
+    "ipv4": _is_forbidden_ipv4,
+    "ipv6": _is_forbidden_ipv6,
+    "email": _is_forbidden_email,
+    "secret_assignment": _is_literal_assignment,
+}
+
+
+def find_exposures(text: str) -> list[str]:
+    """Return unique pattern names matched in text, in definition order."""
     found: list[str] = []
     for name, pattern in PATTERNS.items():
-        matches = re.findall(pattern, text)
-        if not matches:
-            continue
-        if name == "ipv4" and all(m in _ALLOWED_IPV4 for m in matches):
-            continue
-        if name == "ipv6" and not any(_is_forbidden_ipv6(m) for m in matches):
-            continue
-        found.append(name)
-    return sorted(found)
+        is_exposed = _EXPOSED_IF.get(name)
+        if any(is_exposed is None or is_exposed(match) for match in re.finditer(pattern, text)):
+            found.append(name)
+    return found
+
+
+find_secrets = find_exposures

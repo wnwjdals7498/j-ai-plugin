@@ -2,7 +2,7 @@
 
 [개요](../05-plugin-split.md) · [Windows 설정](setup-windows.md) · [통신·인계 기준](communication.md)
 
-1장은 Linux 개발 서버(pmt, Rocky Linux 8.9·Claude Code 2.1.292에서 0.4.1 hosted 실측), 2장은 Ubuntu 등 다른 배포판의 차이, 3장은 Linux를 Host로 쓰는 경우(선택)다. 값의 예는 실제 값으로 바꾼다.
+1장은 Linux 개발 서버(pmt, Rocky Linux 8.9·Claude Code 2.1.292에서 0.4.1 hosted 실측), 2장은 Ubuntu 등 다른 배포판의 차이, 3장은 Linux를 Host로 쓰는 경우(선택)다. `<LINUX_HOST_ADDRESS>`, `<ALLOWED_SUBNET_1>/24` 같은 자리표시는 실제 값으로 바꾼다.
 
 ## 0. 기준값
 
@@ -131,7 +131,7 @@ w=$(mktemp -d)
 openssl req -x509 -newkey rsa:3072 -sha256 -days 3650 -nodes -keyout $w/ca.key -out $w/ca.crt \
   -subj "/CN=PMT Internal CA" -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
 openssl req -newkey rsa:3072 -sha256 -nodes -keyout $w/host.key -out $w/host.csr -subj "/CN=pmt-host"
-printf 'subjectAltName=IP:<HOST_ADDR>\nextendedKeyUsage=serverAuth\nkeyUsage=critical,digitalSignature,keyEncipherment\n' > $w/ext.cnf
+printf 'subjectAltName=IP:<LINUX_HOST_ADDRESS>\nextendedKeyUsage=serverAuth\nkeyUsage=critical,digitalSignature,keyEncipherment\n' > $w/ext.cnf
 openssl x509 -req -in $w/host.csr -CA $w/ca.crt -CAkey $w/ca.key -CAcreateserial -days 397 -sha256 -extfile $w/ext.cnf -out $w/host.crt
 ```
 
@@ -141,9 +141,9 @@ openssl x509 -req -in $w/host.csr -CA $w/ca.crt -CAkey $w/ca.key -CAcreateserial
 
 ```bash
 sudo pmt-server --config-root /etc/pmt-host init \
-  --public-url https://<HOST_ADDR>:8765 --listen 0.0.0.0:8765 \
+  --public-url https://<LINUX_HOST_ADDRESS>:8765 --listen 0.0.0.0:8765 \
   --data-root /var/lib/pmt-host --log-dir /var/log/pmt-host --backup-dir /srv/pmt-backup \
-  --service systemd --account pmt --allow <HOST_ADDR>/24 \
+  --service systemd --account pmt --allow <ALLOWED_SUBNET_1>/24 \
   --tls-cert $w/host.crt --tls-key $w/host.key --tls-ca $w/ca.crt --apply
 ```
 
@@ -202,10 +202,10 @@ systemctl status pmt-host
 
 ```bash
 # firewalld
-sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="<HOST_ADDR>/24" port port="8765" protocol="tcp" accept'
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="<ALLOWED_SUBNET_1>/24" port port="8765" protocol="tcp" accept'
 sudo firewall-cmd --reload
 # ufw
-sudo ufw allow from <HOST_ADDR>/24 to any port 8765 proto tcp
+sudo ufw allow from <ALLOWED_SUBNET_1>/24 to any port 8765 proto tcp
 ```
 
 SELinux Enforcing에서 `doctor`가 AVC 거부를 보고하면 `ausearch -m avc -ts recent`로 원인을 확인한다. 데이터 경로를 `/var/lib`, `/var/log` 아래에 두면 추가 정책 없이 동작하는 경우가 많지만 실측으로 확인한다.

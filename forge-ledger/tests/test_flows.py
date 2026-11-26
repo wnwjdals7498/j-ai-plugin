@@ -21,8 +21,9 @@ from ledger.flows import (
     plan_new,
     plan_put,
     plane_project_name,
+    record_decision,
 )
-from ledger.history import parse_history
+from ledger.history import HistoryEntry, parse_history
 from ledger.plane import PlaneAuthError, PlaneConflict, PlaneUnavailable
 from ledger.sections import split_html_sections
 from ledger.spec import UNIT_ITEMS
@@ -218,6 +219,40 @@ class FlowsTest(unittest.TestCase):
 
         with self.assertRaises(SecretFound):
             decide(self.repo, self.plane, "토큰", "APP", "<p>10.20.30.40</p>", date(2026, 12, 9))
+
+    def test_record_decision_writes_given_entry_and_appends_plane_reference(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        history = self.repo.root / ".ledger" / "history.md"
+        for ref_id, detail in (("D-261101-0001", "원래 메모"), ("D-261102-0002", "")):
+            entry = HistoryEntry("2026-11-01", "decision", ref_id, "*", "옮긴 결정", detail)
+            recorded = record_decision(self.repo, self.plane, entry, "<p>본문</p>")
+            expected = r"^원래 메모 · plane:SAMPM-\d+@\S+$" if detail else r"^plane:SAMPM-\d+@\S+$"
+            self.assertRegex(recorded.detail, expected)
+            self.assertEqual((recorded.ref_id, recorded.date, recorded.title), (ref_id, "2026-11-01", "옮긴 결정"))
+            self.assertEqual(parse_history(history.read_text(encoding="utf-8"))[-1], recorded)
+            sections = split_html_sections(self.plane.item_html("SAMPM", "[계획서] 결정"))
+            self.assertEqual(sections[ref_id], "<p>본문</p>")
+
+    def test_record_decision_rejects_bad_input_before_writing(self) -> None:
+        init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))
+        history = self.repo.root / ".ledger" / "history.md"
+        before = history.read_text(encoding="utf-8")
+        good = HistoryEntry("2026-11-01", "decision", "D-261101-0001", "*", "제목", "메모")
+        home = "/home/" + "alice"
+        cases: tuple[tuple[HistoryEntry, str, type[Exception]], ...] = (
+            (HistoryEntry("2026-11-01", "decision", "D-261101-0001", "*", "a|b", ""), "<p>x</p>", ValueError),
+            (HistoryEntry("2026-11-01", "decision", "D-261101-0001", "*", "제목", "줄\n둘"), "<p>x</p>", ValueError),
+            (good, f"<p>{home}</p>", SecretFound),
+            (HistoryEntry("2026-11-01", "decision", "D-261101-0001", "*", "제목", home), "<p>x</p>", SecretFound),
+            (HistoryEntry("2026-11-01", "decision", "D-261101-0001", "NOPE", "제목", ""), "<p>x</p>", FlowError),
+        )
+        calls_before = len(self.plane.calls)
+        for entry, body, error in cases:
+            with self.subTest(entry=entry.title, error=error.__name__):
+                with self.assertRaises(error):
+                    record_decision(self.repo, self.plane, entry, body)
+        self.assertEqual(len(self.plane.calls), calls_before)
+        self.assertEqual(history.read_text(encoding="utf-8"), before)
 
     def test_plane_doc_source_and_unavailable_conversion(self) -> None:
         init_repo(self.repo, self.plane, "forge", TEMPLATES, date(2026, 11, 23))

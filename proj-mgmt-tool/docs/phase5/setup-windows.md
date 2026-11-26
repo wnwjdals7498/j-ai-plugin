@@ -2,7 +2,7 @@
 
 [개요](../05-plugin-split.md) · [Linux 설정](setup-linux.md) · [통신·인계 기준](communication.md)
 
-1장은 Windows Host 서버(pmt-server), 2장은 Windows 개발 PC(pmt)다. 각 단계는 **pmt-server/pmt 명령**과 그 명령이 내부에서 하는 **수동 동등 작업**을 함께 적는다. 수동 동등 작업은 점검과 장애 대응용이다. 값의 예(`<HOST_ADDR>`, `<HOST_ADDR>/24`)는 실제 값으로 바꾼다.
+1장은 Windows Host 서버(pmt-server), 2장은 Windows 개발 PC(pmt)다. 각 단계는 **pmt-server/pmt 명령**과 그 명령이 내부에서 하는 **수동 동등 작업**을 함께 적는다. 수동 동등 작업은 점검과 장애 대응용이다. `<PMT_HOST_ADDRESS>`, `<ALLOWED_SUBNET_1>/24` 같은 자리표시는 실제 값으로 바꾼다.
 
 ## 0. 기준값
 
@@ -64,7 +64,7 @@ $o = "C:\Program Files\Git\usr\bin\openssl.exe"
 $w = "$env:TEMP\pmt-ca"; New-Item -ItemType Directory -Force $w | Out-Null
 & $o req -x509 -newkey rsa:3072 -sha256 -days 3650 -nodes -keyout "$w\ca.key" -out "$w\ca.crt" -subj "/CN=PMT Internal CA" -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
 & $o req -newkey rsa:3072 -sha256 -nodes -keyout "$w\host.key" -out "$w\host.csr" -subj "/CN=pmt-host"
-Set-Content "$w\ext.cnf" "subjectAltName=IP:<HOST_ADDR>`nextendedKeyUsage=serverAuth`nkeyUsage=critical,digitalSignature,keyEncipherment" -Encoding ascii
+Set-Content "$w\ext.cnf" "subjectAltName=IP:<PMT_HOST_ADDRESS>`nextendedKeyUsage=serverAuth`nkeyUsage=critical,digitalSignature,keyEncipherment" -Encoding ascii
 & $o x509 -req -in "$w\host.csr" -CA "$w\ca.crt" -CAkey "$w\ca.key" -CAcreateserial -days 397 -sha256 -extfile "$w\ext.cnf" -out "$w\host.crt"
 ```
 
@@ -74,10 +74,10 @@ Set-Content "$w\ext.cnf" "subjectAltName=IP:<HOST_ADDR>`nextendedKeyUsage=server
 
 ```powershell
 pmt-server --config-root C:\ProgramData\PMT\host-config init `
-  --public-url https://<HOST_ADDR>:8765 --listen 0.0.0.0:8765 `
+  --public-url https://<PMT_HOST_ADDRESS>:8765 --listen 0.0.0.0:8765 `
   --data-root C:\ProgramData\PMT\host-data --log-dir C:\ProgramData\PMT\logs --backup-dir D:\PMT-backup `
   --service windows-task --account "NT AUTHORITY\LOCAL SERVICE" `
-  --allow <HOST_ADDR>/24 --allow <HOST_ADDR>/24 `
+  --allow <ALLOWED_SUBNET_1>/24 --allow <ALLOWED_SUBNET_2>/24 `
   --tls-cert $w\host.crt --tls-key $w\host.key --tls-ca $w\ca.crt
 # 출력 계획 확인 후
 pmt-server init ... --apply
@@ -101,7 +101,7 @@ pmt-server init ... --apply
 ```powershell
 pmt-server doctor
 pmt-server serve      # 콘솔에서 수동 실행. 다른 창에서 아래 확인 후 Ctrl+C
-curl.exe --cacert C:\ProgramData\PMT\tls\ca.crt https://<HOST_ADDR>:8765/health
+curl.exe --cacert C:\ProgramData\PMT\tls\ca.crt https://<PMT_HOST_ADDRESS>:8765/health
 ```
 
 `doctor`의 fail이 0이어야 다음으로 간다. health는 인증 없는 확인이고, 인증 compatibility는 1.7의 기기로 확인한다.
@@ -143,7 +143,7 @@ pmt-server apply --only firewall,service --apply
 
 ```powershell
 New-NetFirewallRule -DisplayName "PMT Host 8765" -Direction Inbound -Protocol TCP -LocalPort 8765 `
-  -RemoteAddress <HOST_ADDR>/24,<HOST_ADDR>/24 -Action Allow -Profile Domain,Private
+  -RemoteAddress <ALLOWED_SUBNET_1>/24,<ALLOWED_SUBNET_2>/24 -Action Allow -Profile Domain,Private
 
 $py = "C:\PMT\app\0.5.0\venv\Scripts\python.exe"
 $action = New-ScheduledTaskAction -Execute $py -Argument "-m pmt.server_admin --config-root C:\ProgramData\PMT\host-config serve" -WorkingDirectory "C:\PMT\app\0.5.0"
@@ -196,7 +196,7 @@ claude plugin install pmt-lifecycle@j-ai-plugins
 
 ### 2.3 local로 시작
 
-`/plugin` → PMT → `python_path` = `C:\Users\<사용자>\AppData\Local\Programs\Python\Python313\python.exe`(실제 경로는 `py -3.13 -c "import sys;print(sys.executable)"`로 확인). 새 세션을 열면:
+`/plugin` → PMT → `python_path` = `<사용자 폴더>\AppData\Local\Programs\Python\Python313\python.exe`(실제 경로는 `py -3.13 -c "import sys;print(sys.executable)"`로 확인). 새 세션을 열면:
 
 - `%APPDATA%\pmt\storage.json`(mode local)과 `%LOCALAPPDATA%\pmt\data\pmt.sqlite3`가 생긴다.
 - 저장소 폴더에서 `pmt link --new "프로젝트 이름"` → 다음 세션부터 overview 표시.

@@ -100,7 +100,7 @@ pmt-server가 만들고(S-13) pmt가 읽는다(C-02, C-03). **비밀을 담지 �
   "issued_at": "2026-10-08T06:00:00Z",
   "issuer": {"tool": "pmt-server", "version": "0.5.0"},
   "host": {
-    "url": "https://<HOST_ADDR>:8765",
+    "url": "https://<PMT_HOST_ADDRESS>:8765",
     "compatibility": {"core": "0.4", "db_schema": 5, "graph_schema": 1, "protocol": [1]},
     "ca_pem": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n",
     "ca_sha256": "3f1c...e9"

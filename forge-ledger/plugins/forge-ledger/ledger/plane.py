@@ -17,7 +17,7 @@ from ledger.secrets import find_secrets
 
 _ENV_URL = "FORGE_LEDGER_PLANE_URL"
 _ENV_WORKSPACE = "FORGE_LEDGER_PLANE_WORKSPACE"
-_ENV_TOKEN = "FORGE_LEDGER_PLANE_TOKEN"  # nosec B105 # 환경 변수 이름이며 비밀값이 아님
+_ENV_AUTH = "FORGE_LEDGER_PLANE_TOKEN"  # 환경 변수 이름
 _RETRY_DELAYS: tuple[float, ...] = (1.0, 2.0, 4.0)
 _RATE_LIMIT_DEFAULT_WAIT = 60.0
 _RATE_LIMIT_MAX_WAIT = 65.0
@@ -27,6 +27,10 @@ _DEFAULT_TIMEOUT = 30.0
 _FORMAT_ERROR = "Plane 응답 형식 오류"
 _LIST_FORMAT_ERROR = "Plane 목록 응답 형식 오류"
 _DATE_ONLY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_ITEM_CODE_RE = re.compile(r"(.+)-([0-9]+)")
+_UPDATABLE_ITEM_FIELDS = frozenset(
+    {"state", "assignees", "labels", "parent", "description_html", "external_source", "external_id"}
+)
 
 
 class PlaneError(Exception):
@@ -56,12 +60,46 @@ class PlaneSettings:
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> PlaneSettings:
         values: list[str] = []
-        for key in (_ENV_URL, _ENV_WORKSPACE, _ENV_TOKEN):
+        for key in (_ENV_URL, _ENV_WORKSPACE, _ENV_AUTH):
             raw = env.get(key, "").strip()
             if not raw:
                 raise PlaneError(f"설정 없음: {key}")
             values.append(raw)
-        return cls(base_url=values[0], workspace=values[1], token=<REDACTED>
+        url, workspace, token = values
+        return cls(base_url=url, workspace=workspace, token=token)
+
+
+def check_update_fields(fields: Mapping[str, Any]) -> None:
+    """`update_item`이 받지 않는 필드가 있으면 `ValueError`다."""
+    rejected = sorted(set(fields) - _UPDATABLE_ITEM_FIELDS)
+    if rejected:
+        raise ValueError(f"수정할 수 없는 필드: {', '.join(rejected)}")
+
+
+def match_external(items: list[dict[str, Any]], source: str, external_id: str) -> Optional[dict[str, Any]]:
+    """원천 표식 두 값이 모두 같은 첫 항목."""
+    for item in items:
+        if item.get("external_source") == source and item.get("external_id") == external_id:
+            return item
+    return None
+
+
+def find_by_code(
+    code: str,
+    list_project_infos: Callable[[], list[ProjectInfo]],
+    list_items: Callable[[str], list[dict[str, Any]]],
+) -> tuple[str, dict[str, Any]]:
+    """`FL-12` 같은 항목 코드를 (프로젝트 id, 항목)으로 바꾼다."""
+    parsed = _ITEM_CODE_RE.fullmatch(code)
+    if parsed:
+        identifier, number = parsed.group(1), int(parsed.group(2))
+        for project in list_project_infos():
+            if project.identifier != identifier:
+                continue
+            for item in list_items(project.id):
+                if item.get("sequence_id") == number:
+                    return project.id, item
+    raise PlaneError(f"항목 없음: {code}")
 
 
 class PlaneLike(Protocol):
@@ -81,13 +119,34 @@ class PlaneLike(Protocol):
 
     def create_cycle(self, project_id: str, name: str) -> dict[str, Any]: ...
 
+    def list_states(self, project_id: str) -> list[dict[str, Any]]: ...
+
+    def list_labels(self, project_id: str) -> list[dict[str, Any]]: ...
+
     def create_item(
         self,
         project_id: str,
         name: str,
         description_html: str,
         label_ids: list[str],
+        *,
+        parent: Optional[str] = None,
+        state: Optional[str] = None,
+        external_source: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> dict[str, Any]: ...
+
+    def update_item(self, project_id: str, item_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def find_item_by_external(self, project_id: str, source: str, external_id: str) -> Optional[dict[str, Any]]: ...
+
+    def list_comments(self, project_id: str, item_id: str) -> list[dict[str, Any]]: ...
+
+    def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]: ...
+
+    def update_comment(self, project_id: str, item_id: str, comment_id: str, html: str) -> dict[str, Any]: ...
+
+    def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]: ...
 
     def list_items(self, project_id: str) -> list[dict[str, Any]]: ...
 
@@ -232,7 +291,13 @@ class PlaneClient:
         path: str,
         payload: Optional[dict[str, Any]] = None,
         query: Optional[dict[str, str]] = None,
+        *,
+        retry_transient: bool = True,
     ) -> Any:
+        """429는 항상 다시 보낸다. 5xx·연결 오류는 `retry_transient`일 때만 다시 보낸다.
+
+        생성 POST는 `retry_transient=False`로 부른다. 서버가 이미 만들었을 수 있어 다시 보내면 중복된다.
+        """
         url = f"{self._base_url}{path}"
         if query:
             url = f"{url}?{urllib.parse.urlencode(query)}"
@@ -276,14 +341,14 @@ class PlaneClient:
                         continue
                     raise PlaneUnavailable("Plane 요청 실패: HTTP 429") from None
                 if 500 <= status <= 599:
-                    if attempt < len(_RETRY_DELAYS):
+                    if retry_transient and attempt < len(_RETRY_DELAYS):
                         self._sleep(_RETRY_DELAYS[attempt])
                         attempt += 1
                         continue
                     raise PlaneUnavailable(f"Plane 요청 실패: HTTP {status}") from None
                 raise PlaneError(f"Plane 요청 오류: HTTP {status}") from None
             except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError) as exc:
-                if attempt < len(_RETRY_DELAYS):
+                if retry_transient and attempt < len(_RETRY_DELAYS):
                     self._sleep(_RETRY_DELAYS[attempt])
                     attempt += 1
                     continue
@@ -297,8 +362,10 @@ class PlaneClient:
         method: str,
         path: str,
         payload: Optional[dict[str, Any]] = None,
+        *,
+        retry_transient: bool = True,
     ) -> dict[str, Any]:
-        result = self._request(method, path, payload=payload)
+        result = self._request(method, path, payload=payload, retry_transient=retry_transient)
         if not isinstance(result, dict):
             raise PlaneError(_FORMAT_ERROR)
         return result
@@ -330,6 +397,11 @@ class PlaneClient:
         """현재 API 키 사용자의 이메일을 돌려준다."""
         data = self._request_dict("GET", "/api/v1/users/me/")
         return _required_text(data, "email")
+
+    def whoami_id(self) -> str:
+        """현재 API 키 사용자의 id를 돌려준다. 담당자 지정과 댓글 작성자 비교에 쓴다."""
+        data = self._request_dict("GET", "/api/v1/users/me/")
+        return _required_text(data, "id")
 
     def list_projects(self) -> list[dict[str, Any]]:
         return self._list_paginated(self._projects_path())
@@ -403,22 +475,72 @@ class PlaneClient:
             payload={"name": name},
         )
 
+    def list_states(self, project_id: str) -> list[dict[str, Any]]:
+        return self._list_paginated(self._projects_path(project_id, "states"))
+
+    def list_labels(self, project_id: str) -> list[dict[str, Any]]:
+        return self._list_paginated(self._projects_path(project_id, "labels"))
+
     def create_item(
         self,
         project_id: str,
         name: str,
         description_html: str,
         label_ids: list[str],
+        *,
+        parent: Optional[str] = None,
+        state: Optional[str] = None,
+        external_source: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "name": name,
+            "description_html": description_html,
+            "labels": list(label_ids),
+        }
+        optional = {
+            "parent": parent,
+            "state": state,
+            "external_source": external_source,
+            "external_id": external_id,
+        }
+        payload.update({key: value for key, value in optional.items() if value is not None})
+        path = self._projects_path(project_id, "work-items")
+        return self._request_dict("POST", path, payload=payload, retry_transient=False)
+
+    def update_item(self, project_id: str, item_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        """허용한 필드만 PATCH한다. `None` 값은 그 필드를 비운다."""
+        check_update_fields(fields)
+        return self._request_dict(
+            "PATCH",
+            self._projects_path(project_id, "work-items", item_id),
+            payload=dict(fields),
+        )
+
+    def find_item_by_external(self, project_id: str, source: str, external_id: str) -> Optional[dict[str, Any]]:
+        # 목록 전체를 받아 거른다. 필터 질의는 실서버에서 확인하기 전에는 쓰지 않는다.
+        return match_external(self.list_items(project_id), source, external_id)
+
+    def list_comments(self, project_id: str, item_id: str) -> list[dict[str, Any]]:
+        return self._list_paginated(self._projects_path(project_id, "work-items", item_id, "comments"))
+
+    def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]:
         return self._request_dict(
             "POST",
-            self._projects_path(project_id, "work-items"),
-            payload={
-                "name": name,
-                "description_html": description_html,
-                "labels": list(label_ids),
-            },
+            self._projects_path(project_id, "work-items", item_id, "comments"),
+            payload={"comment_html": html},
+            retry_transient=False,
         )
+
+    def update_comment(self, project_id: str, item_id: str, comment_id: str, html: str) -> dict[str, Any]:
+        return self._request_dict(
+            "PATCH",
+            self._projects_path(project_id, "work-items", item_id, "comments", comment_id),
+            payload={"comment_html": html},
+        )
+
+    def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]:
+        return find_by_code(code, self.list_project_infos, self.list_items)
 
     def list_items(self, project_id: str) -> list[dict[str, Any]]:
         return self._list_paginated(self._projects_path(project_id, "work-items"))

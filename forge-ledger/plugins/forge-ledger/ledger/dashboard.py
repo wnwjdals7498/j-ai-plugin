@@ -191,7 +191,8 @@ def serve(
     server = make_server(app, bind, port)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
-        print(f"대시보드: http://{bind}:{server.server_address[1]}/?token=<REDACTED>", file=out)
+        address = f"http://{bind}:{server.server_address[1]}/"
+        print(f"대시보드: {address}?token=" + app.token, file=out)
         if not _is_loopback(bind):
             print(_OPEN_ADDRESS_WARNING, file=out)
         out.flush()  # 파이프로 받는 쪽(백그라운드 실행)도 바로 주소를 본다

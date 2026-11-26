@@ -37,7 +37,7 @@ def _config(root, *, platform="windows", service_kind=None, account=None, source
         "claim_key": {"key_id": "primary", "source": {"kind": "env", "name": "PMT_TEST_CLAIM_KEY"},
                        "retained": []},
         "proxy": {"enabled": False, "trusted": []},
-        "access": {"allowed_sources": list(["<HOST_ADDR>/24"] if sources is None else sources)},
+        "access": {"allowed_sources": list(["10.20.30.0/24"] if sources is None else sources)},
         "service": {"kind": kind, "name": "PMT Host", "account": account, "app_root": str(app)},
         "logging": {"level": "info", "retain_days": 30},
         "registry": {"projects": []},
@@ -303,14 +303,14 @@ def test_systemd_placeholder_validation_blocks_missing_or_insecure_fallback(monk
 def test_windows_firewall_uses_named_restricted_rule_and_public_is_explicit(tmp_path):
     root = tmp_path / "root"
     root.mkdir()
-    _config_root, config = _config(root, sources=["<HOST_ADDR>/24", "<HOST_ADDR>/24"])
+    _config_root, config = _config(root, sources=["10.20.30.0/24", "10.40.50.0/24"])
     current = {"backend": "windows", "exists": True, "matches": False}
     plan = firewall.plan_firewall(config, current=current, platform="windows")
     script = plan["commands"][0]["script"]
     assert "Remove-NetFirewallRule -DisplayName 'PMT Host 18765'" in script
     assert "-Direction Inbound -Protocol TCP -LocalPort 18765" in script
     assert "-Profile Domain,Private" in script and "Public" not in script
-    assert "<HOST_ADDR>/24" in script and "<HOST_ADDR>/24" in script
+    assert "10.20.30.0/24" in script and "10.40.50.0/24" in script
     public = firewall.plan_firewall(config, current={"matches": False}, platform="windows", allow_public=True)
     assert "-Profile Domain,Private,Public" in public["commands"][0]["script"]
 
@@ -318,7 +318,7 @@ def test_windows_firewall_uses_named_restricted_rule_and_public_is_explicit(tmp_
 def test_linux_firewall_plans_idempotent_rich_rules_and_named_ufw_rules(tmp_path):
     root = tmp_path / "root"
     root.mkdir()
-    _config_root, config = _config(root, platform="linux", sources=["<HOST_ADDR>/24", "2001:db8::/64"])
+    _config_root, config = _config(root, platform="linux", sources=["10.20.30.0/24", "2001:db8::/64"])
     expected = firewall.plan_firewall(config, current={"rich_rules": []}, platform="linux", backend="firewalld")
     assert len(expected["commands"]) == 3
     assert expected["commands"][0]["argv"][:2] == ["firewall-cmd", "--permanent"]
@@ -332,7 +332,7 @@ def test_linux_firewall_plans_idempotent_rich_rules_and_named_ufw_rules(tmp_path
     assert conflict["commands"] == []
 
     ufw = firewall.plan_firewall(config,
-        current={"rules": [("<HOST_ADDR>/24", 18765, "PMT Host 18765"),
+        current={"rules": [("10.20.30.0/24", 18765, "PMT Host 18765"),
                            ("192.0.2.0/24", 18765, "Other app"),
                            ("192.0.2.0/24", 18765, "PMT Host 18765")]},
         platform="linux", backend="ufw")
@@ -347,7 +347,7 @@ def test_firewall_requires_allowed_sources_and_unknown_linux_backend_is_manual(t
     _config_root, config = _config(root, sources=[])
     blocked = firewall.plan_firewall(config, current={"backend": "windows"}, platform="windows")
     assert blocked["status"] == "blocked" and blocked["error_code"] == "firewall_sources_required"
-    config["access"]["allowed_sources"] = ["<HOST_ADDR>/24"]
+    config["access"]["allowed_sources"] = ["10.20.30.0/24"]
     manual = firewall.plan_firewall(config, current={"backend": "none"}, platform="linux", backend="none")
     assert manual["status"] == "manual" and manual["commands"] == []
 

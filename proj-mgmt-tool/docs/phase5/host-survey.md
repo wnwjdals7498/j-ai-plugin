@@ -19,7 +19,7 @@
 | claim key ID / retained keys | `primary` / 빈 목록 (설정의 식별자만 조사) |
 | 공개 서버 인증서 | `D:/PMTHostState/secrets/server-chain.pem` |
 | TLS 개인키 위치 | `D:/PMTHostState/secrets/server-key.pem` — 파일 열지 않음 |
-| 인증서 SAN | IP `<HOST_ADDR>`, `<HOST_ADDR>`, `127.0.0.1`; DNS SAN 없음 (공개 leaf 직접 확인) |
+| 인증서 SAN | IP `<PMT_HOST_ADDRESS>`, `<PMT_HOST_SECOND_ADDRESS>`, `127.0.0.1`; DNS SAN 없음 (공개 leaf 직접 확인) |
 | leaf 만료 | 2027-10-06T07:16:44Z (직접 확인) |
 | CA | `D:/Application/PMTHost/public/pmt-root-ca.pem`; 공개 manifest상 만료 2036-10-03T07:16:44Z |
 | CA DER SHA-256 | `4ef67f8b68430d79474b0ee80c990fb578a89a2088a5933a3077f8072aed54a7` (공개 certificate manifest) |

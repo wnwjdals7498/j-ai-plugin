@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess  # nosec B404 # git HEAD 조회와 `work verify --run`
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Mapping, NoReturn, Optional
 
-from ledger import flows
+from ledger import flows, work
 from ledger.check import CheckReport, run_check
 from ledger.config import load_config
 from ledger.hubcli import HUB_COMMANDS, add_hub_parsers, run_hub
+from ledger.migrate_apply import load_checked, run_apply, run_preview
 from ledger.miniyaml import MiniYamlError
 from ledger.plane import (
     PlaneAuthError,
@@ -83,9 +85,114 @@ def _build_parser() -> _ArgumentParser:
     p_decide.add_argument("--project", required=True, help="대상 프로젝트 키 또는 *")
     p_decide.add_argument("--body-file", required=True, dest="body_file", help="결정 본문 HTML 파일 경로")
 
+    migrate_parser = sub.add_parser("migrate", parents=[repo_parent], help="PMT 이전 명령")
+    migrate_sub = migrate_parser.add_subparsers(dest="migrate_command", required=True)
+    m_check = migrate_sub.add_parser("check", parents=[repo_parent], help="매니페스트 형식·노출 검사")
+    m_check.add_argument("file", help="매니페스트 JSON 경로")
+    m_preview = migrate_sub.add_parser("preview", parents=[repo_parent], help="적용 계획 미리 보기(쓰지 않음)")
+    m_preview.add_argument("file", help="매니페스트 JSON 경로")
+    m_apply = migrate_sub.add_parser("apply", parents=[repo_parent], help="매니페스트를 Plane과 .ledger/에 적용")
+    m_apply.add_argument("file", help="매니페스트 JSON 경로")
+
+    sub.add_parser("next", parents=[repo_parent], help="작업 이어받기 요약")
+    fact_parser = sub.add_parser("fact", parents=[repo_parent], help="사실 기록")
+    fact_sub = fact_parser.add_subparsers(dest="fact_command", required=True)
+    fact_add = fact_sub.add_parser("add", parents=[repo_parent], help="사실 추가")
+    fact_add.add_argument("text", help="사실 내용")
+    fact_add.add_argument("--ref", default="", help="출처")
+
+    _add_work_parsers(sub, repo_parent)
     add_hub_parsers(sub, repo_parent)
 
     return parser
+
+
+def _add_work_parsers(sub: argparse._SubParsersAction[_ArgumentParser], repo_parent: _ArgumentParser) -> None:
+    work_parser = sub.add_parser("work", parents=[repo_parent], help="작업 착수·인계·검증·종료")
+    work_sub = work_parser.add_subparsers(dest="work_command", required=True)
+
+    def command(name: str, help_text: str) -> argparse.ArgumentParser:
+        added = work_sub.add_parser(name, parents=[repo_parent], help=help_text)
+        added.add_argument("code", help="작업 항목 코드(예: FL-12)")
+        return added
+
+    w_start = command("start", "착수")
+    w_start.add_argument("--take", action="store_true", help="30분 넘게 기록이 없는 점유를 넘겨받음")
+
+    w_note = command("note", "인계 메모")
+    w_note.add_argument("--did", required=True, help="한 일")
+    w_note.add_argument("--next", required=True, dest="next_step", help="다음 할 일")
+
+    w_verify = command("verify", "검증 기록")
+    w_verify.add_argument("--cmd", required=True, help="검증 명령")
+    how = w_verify.add_mutually_exclusive_group(required=True)
+    how.add_argument("--exit", type=int, dest="exit_code", help="이미 실행한 명령의 종료 코드")
+    how.add_argument("--run", action="store_true", help="명령을 셸(sh -c)로 실행하고 종료 코드를 기록")
+    w_verify.add_argument("--limits", default=None, help="검증이 확인하지 못한 범위")
+
+    w_end = command("end", "종료")
+    modes = w_end.add_mutually_exclusive_group(required=True)
+    for mode in ("done", "pause", "fail", "skip"):
+        modes.add_argument(f"--{mode}", action="store_const", const=mode, dest="mode")
+    w_end.add_argument("--result", help="--done의 결과")
+    w_end.add_argument("--unverified", help="--done에 현재 HEAD의 검증 기록이 없는 사유")
+    w_end.add_argument("--cause", help="--fail의 원인")
+    w_end.add_argument("--fix", help="--fail의 조치")
+    w_end.add_argument("--reason", help="--skip의 사유")
+
+
+def _git_head(path: Path) -> str:
+    try:
+        proc = subprocess.run(  # nosec B603 B607 # 고정 git rev-parse 명령(shell=False)
+            ["git", "rev-parse", "--verify", "HEAD"], cwd=path, capture_output=True, text=True, check=False
+        )
+    except OSError:
+        proc = None
+    if proc is None or proc.returncode != 0:
+        raise work.WorkError("git HEAD를 읽을 수 없음. 커밋이 있는 git 저장소에서 실행하세요")
+    return proc.stdout.strip()
+
+
+def _run_shell(command: str, cwd: Path) -> int:
+    """사용자가 준 검증 명령을 그대로 실행한다. 출력은 터미널로 보낸다. 신호로 끝나면 셸처럼 128+번호다."""
+    proc = subprocess.run(["sh", "-c", command], cwd=cwd, check=False)  # nosec B603 B607 # 사용자가 입력한 명령
+    return proc.returncode if proc.returncode >= 0 else 128 - proc.returncode
+
+
+def _run_work(args: argparse.Namespace, client: PlaneClient) -> int:
+    now = datetime.now(timezone.utc).astimezone()
+    here = Path(args.repo) if args.repo else Path.cwd()
+    if args.work_command == "start":
+        print(work.start(client, args.code, work.short_host(), now, take=args.take))
+    elif args.work_command == "note":
+        print(work.note(client, args.code, args.did, args.next_step, now))
+    elif args.work_command == "verify":
+        head = _git_head(here)
+        exit_code = args.exit_code
+        if args.run:
+            work.require_clean(args.cmd, args.limits or "")  # 기록하지 못할 명령은 실행하지도 않는다.
+            exit_code = _run_shell(args.cmd, here)
+            after = _git_head(here)
+            if after != head:
+                raise work.WorkError(f"검증 중 HEAD 변경: {head[:7]} → {after[:7]}. 기록하지 않았습니다")
+        print(work.verify(client, args.code, args.cmd, exit_code, head, now, limits=args.limits))
+        return 1 if args.run and exit_code != 0 else 0
+    else:
+        head = _git_head(here) if args.mode == "done" else ""
+        message = work.end(
+            client,
+            args.code,
+            args.mode,
+            now,
+            head,
+            result=args.result,
+            unverified=args.unverified,
+            cause=args.cause,
+            fix=args.fix,
+            reason=args.reason,
+        )
+        print(message)
+    return 0
 
 
 def _render_check_table(report: CheckReport) -> str:
@@ -129,6 +236,15 @@ def _run_plan_check(
     return report.exit_code
 
 
+def _run_migrate_check(path: Path, env: Mapping[str, str]) -> int:
+    """매니페스트만 읽는다. Plane 설정이나 작업 저장소가 필요 없다."""
+    manifest = load_checked(path, env)
+    if manifest is None:
+        return 1
+    print(f"검사 통과: 레코드 {len(manifest.records)}건")
+    return 0
+
+
 def main(
     argv: Optional[list[str]] = None,
     env: Optional[Mapping[str, str]] = None,
@@ -148,11 +264,21 @@ def main(
     if args.command in HUB_COMMANDS:
         return run_hub(args, effective_env, out=sys.stdout, err=sys.stderr)
 
+    if args.command == "migrate" and args.migrate_command == "check":
+        try:
+            return _run_migrate_check(Path(args.file), effective_env)
+        except (OSError, ValueError) as exc:
+            _emit_error(str(exc), token)
+            return 1
+
     try:
         if args.command == "init" and args.repo:
             repo = flows.Repo.at(Path(args.repo))  # `.ledger/`를 새로 만들 곳이라 위로 찾지 않는다
         else:
             repo = flows.Repo.discover(Path(args.repo) if args.repo else Path.cwd())
+        if args.command == "fact":
+            print(work.fact_add(repo, args.text, args.ref, date.today()))
+            return 0
         settings = PlaneSettings.from_env(effective_env)
         found_ws = find_secrets(settings.workspace)
         if found_ws:
@@ -163,10 +289,21 @@ def main(
         )
         today = date.today()
 
+        if args.command == "next":
+            print(work.render_next(client, flows.default_project_id(repo, client), repo, datetime.now(timezone.utc)))
+            return 0
+
+        if args.command == "work":
+            return _run_work(args, client)
+
         if args.command == "init":
             cfg = flows.init_repo(repo, client, settings.workspace, _TEMPLATES_DIR, today)
             print(f"초기화 완료: {cfg.default_project().key} ({cfg.workspace})")
             return 0
+
+        if args.command == "migrate":
+            run_migrate = run_preview if args.migrate_command == "preview" else run_apply
+            return run_migrate(Path(args.file), repo, client, effective_env)
 
         if args.command == "plan":
             if args.plan_command == "new":
@@ -202,6 +339,6 @@ def main(
     except (PlaneAuthError, PlaneUnavailable, PlaneError) as exc:
         _emit_error(str(exc), token)
         return 2
-    except (flows.FlowError, MiniYamlError, OSError, ValueError) as exc:
+    except (flows.FlowError, work.WorkError, MiniYamlError, OSError, ValueError) as exc:
         _emit_error(str(exc), token)
         return 1

@@ -30,7 +30,7 @@
   },
   "access": {
     "allowed_sources": [
-      "<HOST_ADDR>/24"
+      "192.0.2.0/24"
     ]
   },
   "service": {

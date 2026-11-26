@@ -16,7 +16,7 @@
     "host_url": {
       "type": "string",
       "title": "PMT Host URL",
-      "description": "HTTPS address of the Windows PMT Host, for example https://<HOST_ADDR>:8765."
+      "description": "HTTPS address of the Windows PMT Host, for example https://<PMT_HOST_ADDRESS>:8765."
     },
     "host_ca_file": {
       "type": "file",

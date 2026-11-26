@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# 커밋하려고 올린 내용의 민감값 노출을 검사하고, 걸리면 커밋을 막는다.
+# 설치: bash scripts/install-hooks.sh
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+exec python3 forge-ledger/ci/scan_exposure.py --staged

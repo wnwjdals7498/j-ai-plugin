@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlsplit
 
+from ledger.adapters import ProjectInfo
 from ledger.check import SourceUnavailable
-from ledger.plane import PlaneConflict, PlaneError
+from ledger.plane import PlaneConflict, PlaneError, check_update_fields, find_by_code, match_external
 from ledger.spec import TEMPLATE_FOR
 
 _PLANE_TEMPLATES = (
@@ -27,6 +28,16 @@ _PLANE_TEMPLATES = (
 
 _FORBIDDEN_NAME_RE = re.compile(r"[&+,:;$^}{*=?@#|'<>.()%!-]")
 _FORBIDDEN_NAME_BODY = {"non_field_errors": ["Project name cannot contain special characters."]}
+# Plane이 새 프로젝트에 만들어 두는 상태 (이름, 그룹)
+_DEFAULT_STATES = (
+    ("Backlog", "backlog"),
+    ("Todo", "unstarted"),
+    ("In Progress", "started"),
+    ("Done", "completed"),
+    ("Cancelled", "cancelled"),
+)
+# 댓글 작성자는 이메일이 아니라 사용자 id다.
+_FAKE_ACTOR = "user-1"
 
 
 class DictSource:
@@ -95,10 +106,14 @@ class FakePlaneServer:
         self.projects: dict[str, dict[str, Any]] = {}
         self.items: dict[str, dict[str, dict[str, Any]]] = {}
         self.cycles: dict[str, list[dict[str, Any]]] = {}
-        self.me: dict[str, Any] = {"email": "tester@example.com"}
+        self.states: dict[str, list[dict[str, Any]]] = {}  # 프로젝트 id별
+        self.labels: dict[str, list[dict[str, Any]]] = {}  # 프로젝트 id별
+        self.comments: dict[str, list[dict[str, Any]]] = {}  # 항목 id별
+        self.me: dict[str, Any] = {"id": _FAKE_ACTOR, "email": "tester@example.com"}
         self._item_seq: dict[str, int] = {}
         self._tick = 0
         self.touch_next_get_item: bool = False
+        self.drop_next_response: bool = False  # 요청은 처리하고 응답 없이 연결을 끊는다
         self._closed = False
 
         owner = self
@@ -113,6 +128,10 @@ class FakePlaneServer:
                 return
 
             def _send_json(self, status: int, body: Any) -> None:
+                if owner.drop_next_response:
+                    owner.drop_next_response = False
+                    self.close_connection = True
+                    return
                 raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
                 self.send_response(status)
                 if status == 429 and owner.retry_after is not None:
@@ -173,6 +192,22 @@ class FakePlaneServer:
                         }
                         self._send_json(200, page)
                         return
+                    for suffix, store in (
+                        ("/states/", owner.states),
+                        ("/labels/", owner.labels),
+                        ("/comments/", owner.comments),
+                    ):
+                        if clean_path.endswith(suffix):
+                            if owner.pages:
+                                page = owner.pages.pop(0)
+                            else:
+                                page = {
+                                    "results": [dict(entry) for entry in store.get(parts[-2], [])],
+                                    "next_cursor": None,
+                                    "next_page_results": False,
+                                }
+                            self._send_json(200, page)
+                            return
                     if clean_path.endswith("/work-items/"):
                         if owner.pages:
                             page = owner.pages.pop(0)
@@ -245,6 +280,16 @@ class FakePlaneServer:
                         owner.items.setdefault(pid, {})[item_id] = dict(payload)
                         self._send_json(201, payload)
                         return
+                    if clean_path.endswith("/comments/"):
+                        payload = {"id": f"id-{seq}", "created_at": _next_timestamp(), "actor": _FAKE_ACTOR}
+                        if isinstance(parsed_json, dict):
+                            payload.update(parsed_json)
+                        owner.comments.setdefault(parts[-2], []).append(dict(payload))
+                        commented = owner.items.get(parts[-4], {}).get(parts[-2])
+                        if commented is not None:
+                            commented["updated_at"] = payload["created_at"]
+                        self._send_json(201, payload)
+                        return
                     payload = {
                         "id": f"id-{seq}",
                         "sequence_id": seq,
@@ -252,7 +297,22 @@ class FakePlaneServer:
                     }
                     if isinstance(parsed_json, dict):
                         payload.update(parsed_json)
+                    if clean_path.endswith("/labels/"):
+                        owner.labels.setdefault(parts[-2], []).append(dict(payload))
                     self._send_json(201, payload)
+                    return
+
+                if method == "PATCH" and len(parts) >= 4 and parts[-2] == "comments":
+                    for comment in owner.comments.get(parts[-3], []):
+                        if comment["id"] == parts[-1]:
+                            if isinstance(parsed_json, dict):
+                                comment.update(parsed_json)
+                            commented = owner.items.get(parts[-5], {}).get(parts[-3])
+                            if commented is not None:
+                                commented["updated_at"] = _next_timestamp()
+                            self._send_json(200, comment)
+                            return
+                    self._send_json(404, {"detail": "comment not found"})
                     return
 
                 if method == "PATCH":
@@ -343,6 +403,7 @@ class _FakeProject:
     modules: list[dict[str, Any]] = field(default_factory=list)
     cycles: list[dict[str, Any]] = field(default_factory=list)
     items: list[dict[str, Any]] = field(default_factory=list)
+    comments: dict[str, list[dict[str, Any]]] = field(default_factory=dict)  # 항목 id별
     next_seq: int = 1
 
 
@@ -386,14 +447,13 @@ class FakePlane:
 
     @staticmethod
     def _copy_item(item: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "id": item["id"],
-            "sequence_id": item["sequence_id"],
-            "updated_at": item["updated_at"],
-            "name": item["name"],
-            "description_html": item["description_html"],
-            "labels": list(item["labels"]),
-        }
+        return {key: list(value) if isinstance(value, list) else value for key, value in item.items()}
+
+    def _stored_item(self, project_id: str, item_id: str) -> dict[str, Any]:
+        for item in self._project_by_id(project_id).items:
+            if item["id"] == item_id:
+                return item
+        raise PlaneError(f"item not found: {item_id}")
 
     # --- PlaneLike 구현 ---
 
@@ -455,6 +515,11 @@ class FakePlane:
         name: str,
         description_html: str,
         label_ids: list[str],
+        *,
+        parent: Optional[str] = None,
+        state: Optional[str] = None,
+        external_source: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> dict[str, Any]:
         self._record_and_check("create_item", project_id, name)
         proj = self._project_by_id(project_id)
@@ -467,6 +532,11 @@ class FakePlane:
             "name": name,
             "description_html": description_html,
             "labels": list(label_ids),
+            "assignees": [],
+            "parent": parent,
+            "state": state,
+            "external_source": external_source,
+            "external_id": external_id,
         }
         proj.items.append(item)
         return self._copy_item(item)
@@ -506,6 +576,74 @@ class FakePlane:
                 item["updated_at"] = self._next_timestamp()
                 return self._copy_item(item)
         raise PlaneError(f"item not found: {item_id}")
+
+    # --- WorkTracker와 원천 표식·댓글 ---
+
+    def whoami(self) -> str:
+        self._record_and_check("whoami")
+        return "tester@example.com"
+
+    def whoami_id(self) -> str:
+        self._record_and_check("whoami_id")
+        return _FAKE_ACTOR
+
+    def list_states(self, project_id: str) -> list[dict[str, Any]]:
+        self._record_and_check("list_states", project_id)
+        proj = self._project_by_id(project_id)
+        return [{"id": f"{proj.id}-state-{group}", "name": name, "group": group} for name, group in _DEFAULT_STATES]
+
+    def list_labels(self, project_id: str) -> list[dict[str, Any]]:
+        self._record_and_check("list_labels", project_id)
+        return [dict(label) for label in self._project_by_id(project_id).labels]
+
+    def update_item(self, project_id: str, item_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        self._record_and_check("update_item", project_id, item_id, dict(fields))
+        check_update_fields(fields)
+        item = self._stored_item(project_id, item_id)
+        item.update(self._copy_item(fields))
+        item["updated_at"] = self._next_timestamp()
+        return self._copy_item(item)
+
+    def find_item_by_external(self, project_id: str, source: str, external_id: str) -> Optional[dict[str, Any]]:
+        self._record_and_check("find_item_by_external", project_id, source, external_id)
+        found = match_external(self._project_by_id(project_id).items, source, external_id)
+        return None if found is None else self._copy_item(found)
+
+    def list_comments(self, project_id: str, item_id: str) -> list[dict[str, Any]]:
+        self._record_and_check("list_comments", project_id, item_id)
+        self._stored_item(project_id, item_id)
+        return [dict(comment) for comment in self._project_by_id(project_id).comments.get(item_id, [])]
+
+    def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]:
+        self._record_and_check("create_comment", project_id, item_id)
+        item = self._stored_item(project_id, item_id)
+        comment = {
+            "id": self._next_id("cmt"),
+            "comment_html": html,
+            "created_at": self._next_timestamp(),
+            "actor": _FAKE_ACTOR,
+        }
+        self._project_by_id(project_id).comments.setdefault(item_id, []).append(comment)
+        item["updated_at"] = comment["created_at"]
+        return dict(comment)
+
+    def update_comment(self, project_id: str, item_id: str, comment_id: str, html: str) -> dict[str, Any]:
+        self._record_and_check("update_comment", project_id, item_id, comment_id)
+        item = self._stored_item(project_id, item_id)
+        for comment in self._project_by_id(project_id).comments.get(item_id, []):
+            if comment["id"] == comment_id:
+                comment["comment_html"] = html
+                item["updated_at"] = self._next_timestamp()
+                return dict(comment)
+        raise PlaneError(f"comment not found: {comment_id}")
+
+    def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]:
+        self._record_and_check("resolve_code", code)
+        return find_by_code(
+            code,
+            lambda: [ProjectInfo(id=p.id, identifier=p.identifier, name=p.name) for p in self._projects.values()],
+            lambda project_id: [self._copy_item(item) for item in self._project_by_id(project_id).items],
+        )
 
     # --- 시험 도우미 ---
 

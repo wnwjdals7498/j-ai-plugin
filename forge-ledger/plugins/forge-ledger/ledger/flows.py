@@ -3,14 +3,14 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess  # nosec B404 # git 저장소 루트 조회용(shell=False)
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
 from ledger.check import SourceUnavailable
 from ledger.config import LedgerConfig, PlaneProject, load_config, save_config
-from ledger.history import HistoryEntry, append_entry, empty_history, new_decision_id, parse_history
+from ledger.history import HistoryEntry, append_entry, empty_history, format_entry, new_decision_id, parse_history
 from ledger.plane import PlaneAuthError, PlaneLike, PlaneUnavailable
 from ledger.secrets import find_secrets
 from ledger.sections import append_html_section, replace_html_section, split_html_sections, split_md_sections
@@ -146,6 +146,16 @@ def _find_project_id(client: PlaneLike, key: str) -> str:
         if proj.get("identifier") == key:
             return str(proj["id"])
     raise FlowError(f"Plane 프로젝트 없음: {key}")
+
+
+def default_project_id(repo: Repo, client: PlaneLike) -> str:
+    """`ledger.yml`의 기본 프로젝트(`init`이 만든 유지보수 프로젝트)의 Plane id."""
+    cfg = _load_repo_config(repo)
+    try:
+        key = cfg.default_project().key
+    except LookupError as exc:
+        raise FlowError("기본 프로젝트가 설정되지 않음") from exc
+    return _find_project_id(client, key)
 
 
 def _find_container_item(client: PlaneLike, project_id: str, container: str) -> dict[str, Any]:
@@ -392,6 +402,60 @@ def plan_put(repo: Repo, client: PlaneLike, key: str, code: str, body_html: str)
     return str(updated["updated_at"])
 
 
+def decision_item(repo: Repo, client: PlaneLike, projects: str) -> tuple[str, str, str, dict[str, Any]]:
+    """결정이 들어갈 '[계획서] 결정' 항목을 읽는다. `*`는 기본 프로젝트다.
+
+    (프로젝트 키, 프로젝트 id, 항목 id, 방금 읽은 항목)을 돌려준다.
+    """
+    cfg = _load_repo_config(repo)
+    if projects == "*":
+        try:
+            target_key = cfg.default_project().key
+        except LookupError as exc:
+            raise FlowError("기본 프로젝트가 설정되지 않음") from exc
+    else:
+        _require_registered_key(cfg, projects)
+        target_key = projects
+
+    project_id = _find_project_id(client, target_key)
+    listed = _find_container_item(client, project_id, "DECISION")
+    item_id = str(listed["id"])
+    return target_key, project_id, item_id, client.get_item(project_id, item_id)
+
+
+def plane_ref(project_key: str, item: dict[str, Any]) -> str:
+    """이력의 상세 칸에 남기는 Plane 참조."""
+    return f"plane:{project_key}-{item['sequence_id']}@{item['updated_at']}"
+
+
+def record_decision(repo: Repo, client: PlaneLike, entry: HistoryEntry, body_html: str) -> HistoryEntry:
+    """`entry`의 결정 절을 Plane에 덧붙이고 history.md에 한 줄을 남긴다.
+
+    남긴 줄(상세 칸 뒤에 Plane 참조를 붙인 것)을 돌려준다.
+    """
+    return append_decision(repo, client, entry, body_html)[0]
+
+
+def append_decision(repo: Repo, client: PlaneLike, entry: HistoryEntry, body_html: str) -> tuple[HistoryEntry, str]:
+    """`record_decision`과 같이 쓰고, Plane이 저장 응답으로 돌려준 항목 HTML도 함께 낸다."""
+    _check_secrets(entry.title, entry.detail, body_html)
+    format_entry(entry)  # 이력 한 줄로 쓸 수 없는 값은 Plane에 쓰기 전에 거른다.
+
+    target_key, project_id, item_id, item = decision_item(repo, client, entry.projects)
+    new_html = append_html_section(str(item.get("description_html", "")), f"{entry.ref_id} {entry.title}", body_html)
+    updated = client.update_item_description(
+        project_id,
+        item_id,
+        new_html,
+        expected_updated_at=str(item["updated_at"]),
+    )
+
+    detail = " · ".join(part for part in (entry.detail, plane_ref(target_key, updated)) if part)
+    recorded = replace(entry, detail=detail)
+    append_entry(_ledger_dir(repo) / "history.md", recorded)
+    return recorded, str(updated.get("description_html") or new_html)
+
+
 def decide(
     repo: Repo,
     client: PlaneLike,
@@ -407,44 +471,16 @@ def decide(
     if any(ch in title for ch in ("|", "\n", "\r")):
         raise FlowError("제목에 사용할 수 없는 문자가 있음")
 
-    cfg = _load_repo_config(repo)
-    if project == "*":
-        try:
-            target_key = cfg.default_project().key
-        except LookupError as exc:
-            raise FlowError("기본 프로젝트가 설정되지 않음") from exc
-    else:
-        _require_registered_key(cfg, project)
-        target_key = project
-
-    history_path = _ledger_dir(repo) / "history.md"
-    ref_id = new_decision_id(today, _existing_history_ids(history_path))
-
-    project_id = _find_project_id(client, target_key)
-    listed = _find_container_item(client, project_id, "DECISION")
-    item_id = str(listed["id"])
-    item = client.get_item(project_id, item_id)
-    expected_updated_at = str(item["updated_at"])
-
-    new_html = append_html_section(str(item.get("description_html", "")), f"{ref_id} {title}", body_html)
-    updated = client.update_item_description(
-        project_id,
-        item_id,
-        new_html,
-        expected_updated_at=expected_updated_at,
-    )
-
-    detail = f"plane:{target_key}-{updated['sequence_id']}@{updated['updated_at']}"
+    ref_id = new_decision_id(today, _existing_history_ids(_ledger_dir(repo) / "history.md"))
     entry = HistoryEntry(
         date=today.isoformat(),
         kind="decision",
         ref_id=ref_id,
         projects=project,
         title=title,
-        detail=detail,
+        detail="",
     )
-    append_entry(history_path, entry)
-    return entry
+    return record_decision(repo, client, entry, body_html)
 
 
 class PlaneDocSource:

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~jjm\\.local\\bin\\graphify.EXE hook-check"
+            "command": "%USERPROFILE%\\.local\\bin\\graphify.EXE hook-check"
           }
         ]
       }

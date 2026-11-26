@@ -6,7 +6,7 @@ services:
     environment:
       CONFIG_FILE: /config.yaml
       GITEA_INSTANCE_URL: "${GITEA_INSTANCE_URL:?GITEA_INSTANCE_URL 필요}"
-      GITEA_RUNNER_REGISTRATION_TOKEN: "${GITEA_RUNNER_REGISTRATION_TOKEN:-}"
+      GITEA_RUNNER_REGISTRATION_TOKEN: ${GITEA_RUNNER_REGISTRATION_TOKEN:-}
       GITEA_RUNNER_NAME: forge-ledger-ci
       GITEA_RUNNER_LABELS: "forge-ci:docker://forge-ledger-ci:3"
     volumes:

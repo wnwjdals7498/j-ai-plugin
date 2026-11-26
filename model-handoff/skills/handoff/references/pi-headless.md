@@ -7,7 +7,7 @@
 
 ## 1회 설정 — freellmapi 연결
 
-`~/.pi/agent/models.json` (Windows: `C:\Users\<사용자>\.pi\agent\models.json`):
+`~/.pi/agent/models.json` (Windows: `%USERPROFILE%\.pi\agent\models.json`):
 
 ```json
 {

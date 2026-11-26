@@ -96,7 +96,8 @@ job_secrets() {
         return 1
     fi
     head="${HEAD_SHA:-HEAD}"
-    python3.9 ci/scan_changed_secrets.py --base "$base" --head "$head"
+    # gitleaks는 forge-ledger/만 보지만, 노출 검사는 저장소 최상위 전체의 변경 파일을 본다.
+    python3.9 ci/scan_exposure.py --range "$base..$head"
 }
 
 job_sast() {
