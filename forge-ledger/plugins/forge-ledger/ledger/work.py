@@ -34,6 +34,7 @@ _RECORD_RE = re.compile(r"\[(착수 취소|착수|인계|검증|종료)\] (.*)")
 _BREAK_RE = re.compile(r"<br\s*/?>|</p>", re.IGNORECASE)
 _TAG_RE = re.compile(r"<[^>]*>")
 _VERIFY_HEAD_RE = re.compile(r"head=([0-9a-f]+) ")
+_CANCEL_REF_RE = re.compile(r" ref=(\S+)$")
 
 
 class WorkError(Exception):
@@ -48,10 +49,11 @@ class _Record:
     detail: str  # 첫 줄에서 `[종류] ` 뒤의 글
     at: datetime
     comment_id: str
+    actor: str  # 작성한 사용자 id
 
     @property
     def host(self) -> str:
-        """`착수`·`착수 취소` 줄의 `<host> <시각>`에서 host."""
+        """`착수` 줄의 `<host> <시각>`에서 host."""
         return self.detail.rsplit(" ", 1)[0]
 
 
@@ -75,26 +77,26 @@ def _records(t: WorkTracker, project_id: str, item_id: str) -> list[_Record]:
                     detail=parsed.group(2),
                     at=parse_comment_time(str(comment.get("created_at", ""))),
                     comment_id=str(comment.get("id", "")),
+                    actor=str(comment.get("actor", "")),
                 )
             )
     return sorted(records, key=lambda r: (r.at, r.comment_id))
 
 
-def _active(records: list[_Record]) -> list[_Record]:
-    """아직 유효한 착수·인계·검증.
+def _cancelled(records: list[_Record]) -> set[str]:
+    """`[착수 취소]`가 `ref=`로 가리키는 착수 댓글 id. 작성 시각이나 정렬 순서와 상관없다."""
+    refs = (_CANCEL_REF_RE.search(record.detail) for record in records if record.kind == "착수 취소")
+    return {ref.group(1) for ref in refs if ref}
 
-    `[종료]`는 그 앞의 기록을 모두 끝내고, `[착수 취소]`는 그 host의 마지막 착수를 지운다.
-    """
+
+def _active(records: list[_Record]) -> list[_Record]:
+    """아직 유효한 착수·인계·검증. 취소된 착수는 빼고, `[종료]`는 그 앞의 기록을 모두 끝낸다."""
+    cancelled = _cancelled(records)
     active: list[_Record] = []
     for record in records:
         if record.kind == "종료":
             active.clear()
-        elif record.kind == "착수 취소":
-            for index in range(len(active) - 1, -1, -1):
-                if active[index].kind == "착수" and active[index].host == record.host:
-                    del active[index]
-                    break
-        else:
+        elif record.kind != "착수 취소" and record.comment_id not in cancelled:
             active.append(record)
     return active
 
@@ -209,7 +211,7 @@ def start(t: WorkTracker, code: str, host: str, now: datetime, take: bool = Fals
     mine_id = _post(t, project_id, item_id, f"[착수] {host} {stamp}")
     rival = _earlier_start(_records(t, project_id, item_id), mine_id, host)
     if rival is not None:
-        _post(t, project_id, item_id, f"[착수 취소] {host} {stamp}")
+        _post(t, project_id, item_id, f"[착수 취소] {host} {stamp} ref={mine_id}")
         raise WorkError(f"착수 취소: {rival.host}의 착수({_minutes(rival.at, now)}분 전)가 먼저이거나 같은 시각임")
     fields = _status_fields(t, project_id, item, "In Progress", state_id)
     t.update_item(project_id, item_id, {**fields, "assignees": [me]})
@@ -254,6 +256,27 @@ def _is_verified(records: list[_Record], head: str) -> bool:
     return any(found is not None and found.group(1) == head[:7] for found in heads)
 
 
+def _recorded_end(records: list[_Record], me: str, host: str, detail: str) -> Optional[_Record]:
+    """내 마지막 착수 뒤에 이미 남은 내 `[종료]`. 없으면 `None`이고 종료를 계속한다.
+
+    그 착수 뒤에 다른 컴퓨터(host나 사용자가 다름)의 취소되지 않은 착수가 있으면 `WorkError`다.
+    응답을 잃은 `end`를 다시 실행할 때 새 착수의 상태와 점유를 덮지 않기 위해서다.
+    착수 없이 끝낸 항목은 같은 내용(`detail`)의 내 `[종료]`를 기준으로 삼는다.
+    """
+    cancelled = _cancelled(records)
+    starts = [r for r in records if r.kind == "착수" and r.comment_id not in cancelled]
+    my_ends = [r for r in records if r.kind == "종료" and r.actor == me]
+    my_starts = [r for r in starts if (r.host, r.actor) == (host, me)]
+    anchors = my_starts or [r for r in my_ends if r.detail == detail]
+    if not anchors:
+        return None
+    since = anchors[-1].at
+    other = next((r for r in starts if r.at >= since and (r.host, r.actor) != (host, me)), None)
+    if other is not None:
+        raise WorkError(f"end 거부: 그 뒤에 {other.host}에서 착수함. 상태와 댓글을 바꾸지 않았습니다")
+    return next((r for r in reversed(my_ends) if r.at >= since), None)
+
+
 def end(
     t: WorkTracker,
     code: str,
@@ -265,15 +288,21 @@ def end(
     cause: Optional[str] = None,
     fix: Optional[str] = None,
     reason: Optional[str] = None,
+    *,
+    host: str,
 ) -> str:
     """작업을 끝낸다. `done`은 현재 HEAD의 검증 기록이 없으면 `unverified`(사유)가 필요하다.
 
     `head`는 `done`에서만 쓴다. 상태·라벨을 먼저 바꾸고 `[종료]`를 나중에 남긴다. `[종료]`는 점유를 풀기 때문에
-    상태를 바꾸지 못했으면 남기지 않는다. 다시 실행하면 이미 목표 상태인 항목에는 댓글만 쓴다.
+    상태를 바꾸지 못했으면 남기지 않는다.
+
+    다시 실행해도 안전하다. 내 `[종료]`가 이미 있으면 아무것도 바꾸지 않고, 없고 이미 목표 상태면 댓글만 쓴다.
+    그 사이에 다른 컴퓨터가 착수했으면 거부한다(`_recorded_end`).
     """
     if mode not in _END_MODES:
         raise WorkError(f"알 수 없는 종료 방식: {mode}")
     status, required = _END_MODES[mode]
+    host = _line("host", host)
     given = {"result": result, "cause": cause, "fix": fix, "reason": reason}
     details = [f"{name}: {_line(name, given[name])}" for name in required]
     if mode == "done":
@@ -281,14 +310,20 @@ def end(
         if unverified:
             details.append(f"unverified: {_line('unverified', unverified)}")
 
+    detail = " ".join(part for part in (mode, " / ".join(details)) if part)
+    line = f"[종료] {detail}"
+    require_clean(line)  # 기록하지 못할 내용이면 상태도 바꾸지 않는다.
+
     project_id, item = t.resolve_code(code)
     item_id = str(item["id"])
-    if mode == "done" and not unverified and not _is_verified(_records(t, project_id, item_id), head):
+    records = _records(t, project_id, item_id)
+    recorded = _recorded_end(records, t.whoami_id(), host, detail)
+    if recorded is not None:
+        return f"종료 기록이 이미 있어 아무것도 바꾸지 않음: {code} ([종료] {recorded.detail})"
+    if mode == "done" and not unverified and not _is_verified(records, head):
         raise WorkError(
             f"현재 HEAD({head[:7]})의 검증 기록이 없음. work verify를 실행하거나 unverified 사유를 적으세요"
         )
-    line = " ".join(part for part in ("[종료]", mode, " / ".join(details)) if part)
-    require_clean(line)  # 기록하지 못할 내용이면 상태도 바꾸지 않는다.
     fields = _status_fields(t, project_id, item, status, _state_id(t, project_id, status))
     if "labels" in fields or str(item.get("state")) != fields["state"]:
         t.update_item(project_id, item_id, fields)

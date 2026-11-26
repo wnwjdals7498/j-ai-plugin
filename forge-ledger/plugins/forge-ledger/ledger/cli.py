@@ -147,6 +147,11 @@ def _git_head(path: Path) -> str:
     return proc.stdout.strip()
 
 
+def _short_host() -> str:
+    """짧은 호스트 이름. `.local` 같은 전체 이름은 내부 호스트 이름이라 기록에 남기지 않는다."""
+    return socket.gethostname().split(".")[0]
+
+
 def _run_shell(command: str, cwd: Path) -> int:
     """사용자가 준 검증 명령을 그대로 실행한다. 출력은 터미널로 보낸다. 신호로 끝나면 셸처럼 128+번호다."""
     proc = subprocess.run(["sh", "-c", command], cwd=cwd, check=False)  # nosec B603 B607 # 사용자가 입력한 명령
@@ -157,9 +162,7 @@ def _run_work(args: argparse.Namespace, client: PlaneClient) -> int:
     now = datetime.now(timezone.utc).astimezone()
     here = Path(args.repo) if args.repo else Path.cwd()
     if args.work_command == "start":
-        # 짧은 이름만 쓴다. `.local` 같은 전체 이름은 내부 호스트 이름이라 기록에 남기지 않는다.
-        host = socket.gethostname().split(".")[0]
-        print(work.start(client, args.code, host, now, take=args.take))
+        print(work.start(client, args.code, _short_host(), now, take=args.take))
     elif args.work_command == "note":
         print(work.note(client, args.code, args.did, args.next_step, now))
     elif args.work_command == "verify":
@@ -186,6 +189,7 @@ def _run_work(args: argparse.Namespace, client: PlaneClient) -> int:
             cause=args.cause,
             fix=args.fix,
             reason=args.reason,
+            host=_short_host(),
         )
         print(message)
     return 0

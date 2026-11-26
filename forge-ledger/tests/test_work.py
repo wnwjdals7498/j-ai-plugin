@@ -37,6 +37,9 @@ class _Tracker(FakePlane):
         self.now = NOW
         self._written = 0
         self.after_create: list[tuple[str, datetime, str]] = []  # 내 댓글 직후에 끼워 넣을 댓글
+        self.next_ids: list[str] = []  # 다음에 쓰는 댓글들의 id
+        self.same_time = False  # 켜면 이어 쓰는 댓글이 같은 작성 시각을 받는다
+        self.lose_response = False  # 다음 댓글은 저장한 뒤 응답을 잃는다
         self.project_id = self.create_project("sample", "FL")["id"]
         item = self.create_item(self.project_id, "작업", "", [])
         self.item_id = str(item["id"])
@@ -44,12 +47,17 @@ class _Tracker(FakePlane):
 
     def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]:
         created = super().create_comment(project_id, item_id, html)
-        self._written += 1
+        self._written += 0 if self.same_time and self._written else 1
         created["created_at"] = _stamp(self.now + timedelta(milliseconds=self._written))
-        self._project_by_id(project_id).comments[item_id][-1]["created_at"] = created["created_at"]
+        if self.next_ids:
+            created["id"] = self.next_ids.pop(0)
+        self._project_by_id(project_id).comments[item_id][-1].update(created)
         pending, self.after_create = self.after_create, []
         for text, at, actor in pending:
             self.add(text, at, actor)
+        if self.lose_response:
+            self.lose_response = False
+            raise PlaneUnavailable("Plane 연결 실패")
         return created
 
     def list_comments(self, project_id: str, item_id: str) -> list[dict[str, Any]]:
@@ -57,16 +65,21 @@ class _Tracker(FakePlane):
 
     # --- 시험 도우미 ---
 
-    def add(self, text: str, at: datetime, actor: str = OTHER) -> None:
+    def add(self, text: str, at: datetime, actor: str = OTHER, comment_id: str = "") -> str:
         comments = self._project_by_id(self.project_id).comments.setdefault(self.item_id, [])
+        comment_id = comment_id or f"seed-{len(comments)}"
         comments.append(
             {
-                "id": f"seed-{len(comments)}",
+                "id": comment_id,
                 "comment_html": f'<p class="editor">{html.escape(text, quote=False)}</p>',
                 "created_at": _stamp(at),
                 "actor": actor,
             }
         )
+        return comment_id
+
+    def ids(self) -> list[str]:
+        return [str(c["id"]) for c in self._project_by_id(self.project_id).comments.get(self.item_id, [])]
 
     def assign(self, *user_ids: str) -> None:
         self._stored_item(self.project_id, self.item_id)["assignees"] = list(user_ids)
@@ -107,7 +120,7 @@ class WorkTest(unittest.TestCase):
         self.assertEqual(self.t.item()["assignees"], [ME])
         work.note(self.t, "FL-1", "모듈 작성", "시험 추가", self._later(1))
         work.verify(self.t, "FL-1", "pytest -q", 0, HEAD, self._later(2))
-        work.end(self.t, "FL-1", "done", self._later(3), HEAD, result="완료")
+        work.end(self.t, "FL-1", "done", self._later(3), HEAD, host="alpha", result="완료")
 
         self.assertEqual(self.t.group(), "completed")
         self.assertEqual(
@@ -187,7 +200,7 @@ class WorkTest(unittest.TestCase):
         with self.assertRaisesRegex(work.WorkError, "beta"):
             work.start(self.t, "FL-1", "alpha", NOW)
         self.assertEqual(self.t.item()["assignees"], [ME])
-        self.assertEqual(self.t.lines()[-1], "[착수 취소] alpha 2026-11-26T12:00:00+00:00")
+        self.assertEqual(self.t.lines()[-1], f"[착수 취소] alpha 2026-11-26T12:00:00+00:00 ref={self.t.ids()[-2]}")
         self.assertNotIn("update_item", self.t.writes())
 
     def test_same_host_can_start_again(self) -> None:
@@ -197,7 +210,7 @@ class WorkTest(unittest.TestCase):
 
     def test_pause_then_another_host_starts_at_once(self) -> None:
         work.start(self.t, "FL-1", "alpha", NOW)
-        work.end(self.t, "FL-1", "pause", self._later(1), HEAD)
+        work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
         work.start(self.t, "FL-1", "beta", self._later(2))
         self.assertEqual(self.t.group(), "started")
         self.assertEqual(self.t.label_names(), [])
@@ -212,9 +225,14 @@ class WorkTest(unittest.TestCase):
 
         after = self.t.item()
         self.assertEqual((after["assignees"], after["state"]), (before["assignees"], before["state"]))
+        stamp = "2026-11-26T12:00:00+00:00"
         self.assertEqual(
-            [line.rsplit(" ", 1)[0] for line in self.t.lines()],
-            ["[착수] beta", "[착수] alpha", "[착수 취소] alpha"],
+            self.t.lines(),
+            [
+                "[착수] beta 2026-11-26T11:59:59+00:00",
+                f"[착수] alpha {stamp}",
+                f"[착수 취소] alpha {stamp} ref={self.t.ids()[0]}",
+            ],
         )
 
     def test_race_loser_does_not_remove_the_winner_assignment(self) -> None:
@@ -241,7 +259,10 @@ class WorkTest(unittest.TestCase):
 
         self.assertEqual(comments[0]["created_at"], comments[1]["created_at"])
         self.assertLess(comments[1]["id"], comments[0]["id"])
-        self.assertEqual(comments[-1]["comment_html"], "<p>[착수 취소] beta 2026-11-26T12:00:00+00:00</p>")
+        self.assertEqual(
+            comments[-1]["comment_html"],
+            f"<p>[착수 취소] beta 2026-11-26T12:00:00+00:00 ref={comments[1]['id']}</p>",
+        )
 
     def test_race_winner_ignores_later_start(self) -> None:
         self.t.after_create = [("[착수] beta 2026-11-26T12:00:01+00:00", NOW + timedelta(seconds=1), OTHER)]
@@ -251,17 +272,39 @@ class WorkTest(unittest.TestCase):
 
     def test_cancelled_and_old_starts_are_not_rivals(self) -> None:
         self.t.add("[착수] gamma 2026-11-26T11:00:00+00:00", NOW - timedelta(minutes=31))
-        self.t.add("[착수] beta 2026-11-26T11:50:00+00:00", NOW - timedelta(minutes=10))
-        self.t.add("[착수 취소] beta 2026-11-26T11:50:01+00:00", NOW - timedelta(minutes=9))
+        beta = self.t.add("[착수] beta 2026-11-26T11:50:00+00:00", NOW - timedelta(minutes=10))
+        self.t.add(f"[착수 취소] beta 2026-11-26T11:50:01+00:00 ref={beta}", NOW - timedelta(minutes=9))
         work.start(self.t, "FL-1", "alpha", NOW)
         self.assertEqual(self.t.item()["assignees"], [ME])
 
     def test_cancelled_start_is_not_a_heartbeat(self) -> None:
         self._claimed_by_other(40)
-        self.t.add("[착수] gamma 2026-11-26T11:55:00+00:00", NOW - timedelta(minutes=5))
-        self.t.add("[착수 취소] gamma 2026-11-26T11:55:01+00:00", NOW - timedelta(minutes=4))
+        gamma = self.t.add("[착수] gamma 2026-11-26T11:55:00+00:00", NOW - timedelta(minutes=5))
+        self.t.add(f"[착수 취소] gamma 2026-11-26T11:55:01+00:00 ref={gamma}", NOW - timedelta(minutes=4))
         work.start(self.t, "FL-1", "alpha", NOW, take=True)
         self.assertEqual(self.t.item()["assignees"], [ME])
+
+    def test_same_timestamp_cancel_with_reversed_ids_allows_retry(self) -> None:
+        self.t.next_ids, self.t.same_time = ["z-start", "a-cancel"], True
+        gamma_at = NOW - timedelta(seconds=1)
+        self.t.after_create = [("[착수] gamma 2026-11-26T11:59:59+00:00", gamma_at, OTHER)]
+        with self.assertRaisesRegex(work.WorkError, "gamma"):
+            work.start(self.t, "FL-1", "beta", NOW)
+        self.assertEqual(self.t.lines()[-1], "[착수 취소] beta 2026-11-26T12:00:00+00:00 ref=z-start")
+        gamma = next(i for i in self.t.ids() if i.startswith("seed-"))
+        self.t.add(f"[착수 취소] gamma 2026-11-26T12:00:00+00:00 ref={gamma}", NOW)
+
+        self.t.same_time = False
+        work.start(self.t, "FL-1", "delta", self._later(1))
+        self.assertEqual(self.t.item()["assignees"], [ME])
+
+    def test_cancel_removes_exactly_the_referenced_start(self) -> None:
+        self.t.add("[착수] beta 2026-11-26T11:50:00+00:00", NOW - timedelta(minutes=10), comment_id="b-keep")
+        at = NOW - timedelta(minutes=5)
+        self.t.add("[착수] beta 2026-11-26T11:55:00+00:00", at, comment_id="z-start")
+        self.t.add("[착수 취소] beta 2026-11-26T11:55:00+00:00 ref=z-start", at, comment_id="a-cancel")
+        with self.assertRaisesRegex(work.WorkError, "beta의 착수.10분 전"):
+            work.start(self.t, "FL-1", "alpha", NOW)
 
     # 입력 검사
 
@@ -289,8 +332,8 @@ class WorkTest(unittest.TestCase):
             lambda: work.note(self.t, "FL-1", f"{leak} 수정", "b", NOW),
             lambda: work.verify(self.t, "FL-1", f"pytest {leak}", 0, HEAD, NOW),
             lambda: work.verify(self.t, "FL-1", "pytest", 0, HEAD, NOW, limits=leak),
-            lambda: work.end(self.t, "FL-1", "fail", NOW, HEAD, cause=leak, fix="b"),
-            lambda: work.end(self.t, "FL-1", "done", NOW, HEAD, result="r", unverified=leak),
+            lambda: work.end(self.t, "FL-1", "fail", NOW, HEAD, host="alpha", cause=leak, fix="b"),
+            lambda: work.end(self.t, "FL-1", "done", NOW, HEAD, host="alpha", result="r", unverified=leak),
         )
         for call in calls:
             with self.assertRaisesRegex(SecretFound, "home_path") as caught:
@@ -304,10 +347,10 @@ class WorkTest(unittest.TestCase):
         work.verify(self.t, "FL-1", "pytest", 0, OTHER_HEAD, NOW)
         self.t.calls.clear()
         with self.assertRaisesRegex(work.WorkError, "unverified"):
-            work.end(self.t, "FL-1", "done", NOW, HEAD, result="완료")
+            work.end(self.t, "FL-1", "done", NOW, HEAD, host="alpha", result="완료")
         self.assertEqual(self.t.writes(), [])
 
-        work.end(self.t, "FL-1", "done", self._later(1), HEAD, result="완료", unverified="문서만 수정")
+        work.end(self.t, "FL-1", "done", self._later(1), HEAD, host="alpha", result="완료", unverified="문서만 수정")
         self.assertEqual(self.t.lines()[-1], "[종료] done result: 완료 / unverified: 문서만 수정")
         self.assertEqual(self.t.group(), "completed")
 
@@ -320,7 +363,7 @@ class WorkTest(unittest.TestCase):
         for mode, fields, group, labels, line in cases:
             with self.subTest(mode=mode):
                 t = _Tracker()
-                work.end(t, "FL-1", mode, NOW, "", **fields)  # type: ignore[arg-type]
+                work.end(t, "FL-1", mode, NOW, "", host="alpha", **fields)  # type: ignore[arg-type]
                 self.assertEqual((t.group(), t.label_names(), t.lines()), (group, labels, [line]))
 
     def test_status_labels_are_replaced_and_others_kept(self) -> None:
@@ -329,7 +372,7 @@ class WorkTest(unittest.TestCase):
         self.t.update_item(self.t.project_id, self.t.item_id, {"labels": [keep["id"], old["id"]]})
         work.start(self.t, "FL-1", "alpha", NOW)
         self.assertEqual(self.t.label_names(), ["blocked"])
-        work.end(self.t, "FL-1", "skip", self._later(1), "", reason="불필요")
+        work.end(self.t, "FL-1", "skip", self._later(1), "", host="alpha", reason="불필요")
         self.assertEqual(self.t.label_names(), ["blocked", "skipped"])
 
     def test_end_requires_mode_fields(self) -> None:
@@ -342,7 +385,7 @@ class WorkTest(unittest.TestCase):
         )
         for mode, fields in cases:
             with self.subTest(mode=mode, fields=fields), self.assertRaises(work.WorkError):
-                work.end(self.t, "FL-1", mode, NOW, HEAD, **fields)  # type: ignore[arg-type]
+                work.end(self.t, "FL-1", mode, NOW, HEAD, host="alpha", **fields)  # type: ignore[arg-type]
         self.assertEqual(self.t.writes(), [])
 
     # 쓰기 실패
@@ -351,26 +394,86 @@ class WorkTest(unittest.TestCase):
         work.start(self.t, "FL-1", "alpha", NOW)
         self.t.fail_on["update_item"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
         with self.assertRaises(PlaneUnavailable):
-            work.end(self.t, "FL-1", "pause", self._later(1), HEAD)
+            work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
         self.assertEqual([line.split()[0] for line in self.t.lines()], ["[착수]"])
         self.assertEqual(self.t.group(), "started")
 
         del self.t.fail_on["update_item"]
-        work.end(self.t, "FL-1", "pause", self._later(2), HEAD)
+        work.end(self.t, "FL-1", "pause", self._later(2), HEAD, host="alpha")
         self.assertEqual((self.t.group(), self.t.label_names()), ("unstarted", ["paused"]))
         self.assertEqual(self.t.lines()[1:], ["[종료] pause"])
 
     def test_end_comment_failure_asks_for_rerun_which_writes_only_the_comment(self) -> None:
         self.t.fail_on["create_comment"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
         with self.assertRaisesRegex(work.WorkError, "end를 다시 실행.*HTTP 500"):
-            work.end(self.t, "FL-1", "pause", NOW, HEAD)
+            work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
         self.assertEqual(self.t.writes(), ["create_label", "update_item", "create_comment"])  # 댓글은 한 번만 시도
 
         del self.t.fail_on["create_comment"]
         self.t.calls.clear()
-        work.end(self.t, "FL-1", "pause", self._later(1), HEAD)
+        work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
         self.assertEqual(self.t.writes(), ["create_comment"])
         self.assertEqual(self.t.lines(), ["[종료] pause"])
+
+    def _end_with_lost_response(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        self.t.lose_response = True
+        with self.assertRaisesRegex(work.WorkError, "end를 다시 실행"):
+            work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
+
+    def test_end_rerun_after_lost_response_is_refused_once_another_host_started(self) -> None:
+        self._end_with_lost_response()
+        work.start(self.t, "FL-1", "beta", self._later(2))  # 같은 계정의 다른 컴퓨터
+        before = (self.t.item(), self.t.lines())
+        self.t.calls.clear()
+        with self.assertRaisesRegex(work.WorkError, "beta"):
+            work.end(self.t, "FL-1", "pause", self._later(3), HEAD, host="alpha")
+        self.assertEqual(self.t.writes(), [])
+        self.assertEqual((self.t.item(), self.t.lines()), before)
+
+    def test_end_rerun_after_lost_response_succeeds_without_a_second_end_comment(self) -> None:
+        self._end_with_lost_response()
+        before = self.t.item()
+        self.t.calls.clear()
+        message = work.end(self.t, "FL-1", "pause", self._later(2), HEAD, host="alpha")
+        self.assertIn("[종료] pause", message)
+        self.assertEqual(self.t.writes(), [])
+        self.assertEqual(self.t.item(), before)
+        self.assertEqual([line.split()[0] for line in self.t.lines()], ["[착수]", "[종료]"])
+
+    def test_end_rerun_without_a_start_is_recognised_by_the_same_end_line(self) -> None:
+        self.t.lose_response = True
+        with self.assertRaises(work.WorkError):
+            work.end(self.t, "FL-1", "skip", NOW, "", reason="불필요", host="alpha")
+        self.t.calls.clear()
+        work.end(self.t, "FL-1", "skip", self._later(1), "", reason="불필요", host="alpha")
+        self.assertEqual(self.t.writes(), [])
+
+        work.start(self.t, "FL-1", "beta", self._later(2))
+        self.t.calls.clear()
+        with self.assertRaisesRegex(work.WorkError, "beta"):
+            work.end(self.t, "FL-1", "skip", self._later(3), "", reason="불필요", host="alpha")
+        self.assertEqual(self.t.writes(), [])
+
+    def test_cancelled_attempt_by_another_host_does_not_block_end(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        with self.assertRaises(work.WorkError):
+            work.start(self.t, "FL-1", "beta", self._later(5))
+        work.end(self.t, "FL-1", "pause", self._later(6), HEAD, host="alpha")
+        self.assertEqual(self.t.group(), "unstarted")
+        self.assertEqual(self.t.lines()[-1], "[종료] pause")
+
+    def test_same_host_name_of_another_user_counts_as_another_computer(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        self.t.add("[착수] alpha 2026-11-26T12:40:00+00:00", NOW + timedelta(minutes=40), OTHER)
+        with self.assertRaisesRegex(work.WorkError, "거부"):
+            work.end(self.t, "FL-1", "pause", self._later(41), HEAD, host="alpha")
+
+    def test_next_cycle_on_the_same_host_can_end_again(self) -> None:
+        for minute in (0, 2):
+            work.start(self.t, "FL-1", "alpha", self._later(minute))
+            work.end(self.t, "FL-1", "pause", self._later(minute + 1), HEAD, host="alpha")
+        self.assertEqual([line.split()[0] for line in self.t.lines()], ["[착수]", "[종료]"] * 2)
 
     def test_start_comment_failure_surfaces_and_changes_nothing(self) -> None:
         self.t.fail_on["create_comment"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
