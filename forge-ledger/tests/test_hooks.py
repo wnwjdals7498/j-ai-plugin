@@ -137,6 +137,18 @@ class HooksTest(unittest.TestCase):
         self.assertEqual(spawned[0][-2:], ["log", "sync"])
         self.assertIn("FORGE_LEDGER_WORKLOG_AUTO", " ".join(build_exports(env)))
 
+    def test_session_start_strips_workspace(self) -> None:
+        from ledger.worklog import LocalLog, new_entry
+
+        env = {**self.state_env, "CLAUDE_PROJECT_DIR": str(self.repo), "FORGE_LEDGER_PLANE_WORKSPACE": "  forge  "}
+        LocalLog(self.state_dir).append(
+            new_entry("작업", source="manual", env={**env, "FORGE_LEDGER_PLANE_WORKSPACE": "forge"}, now=NOW)
+        )
+        out = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(session_start, "_spawn_detached"), redirect_stdout(out):
+            self.assertEqual(session_start.main(), 0)
+        self.assertIn("작업 일지 미전송 1건", out.getvalue())
+
     def test_worklog_corrupt_sent_preserves_summary_and_refresh(self) -> None:
         worklog = self.state_dir / "worklog"
         worklog.mkdir(parents=True)

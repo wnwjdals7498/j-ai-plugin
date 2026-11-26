@@ -15,7 +15,7 @@ from ledger.adapters import WorklogStore
 from ledger.flows import git_toplevel
 from ledger.plane import PlaneAuthError, PlaneClient, PlaneError, PlaneSettings, PlaneUnavailable
 from ledger.ratelimit import default_state_dir, make_shared_limiter
-from ledger.worklog import LocalLog, RemoteEntry, WorklogError, new_entry
+from ledger.worklog import LocalLog, RemoteEntry, SyncBusy, WorklogError, new_entry
 from ledger.worklog_plane import PlaneWorklog
 
 
@@ -48,25 +48,26 @@ def sync_pending(
     *,
     on_error: Optional[Callable[[Exception], None]] = None,
 ) -> SyncResult:
-    sent = 0
-    failed = 0
-    for entry in local.pending(workspace):
-        try:
-            comment_id = store.post_entry(entry)
-        except PlaneAuthError:
-            raise
-        except (PlaneUnavailable, OSError, IncompleteRead) as exc:
-            if on_error:
-                on_error(exc)
-            break
-        except PlaneError as exc:
-            failed += 1
-            if on_error:
-                on_error(exc)
-            continue
-        local.mark_sent(entry.id, comment_id)
-        sent += 1
-    return SyncResult(sent, len(local.pending(workspace)), local.pending_other(workspace), failed)
+    with local.sync_lock():
+        sent = 0
+        failed = 0
+        for entry in local.pending(workspace):
+            try:
+                comment_id = store.post_entry(entry)
+            except PlaneAuthError:
+                raise
+            except (PlaneUnavailable, OSError, IncompleteRead) as exc:
+                if on_error:
+                    on_error(exc)
+                break
+            except PlaneError as exc:
+                failed += 1
+                if on_error:
+                    on_error(exc)
+                continue
+            local.mark_sent(entry.id, comment_id)
+            sent += 1
+        return SyncResult(sent, len(local.pending(workspace)), local.pending_other(workspace), failed)
 
 
 def add_log_parser(sub: argparse._SubParsersAction[Any]) -> None:
@@ -194,14 +195,19 @@ def run_log(
             local.append(entry)
             errors: list[Exception] = []
             sent = False
+            busy = False
             try:
                 store = make_store(env)
                 if store is not None:
                     try:
                         sync_pending(local, store, workspace, on_error=errors.append)
+                    except SyncBusy:
+                        busy = True
+                        print("전송 건너뜀: 다른 전송 진행 중", file=err)
                     except Exception as exc:
                         errors.append(exc)
-                sent = entry.id not in {pending.id for pending in local.pending(workspace)}
+                if not busy:
+                    sent = entry.id not in {pending.id for pending in local.pending(workspace)}
             except Exception as exc:
                 errors.append(exc)
             if errors:
@@ -223,6 +229,9 @@ def run_log(
             return 1 if result.failed else 0
         elif args.log_command == "show":
             _show(args, local, make_store(env), workspace, now(), out)
+        return 0
+    except SyncBusy:
+        print("다른 전송 진행 중", file=out)
         return 0
     except WorklogError as exc:
         print(f"기록 거부: {exc}", file=err)

@@ -831,9 +831,19 @@ class WorklogSyncTest(_SyncCase):
         def now() -> datetime:
             return datetime(2026, 11, 30, 23, tzinfo=timezone.utc)
 
+        october = RemoteEntry(
+            Entry("old", "2026-10-01T12:00:00+00:00", "host", "manual", "본문", "ws"), "작성자", "old"
+        )
+
+        class InitialLogs:
+            def list_entries(self, from_, to, user=None):
+                return [october]
+
+        self.assertEqual(sync_worklog(self.store, InitialLogs(), PM_URL, now, self.events.append, True).result, "ok")
         self.assertEqual(sync_worklog(self.store, pm, PM_URL, now, self.events.append, False).result, "ok")
-        self.assertEqual(pm.bounds, (date(2026, 11, 1), date(2026, 12, 1)))
-        self.assertEqual(len(self.store.entities(WORKSPACE_REPO_ID, "worklog")), 1)
+        self.assertEqual(pm.bounds, (date(2026, 10, 1), date(2026, 12, 1)))
+        states = {row.ext_key: row.state for row in self.store.entities(WORKSPACE_REPO_ID, "worklog", states=None)}
+        self.assertEqual(states, {"old": "deleted", "id": "open"})
 
     def test_changed_source_requires_full_and_retires_old_only_after_success(self) -> None:
         from datetime import date

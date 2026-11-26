@@ -488,10 +488,11 @@ def sync_worklog(
         client = getattr(pm, "client", pm)
         before = getattr(client, "calls", 0)
         try:
-            today = now().astimezone(timezone.utc).date() + timedelta(days=1)
+            today = now().astimezone(timezone.utc).date()
+            upper = today + timedelta(days=1)
             month_index = today.year * 12 + today.month - 1 - (HUB_RECENT_MONTHS - 1)
             first = date(1970, 1, 1) if full else date(month_index // 12, month_index % 12 + 1, 1)
-            entries = pm.list_entries(first, today)
+            entries = pm.list_entries(first, upper)
             rows = []
             for remote in entries:
                 entry = remote.entry
@@ -510,7 +511,7 @@ def sync_worklog(
             months = {
                 row.attrs["month"]
                 for row in store.entities(WORKSPACE_REPO_ID, "worklog")
-                if first.strftime("%Y-%m") <= row.attrs["month"] <= today.strftime("%Y-%m")
+                if first.strftime("%Y-%m") <= row.attrs["month"] <= upper.strftime("%Y-%m")
             }
             stamp = _stamp(now)
             store.apply_kind(source_id, WORKSPACE_REPO_ID, "worklog", rows, stamp, close_missing=False)

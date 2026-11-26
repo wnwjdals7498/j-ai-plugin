@@ -63,7 +63,8 @@ def validate(text: str, host: str, repo: str, item: str) -> None:
 
 
 def host_label(env: Mapping[str, str]) -> str:
-    return re.sub(r"\s+", "-", env.get("FORGE_LEDGER_WORKLOG_HOST", "") or socket.gethostname().split(".")[0])
+    raw = env.get("FORGE_LEDGER_WORKLOG_HOST", "").strip() or socket.gethostname().split(".")[0].strip()
+    return re.sub(r"\s+", "-", raw)
 
 
 def new_entry(
@@ -84,11 +85,15 @@ def new_entry(
         host=host,
         source=source,
         text=text,
-        workspace=env.get("FORGE_LEDGER_PLANE_WORKSPACE", ""),
+        workspace=env.get("FORGE_LEDGER_PLANE_WORKSPACE", "").strip(),
         repo=repo,
         item=item,
         session=session,
     )
+
+
+class SyncBusy(Exception):
+    """다른 동기화가 진행 중이다."""
 
 
 class LocalLog:
@@ -103,6 +108,18 @@ class LocalLog:
         fd = os.open(self._lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(fd)
+
+    @contextmanager
+    def sync_lock(self) -> Iterator[None]:
+        fd = os.open(self._dir / "sync.lock", os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise SyncBusy from exc
             yield
         finally:
             os.close(fd)

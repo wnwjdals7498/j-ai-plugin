@@ -87,7 +87,9 @@ class WorklogTest(unittest.TestCase):
         self.log.mark_sent("one", "comment")
         directory = self.state / "worklog"
         self.assertEqual(stat.S_IMODE(directory.stat().st_mode), 0o700)
-        for name in ("2026-11.jsonl", "sent.json", "worklog.lock"):
+        with self.log.sync_lock():
+            self.assertTrue((directory / "sync.lock").exists())
+        for name in ("2026-11.jsonl", "sent.json", "worklog.lock", "sync.lock"):
             self.assertEqual(stat.S_IMODE((directory / name).stat().st_mode), 0o600)
 
     def test_last_for_session(self) -> None:
@@ -114,6 +116,15 @@ class WorklogTest(unittest.TestCase):
             self.assertEqual(host_label({"FORGE_LEDGER_WORKLOG_HOST": ""}), "desktop")
         with self.assertRaises(WorklogError):
             new_entry("", source="manual", env=env, now=now)
+
+    def test_environment_whitespace_normalization(self) -> None:
+        now = datetime(2026, 11, 26, tzinfo=timezone.utc)
+        env = {"FORGE_LEDGER_PLANE_WORKSPACE": "  team  ", "FORGE_LEDGER_WORKLOG_HOST": "  desk  top  "}
+        value = new_entry("작업", source="manual", env=env, now=now)
+        self.assertEqual(value.workspace, "team")
+        self.assertEqual(value.host, "desk-top")
+        with patch("ledger.worklog.socket.gethostname", return_value="desktop.example"):
+            self.assertEqual(host_label({"FORGE_LEDGER_WORKLOG_HOST": "  "}), "desktop")
 
     def test_append_rejects_exposure_even_for_direct_entry(self) -> None:
         with self.assertRaises(WorklogError):

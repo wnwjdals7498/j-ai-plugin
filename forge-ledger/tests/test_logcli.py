@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import fcntl
 import io
+import os
+import stat
 import json
 import tempfile
 import unittest
@@ -71,6 +74,33 @@ class LogCliTest(unittest.TestCase):
             err=self.err,
             make_store=lambda env: self.store if store else None,
         )
+
+    def test_workspace_whitespace_sends_entry(self):
+        self.env["FORGE_LEDGER_PLANE_WORKSPACE"] = "  forge  "
+        self.assertEqual(self.run_cmd("add", "작업"), 0)
+        self.assertIn("(전송)", self.out.getvalue())
+        self.assertEqual(len(self.store.comments), 1)
+        self.assertEqual(LocalLog(Path(self.tmp.name)).pending_other("forge"), 0)
+
+    def test_sync_lock_busy_skips_and_add_remains_pending(self):
+        local = LocalLog(Path(self.tmp.name))
+        lock_path = Path(self.tmp.name) / "worklog" / "sync.lock"
+        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+        self.addCleanup(os.close, fd)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.assertEqual(self.run_cmd("add", "작업"), 0)
+        self.assertIn("(미전송)", self.out.getvalue())
+        self.assertEqual(self.err.getvalue(), "전송 건너뜀: 다른 전송 진행 중\n")
+        self.assertEqual(len(local.pending("forge")), 1)
+        with patch.object(self.store, "post_entry") as post:
+            self.assertEqual(self.run_cmd("sync"), 0)
+            post.assert_not_called()
+        self.assertIn("다른 전송 진행 중", self.out.getvalue())
+        self.assertEqual(stat.S_IMODE(lock_path.stat().st_mode), 0o600)
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        self.assertEqual(self.run_cmd("sync"), 0)
+        self.assertEqual(len(local.pending("forge")), 0)
+        self.assertEqual(stat.S_IMODE(lock_path.stat().st_mode), 0o600)
 
     def test_add_offline(self):
         self.assertEqual(self.run_cmd("add", "작업", store=False), 0)

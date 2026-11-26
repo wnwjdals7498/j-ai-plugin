@@ -180,7 +180,7 @@ def main() -> int:
                     child_env[dst_key] = env[src_key]
             try:
                 state_dir = default_state_dir(child_env)
-                pending = len(LocalLog(state_dir).pending(child_env.get("FORGE_LEDGER_PLANE_WORKSPACE", "")))
+                pending = len(LocalLog(state_dir).pending(child_env.get("FORGE_LEDGER_PLANE_WORKSPACE", "").strip()))
             except Exception:  # 일지 손상이 기존 요약과 갱신을 막지 않는다
                 pending = 0
             pending_text = f"작업 일지 미전송 {pending}건" if pending else ""
