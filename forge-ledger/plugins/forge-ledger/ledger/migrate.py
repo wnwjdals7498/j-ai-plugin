@@ -415,8 +415,11 @@ def _drawio_strings(name: str, text: str) -> list[str]:
     return list(_diagram_strings(root))
 
 
-def _resource_problem(relative: str, resources: Path) -> Optional[str]:
-    """resource 경로와 파일 내용을 검사한다. 검사할 수 없는 파일은 통과시키지 않는다."""
+def load_resource(relative: str, resources: Path) -> tuple[bytes, Optional[str]]:
+    """resource를 한 번 읽어 (바이트, 문제)를 낸다. 검사할 수 없는 파일은 통과시키지 않는다.
+
+    문제가 `None`이면 돌려준 바이트가 검사를 통과한 것이다. 쓰는 쪽은 파일을 다시 읽지 말고 이 바이트를 쓴다.
+    """
     if (
         "\\" in relative
         or "\0" in relative
@@ -424,17 +427,21 @@ def _resource_problem(relative: str, resources: Path) -> Optional[str]:
         or PureWindowsPath(relative).drive
         or any(part in ("", ".", "..") for part in relative.split("/"))
     ):
-        return "안전하지 않은 resource 경로(resources 아래 상대 경로만 허용, `..` 금지)"
+        return b"", "안전하지 않은 resource 경로(resources 아래 상대 경로만 허용, `..` 금지)"
     target = resources / relative
     try:
         root = resources.resolve()
         if root not in target.resolve().parents:
-            return "resource가 resources 폴더 밖을 가리킴"
+            return b"", "resource가 resources 폴더 밖을 가리킴"
         if not target.is_file():
-            return "resource 파일이 없음"
+            return b"", "resource 파일이 없음"
         data = target.read_bytes()
     except (OSError, RuntimeError):
-        return "resource 파일을 읽을 수 없음"
+        return b"", "resource 파일을 읽을 수 없음"
+    return data, _content_problem(PurePosixPath(relative).name, data)
+
+
+def _content_problem(name: str, data: bytes) -> Optional[str]:
     try:
         text = None if b"\0" in data else data.decode("utf-8")
     except UnicodeDecodeError:
@@ -442,7 +449,7 @@ def _resource_problem(relative: str, resources: Path) -> Optional[str]:
     if text is None:
         return "검사할 수 없는 파일(이진 또는 UTF-8 아님)"
     try:
-        extra = _drawio_strings(PurePosixPath(relative).name, text)
+        extra = _drawio_strings(name, text)
     except _Unscannable as exc:
         return str(exc)
     names = _exposures(text, *extra)
@@ -487,7 +494,7 @@ def check_manifest(m: Manifest, source_dir: Path) -> list[Problem]:
             messages.append(depth)
         path = record.get("path")
         if record.get("kind") == "resource" and isinstance(path, str) and path.strip():
-            resource = _resource_problem(path, source_dir / "resources")
+            resource = load_resource(path, source_dir / "resources")[1]
             if resource:
                 messages.append(resource)
         problems.extend(Problem(label, message) for message in messages)
