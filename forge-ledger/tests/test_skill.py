@@ -65,6 +65,8 @@ class SkillTest(unittest.TestCase):
             "replaced_by",
             "link_to",
             "migrate/<slug>",
+            "pmt --project <slug> resume <slug>",
+            "pmt --project <slug> lock list",
         ):
             self.assertIn(value, text)
         self.assertEqual(find_secrets(text), [])
