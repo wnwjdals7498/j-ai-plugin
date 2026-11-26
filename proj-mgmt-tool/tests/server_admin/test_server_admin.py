@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import multiprocessing
 import os
@@ -18,6 +19,19 @@ from pmt.lifecycle import create_scope
 from pmt.server_admin.config import load_config, load_config_snapshot, publish_config, validate_config
 from pmt.server_admin.init import _base_config, _adopt_metadata
 from pmt.server_admin.secrets import _check_windows_acl, _dpapi, _set_windows_acl, check_source, store_key
+
+
+def test_shipped_example_config_passes_validation_with_documentation_ranges():
+    path = Path(__file__).resolve().parents[3] / "pmt-server" / "templates" / "host-config.example.json"
+    example = json.loads(path.read_text(encoding="utf-8"))
+    assert validate_config(example) is example
+    # The exposure scan allows IPv4 in this file, so only RFC 5737 documentation ranges may appear here.
+    documentation = [ipaddress.ip_network(item) for item in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")]
+    sources = example["access"]["allowed_sources"]
+    assert sources
+    for source in sources:
+        network = ipaddress.ip_network(source)
+        assert any(network.subnet_of(allowed) for allowed in documentation)
 
 
 def _config(root, data_root):
