@@ -5,16 +5,23 @@
 
 from __future__ import annotations
 
+import base64
+import html
 import json
 import os
 import re
+
+# nosemgrep: opt.semgrep-rules.python.lang.security.use-defused-xml.use-defused-xml -- 표준 라이브러리 제약(로컬 drawio)
+import xml.etree.ElementTree as ET  # nosec B405 # 표준 라이브러리 제약, ENTITY 선언은 파싱 전에 거부
+import zlib
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Optional
+from urllib.parse import unquote
 
-from ledger.secrets import find_exposures
+from ledger.secrets import PATTERN_NAMES, find_exposures
 
 _VERSION = 1
 _TOP_FIELDS = ("version", "slug", "source_dir", "records")
@@ -24,6 +31,13 @@ _TIME_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}(:[0-9]{2
 _MAX_DEPTH_BELOW_WORK = 3
 # 정상 매니페스트는 몇 단계뿐이다. 검사는 재귀하므로 읽을 때 깊이를 막는다.
 _MAX_JSON_DEPTH = 20
+_DRAWIO_NAME_RE = re.compile(r"\.(drawio|dio)(\.|$)")
+# 주석은 첫 `-->`에서만 끝나게 해 역추적이 늘지 않게 한다.
+_MXFILE_START_RE = re.compile(r"\s*(<\?xml[^>]*\?>\s*)?(<!--(?:(?!-->).)*-->\s*)*<mxfile\b", re.DOTALL)
+_MAX_DIAGRAM_BYTES = 20 * 1024 * 1024  # 압축을 푼 다이어그램 한 쪽의 최대 크기
+_MAX_EMBED_DEPTH = 3  # SVG 속 mxfile, 압축 본문 속 XML처럼 겹친 단계
+_UNPARSABLE_DRAWIO = "draw.io 파일을 XML로 해석할 수 없어 검사할 수 없음"
+_UNDECODABLE_DIAGRAM = "압축된 draw.io 다이어그램을 풀 수 없어 검사할 수 없음"
 
 _TEXT = "비어 있지 않은 문자열"
 _ANY_TEXT = "문자열"
@@ -181,14 +195,25 @@ def manifest_path(slug: str, env: Mapping[str, str]) -> Path:
     return state / "forge-ledger" / "migrations" / f"{slug}.json"
 
 
+def _exposures(*texts: str) -> list[str]:
+    """원문과 HTML 문자 참조를 푼 글(화면에 보이는 글자)을 모두 검사한다. 정의 순서, 중복 없음."""
+    found: set[str] = set()
+    for text in texts:
+        found.update(find_exposures(text))
+        shown = html.unescape(text)
+        if shown != text:
+            found.update(find_exposures(shown))
+    return [name for name in PATTERN_NAMES if name in found]
+
+
 def _field_name(name: str) -> str:
-    return "(가린 필드 이름)" if find_exposures(name) else " ".join(name.split())
+    return "(가린 필드 이름)" if _exposures(name) else " ".join(name.split())
 
 
 def _record_label(record: Mapping[str, Any], index: int) -> str:
     """문제 목록에 쓸 이름. 키에 노출 값이 있거나 키가 없으면 위치로 부른다."""
     key = record.get("key")
-    if isinstance(key, str) and key.strip() and not find_exposures(key):
+    if isinstance(key, str) and key.strip() and not _exposures(key):
         return " ".join(key.split())
     return f"records[{index}]"
 
@@ -210,7 +235,7 @@ def _strings(value: Any, where: str) -> Iterator[tuple[str, str]]:
 def _exposure_problems(label: str, value: Mapping[str, Any]) -> list[Problem]:
     problems = []
     for where, text in _strings(dict(value), ""):
-        names = find_exposures(text)
+        names = _exposures(text)
         if names:
             problems.append(Problem(label, f"노출 패턴({', '.join(names)}): {where}"))
     return problems
@@ -306,6 +331,90 @@ def _depth_problem(record: dict[str, Any], by_key: Mapping[str, dict[str, Any]])
     return None
 
 
+class _Unscannable(Exception):
+    """내용을 확인할 수 없는 파일. 메시지는 그대로 문제로 쓰며 파일 내용을 담지 않는다."""
+
+
+def _parse_xml(text: str) -> Optional[ET.Element]:
+    if "<!ENTITY" in text:  # draw.io는 쓰지 않는다. 엔티티 확장 공격을 막는다.
+        return None
+    try:
+        # nosemgrep -- 표준 라이브러리 제약(로컬 drawio), 위에서 ENTITY 선언을 거부함
+        return ET.fromstring(text.lstrip("\ufeff"))  # nosec B314
+    except (ET.ParseError, ValueError):
+        return None
+
+
+def _local_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _embedded_source(element: ET.Element) -> str:
+    """draw.io가 내보낸 SVG는 원본(mxfile 또는 mxGraphModel)을 `content` 속성에 담는다.
+
+    다른 형식의 `content`는 속을 볼 수 없으므로 `_Unscannable`이다.
+    """
+    if _local_name(element.tag) != "svg":
+        return ""
+    content = element.get("content", "").strip()
+    if content and not content.startswith(("<mxfile", "<mxGraphModel")):
+        raise _Unscannable(_UNPARSABLE_DRAWIO)
+    return content
+
+
+def _inflate_diagram(body: str) -> str:
+    """압축 본문(base64 → raw deflate → URL 인코딩)을 푼다. 조금이라도 어긋나면 `_Unscannable`."""
+    try:
+        data = base64.b64decode("".join(body.split()), validate=True)
+        inflater = zlib.decompressobj(wbits=-15)
+        raw = inflater.decompress(data, _MAX_DIAGRAM_BYTES)
+        # 끝나지 않은 스트림(잘림·크기 초과)이나 뒤에 남은 데이터는 검사하지 못한 내용이다.
+        if not inflater.eof or inflater.unused_data:
+            raise _Unscannable(_UNDECODABLE_DIAGRAM)
+        return unquote(raw.decode("utf-8"), errors="strict")
+    except (ValueError, zlib.error):
+        raise _Unscannable(_UNDECODABLE_DIAGRAM) from None
+
+
+def _diagram_strings(root: ET.Element, depth: int = 0) -> Iterator[str]:
+    """속성·글자(XML 문자 참조는 풀린 상태)와, 압축을 푼 다이어그램의 내용을 낸다."""
+    if depth > _MAX_EMBED_DEPTH:
+        raise _Unscannable(_UNPARSABLE_DRAWIO)
+    for element in root.iter():
+        yield from (text for text in (*element.attrib.values(), element.text, element.tail) if text)
+        embedded = _embedded_source(element)
+        if embedded:
+            inner = _parse_xml(embedded)
+            if inner is None:
+                raise _Unscannable(_UNPARSABLE_DRAWIO)
+            yield from _diagram_strings(inner, depth + 1)
+        if _local_name(element.tag) != "diagram":
+            continue
+        # 비압축 다이어그램은 자식 요소만 있다. 직접 든 글자는 압축 본문이다.
+        body = (element.text or "") + "".join(child.tail or "" for child in element)
+        if body.strip():
+            decoded = _inflate_diagram(body)
+            yield decoded
+            inner = _parse_xml(decoded)
+            if inner is not None:
+                yield from _diagram_strings(inner, depth + 1)
+
+
+def _drawio_strings(name: str, text: str) -> list[str]:
+    """draw.io 파일이면 원문 밖에 더 검사할 글을 낸다. 이름이나 내용으로 알아본다."""
+    if not text.strip():
+        return []
+    named = _DRAWIO_NAME_RE.search(name.lower()) is not None
+    root = _parse_xml(text)
+    if root is None:
+        if named or _MXFILE_START_RE.match(text.lstrip("\ufeff")):
+            raise _Unscannable(_UNPARSABLE_DRAWIO)
+        return []
+    if not named and not any(_local_name(e.tag) == "mxfile" or _embedded_source(e) for e in root.iter()):
+        return []
+    return list(_diagram_strings(root))
+
+
 def _resource_problem(relative: str, resources: Path) -> Optional[str]:
     """resource 경로와 파일 내용을 검사한다. 검사할 수 없는 파일은 통과시키지 않는다."""
     if (
@@ -332,7 +441,11 @@ def _resource_problem(relative: str, resources: Path) -> Optional[str]:
         text = None
     if text is None:
         return "검사할 수 없는 파일(이진 또는 UTF-8 아님)"
-    names = find_exposures(text)
+    try:
+        extra = _drawio_strings(PurePosixPath(relative).name, text)
+    except _Unscannable as exc:
+        return str(exc)
+    names = _exposures(text, *extra)
     return f"노출 패턴({', '.join(names)}): resource 파일 내용" if names else None
 
 
@@ -385,7 +498,7 @@ def check_manifest(m: Manifest, source_dir: Path) -> list[Problem]:
 def _shown(value: Any, limit: int = 80) -> str:
     """미리 보기에 낼 한 줄. 노출 패턴에 걸리면 값 대신 패턴 이름만 낸다."""
     text = value if isinstance(value, str) else ""
-    names = find_exposures(text)
+    names = _exposures(text)
     if names:
         return f"(가림: {', '.join(names)})"
     single = " ".join(text.split())

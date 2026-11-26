@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import base64
 import copy
 import io
 import json
 import tempfile
+import time
 import unittest
+import zlib
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from ledger.cli import main
 from ledger.migrate import (
@@ -20,6 +24,7 @@ from ledger.migrate import (
     render_preview,
     resolve_source_dir,
 )
+from ledger.secrets import find_exposures
 
 _P = "pmt:forge-wiki-plugin"
 _WORK = f"{_P}/_default/Work5"
@@ -31,6 +36,31 @@ _D9 = f"{_P}/D9"
 _FACT = f"{_P}/F1"
 _RESOURCE = f"{_P}/resources/derived/a.drawio"
 _PROJECT = f"{_P}/project"
+
+_CLEAN_DRAWIO = '<mxfile><diagram name="p1"><mxGraphModel><root/></mxGraphModel></diagram></mxfile>\n'
+
+
+def _deflate(data: bytes) -> bytes:
+    compressor = zlib.compressobj(wbits=-15)
+    return compressor.compress(data) + compressor.flush()
+
+
+def _b64(data: bytes) -> str:
+    return base64.b64encode(data).decode("ascii")
+
+
+def _packed(xml: str) -> str:
+    """draw.io의 압축 본문: URL 인코딩 → raw deflate → base64."""
+    return _b64(_deflate(quote(xml, safe="").encode("ascii")))
+
+
+def _model(label: str) -> str:
+    return f'<mxGraphModel><root><mxCell id="1" value="{label}"/></root></mxGraphModel>'
+
+
+def _mxfile(*bodies: str) -> str:
+    return "<mxfile>" + "".join(f'<diagram id="d{i}">{body}</diagram>' for i, body in enumerate(bodies)) + "</mxfile>"
+
 
 # 브리프의 매니페스트 JSON v1 예시 그대로. 예시의 D5가 가리키는 D9만 시험에서 더한다.
 _CONTRACT = """
@@ -82,7 +112,7 @@ class _ManifestCase(unittest.TestCase):
         self.source = self.tmp / "docs" / "projects" / "forge-wiki-plugin"
         self.drawio = self.source / "resources" / "derived" / "a.drawio"
         self.drawio.parent.mkdir(parents=True)
-        self.drawio.write_text("<mxfile><diagram>ok</diagram></mxfile>\n", encoding="utf-8")
+        self.drawio.write_text(_CLEAN_DRAWIO, encoding="utf-8")
 
     def write(self, data: Any) -> Path:
         path = self.tmp / "manifest.json"
@@ -409,6 +439,177 @@ class CheckResourceTest(_ManifestCase):
             with self.subTest(content=content[:4]):
                 self.drawio.write_bytes(content)
                 self.assert_single(_sample(), _RESOURCE, "검사할 수 없는 파일")
+
+
+class CheckHtmlEntityTest(_ManifestCase):
+    """HTML 필드는 저장된 글자와 화면에 보이는 글자가 다를 수 있다."""
+
+    def test_entity_encoded_values_are_detected_without_echo(self) -> None:
+        cases = (
+            (_WORK, "description_html", "<p>&#47;home&#47;alice&#47;run.log</p>", "home_path"),
+            (_ITEM, "description_html", "<p>&#x2F;home&#x2F;alice</p>", "home_path"),
+            (_BACKLOG, "description_html", "<p>&sol;home&sol;alice</p>", "home_path"),
+            (_COMMENT, "body_html", "<p>a.b&#64;corp.co.kr</p>", "email"),
+            (_COMMENT, "body_html", "<p>10&#46;20&#46;30&#46;40</p>", "ipv4"),
+            (_D9, "title", "&#47;Users&#47;alice", "home_path"),
+            (_FACT, "text", "password: &quot;correct horse alice&quot;", "secret_assignment"),
+        )
+        for key, name, value, pattern in cases:
+            with self.subTest(key=key, value=value):
+                data = _sample()
+                _record(data, key)[name] = value
+                message = self.assert_single(data, key, pattern)
+                self.assertIn(name, message)
+                for leaked in ("alice", "corp.co.kr", "10.20.30.40", "&#"):
+                    self.assertNotIn(leaked, message)
+
+    def test_raw_text_is_still_scanned_and_names_are_not_repeated(self) -> None:
+        data = _sample()
+        _record(data, _COMMENT)["body_html"] = "<p>/home/alice &#47;home&#47;bob 10.20.30.40</p>"
+        message = self.assert_single(data, _COMMENT, "home_path")
+        self.assertEqual(message, "노출 패턴(ipv4, home_path): body_html")
+
+    def test_escaped_markup_without_values_passes(self) -> None:
+        data = _sample()
+        _record(data, _COMMENT)["body_html"] = "<p>&lt;b&gt; a &amp; b &quot;c&quot; &#47;opt</p>"
+        self.assertEqual(self.check(data), [])
+
+    def test_entity_encoded_key_and_preview_are_masked(self) -> None:
+        data = _sample()
+        _record(data, _FACT)["key"] = f"{_P}/&#47;home&#47;alice"
+        _record(data, _WORK).update(name="&#47;home&#47;bob", redactions=["&#47;home&#47;carol → ~"])
+        problems = self.check(data)
+        self.assertIn("records[6]", [p.key for p in problems])
+        printed = " ".join(f"{p.key} {p.message}" for p in problems)
+        printed += render_preview(load_manifest(self.write(data)), ApplyPlan())
+        for leaked in ("alice", "bob", "carol"):
+            self.assertNotIn(leaked, printed)
+
+
+class CheckDrawioTest(_ManifestCase):
+    def check_file(self, content: str, name: str = "a.drawio") -> list[Problem]:
+        target = self.drawio.parent / name
+        target.write_text(content, encoding="utf-8")
+        data = _sample()
+        _record(data, _RESOURCE)["path"] = f"derived/{name}"
+        return self.check(data)
+
+    def assert_found(self, content: str, pattern: str, name: str = "a.drawio") -> None:
+        problems = self.check_file(content, name)
+        self.assertEqual([p.key for p in problems], [_RESOURCE], problems)
+        self.assertEqual(problems[0].message, f"노출 패턴({pattern}): resource 파일 내용")
+
+    def assert_unscannable(self, content: str, name: str = "a.drawio") -> None:
+        problems = self.check_file(content, name)
+        self.assertEqual([p.key for p in problems], [_RESOURCE], problems)
+        self.assertIn("검사할 수 없음", problems[0].message)
+        self.assertNotIn("alice", problems[0].message)
+
+    def test_compressed_body_is_decoded_and_scanned(self) -> None:
+        content = _mxfile(_packed(_model("/home/alice/notes")))
+        self.assertEqual(find_exposures(content), [])  # 풀지 않으면 보이지 않는다
+        self.assert_found(content, "home_path")
+
+    def test_clean_compressed_and_wrapped_base64_pass(self) -> None:
+        body = _packed(_model("정상 라벨 & <b>"))
+        wrapped = "\n  " + "\n  ".join(body[i : i + 20] for i in range(0, len(body), 20)) + "\n"
+        for content in (_mxfile(body), _mxfile(wrapped), _mxfile(""), _mxfile("  \n "), ""):
+            with self.subTest(content=content[:40]):
+                self.assertEqual(self.check_file(content), [])
+
+    def test_every_diagram_page_is_scanned(self) -> None:
+        content = _mxfile(_model("ok"), _packed(_model("ok")), _packed(_model("10.20.30.40")))
+        self.assert_found(content, "ipv4")
+
+    def test_compressed_body_is_found_without_drawio_extension(self) -> None:
+        mxfile = _mxfile(_packed(_model("/home/alice")))
+        escaped = mxfile.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        svg = (
+            '<?xml version="1.0"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "svg11.dtd">'
+            f'<svg xmlns="http://www.w3.org/2000/svg" content="{escaped}"><g/></svg>'
+        )
+        for name, content in (("a.xml", mxfile), ("a.drawio.svg", svg), ("a.svg", svg), ("a.dio", mxfile)):
+            with self.subTest(name=name):
+                self.assert_found(content, "home_path", name)
+
+    def test_many_leading_comments_do_not_stall_the_check(self) -> None:
+        # 깨진 XML 앞의 주석들이 정규식의 역추적을 지수로 늘리면 안 된다.
+        comments = "<!--a-->\n" * 26
+        started = time.perf_counter()
+        self.assert_unscannable(comments + "<mxfile>", "a.xml")
+        self.assertEqual(self.check_file(comments + "<broken", "b.xml"), [])
+        self.assertLess(time.perf_counter() - started, 2.0)
+
+    def test_svg_content_in_unknown_form_is_a_problem(self) -> None:
+        packed = _mxfile(_packed(_model("/home/alice")))
+        for name in ("a.drawio.svg", "a.svg"):
+            for label, content in (("base64", _b64(packed.encode())), ("URL 인코딩", quote(packed, safe=""))):
+                with self.subTest(name=name, content=label):
+                    svg = f'<svg xmlns="http://www.w3.org/2000/svg" content="{content}"/>'
+                    self.assert_unscannable(svg, name)
+
+    def test_svg_content_with_bare_graph_model_is_scanned(self) -> None:
+        body = _packed(_model("/home/alice"))
+        content = f"&lt;mxGraphModel&gt;&lt;diagram&gt;{body}&lt;/diagram&gt;&lt;/mxGraphModel&gt;"
+        self.assert_found(f'<svg content="{content}"/>', "home_path", "a.svg")
+        self.assertEqual(self.check_file('<svg content="  "><text>ok</text></svg>', "b.svg"), [])
+
+    def test_cdata_and_text_after_child_are_decoded(self) -> None:
+        body = _packed(_model("/home/alice"))
+        for content in (_mxfile(f"<![CDATA[{body}]]>"), _mxfile(f"<mxGraphModel/>{body}")):
+            with self.subTest(content=content[:40]):
+                self.assert_found(content, "home_path")
+
+    def test_corrupted_compressed_body_is_a_problem(self) -> None:
+        stream = _deflate(quote(_model("/home/alice"), safe="").encode("ascii"))
+        cases = {
+            "base64가 아님": "%%% not base64 %%%",
+            "deflate가 아님": _b64(b"plain bytes, not deflate"),
+            "중간에 잘림": _b64(stream[: len(stream) // 2]),
+            "뒤에 남는 데이터": _b64(stream + b"hidden /home/alice"),
+            "UTF-8이 아님": _b64(_deflate(b"\xff\xfe")),
+            "URL 인코딩이 UTF-8이 아님": _b64(_deflate(b"%FF%FE")),
+            "너무 큼": _b64(_deflate(b"a" * (21 * 1024 * 1024))),
+        }
+        for label, body in cases.items():
+            with self.subTest(case=label):
+                self.assert_unscannable(_mxfile(body))
+
+    def test_unparsable_drawio_is_a_problem(self) -> None:
+        for name, content in (
+            ("a.drawio", "<mxfile><diagram>"),
+            ("a.drawio", "not xml at all"),
+            ("a.xml", '<?xml version="1.0"?>\n<mxfile><diagram>'),
+            ("a.drawio", '<!DOCTYPE m [<!ENTITY x "y">]><mxfile>&x;</mxfile>'),
+        ):
+            with self.subTest(name=name, content=content[:30]):
+                self.assert_unscannable(content, name)
+
+    def test_displayed_labels_are_decoded_in_plain_and_compressed_diagrams(self) -> None:
+        once = "&#47;home&#47;alice"  # XML 문자 참조
+        twice = "&amp;#47;home&amp;#47;alice"  # HTML 라벨 안의 문자 참조
+        for label in (once, twice):
+            for body in (_model(label), _packed(_model(label))):
+                with self.subTest(label=label, body=body[:20]):
+                    self.assert_found(_mxfile(body), "home_path")
+
+    def test_other_files_with_diagram_words_are_not_treated_as_drawio(self) -> None:
+        for name, content in (
+            ("a.xml", "<report><diagram>흐름 설명</diagram></report>"),
+            ("a.md", "draw.io는 `<mxfile><diagram>` 형식이다\n"),
+            ("a.svg", '<svg xmlns="http://www.w3.org/2000/svg"><text>ok</text></svg>'),
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(self.check_file(content, name), [])
+
+    def test_cli_reports_compressed_finding_without_value(self) -> None:
+        self.drawio.write_text(_mxfile(_packed(_model("/home/alice/notes"))), encoding="utf-8")
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            rc = main(["migrate", "check", str(self.write(_sample()))], env={"HOME": str(self.tmp)})
+        self.assertEqual(rc, 1)
+        self.assertIn(f"{_RESOURCE}: 노출 패턴(home_path)", out.getvalue())
+        self.assertNotIn("alice", out.getvalue() + err.getvalue())
 
 
 class PreviewTest(_ManifestCase):
