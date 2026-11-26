@@ -109,10 +109,11 @@ class FakePlaneServer:
         self.states: dict[str, list[dict[str, Any]]] = {}  # 프로젝트 id별
         self.labels: dict[str, list[dict[str, Any]]] = {}  # 프로젝트 id별
         self.comments: dict[str, list[dict[str, Any]]] = {}  # 항목 id별
-        self.me: dict[str, Any] = {"email": "tester@example.com"}
+        self.me: dict[str, Any] = {"id": _FAKE_ACTOR, "email": "tester@example.com"}
         self._item_seq: dict[str, int] = {}
         self._tick = 0
         self.touch_next_get_item: bool = False
+        self.drop_next_response: bool = False  # 요청은 처리하고 응답 없이 연결을 끊는다
         self._closed = False
 
         owner = self
@@ -127,6 +128,10 @@ class FakePlaneServer:
                 return
 
             def _send_json(self, status: int, body: Any) -> None:
+                if owner.drop_next_response:
+                    owner.drop_next_response = False
+                    self.close_connection = True
+                    return
                 raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
                 self.send_response(status)
                 if status == 429 and owner.retry_after is not None:
@@ -280,6 +285,9 @@ class FakePlaneServer:
                         if isinstance(parsed_json, dict):
                             payload.update(parsed_json)
                         owner.comments.setdefault(parts[-2], []).append(dict(payload))
+                        commented = owner.items.get(parts[-4], {}).get(parts[-2])
+                        if commented is not None:
+                            commented["updated_at"] = payload["created_at"]
                         self._send_json(201, payload)
                         return
                     payload = {
@@ -562,6 +570,10 @@ class FakePlane:
         self._record_and_check("whoami")
         return "tester@example.com"
 
+    def whoami_id(self) -> str:
+        self._record_and_check("whoami_id")
+        return _FAKE_ACTOR
+
     def list_states(self, project_id: str) -> list[dict[str, Any]]:
         self._record_and_check("list_states", project_id)
         proj = self._project_by_id(project_id)
@@ -591,7 +603,7 @@ class FakePlane:
 
     def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]:
         self._record_and_check("create_comment", project_id, item_id)
-        self._stored_item(project_id, item_id)
+        item = self._stored_item(project_id, item_id)
         comment = {
             "id": self._next_id("cmt"),
             "comment_html": html,
@@ -599,6 +611,7 @@ class FakePlane:
             "actor": _FAKE_ACTOR,
         }
         self._project_by_id(project_id).comments.setdefault(item_id, []).append(comment)
+        item["updated_at"] = comment["created_at"]
         return dict(comment)
 
     def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]:

@@ -289,7 +289,13 @@ class PlaneClient:
         path: str,
         payload: Optional[dict[str, Any]] = None,
         query: Optional[dict[str, str]] = None,
+        *,
+        retry_transient: bool = True,
     ) -> Any:
+        """429는 항상 다시 보낸다. 5xx·연결 오류는 `retry_transient`일 때만 다시 보낸다.
+
+        생성 POST는 `retry_transient=False`로 부른다. 서버가 이미 만들었을 수 있어 다시 보내면 중복된다.
+        """
         url = f"{self._base_url}{path}"
         if query:
             url = f"{url}?{urllib.parse.urlencode(query)}"
@@ -333,14 +339,14 @@ class PlaneClient:
                         continue
                     raise PlaneUnavailable("Plane 요청 실패: HTTP 429") from None
                 if 500 <= status <= 599:
-                    if attempt < len(_RETRY_DELAYS):
+                    if retry_transient and attempt < len(_RETRY_DELAYS):
                         self._sleep(_RETRY_DELAYS[attempt])
                         attempt += 1
                         continue
                     raise PlaneUnavailable(f"Plane 요청 실패: HTTP {status}") from None
                 raise PlaneError(f"Plane 요청 오류: HTTP {status}") from None
             except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError) as exc:
-                if attempt < len(_RETRY_DELAYS):
+                if retry_transient and attempt < len(_RETRY_DELAYS):
                     self._sleep(_RETRY_DELAYS[attempt])
                     attempt += 1
                     continue
@@ -354,8 +360,10 @@ class PlaneClient:
         method: str,
         path: str,
         payload: Optional[dict[str, Any]] = None,
+        *,
+        retry_transient: bool = True,
     ) -> dict[str, Any]:
-        result = self._request(method, path, payload=payload)
+        result = self._request(method, path, payload=payload, retry_transient=retry_transient)
         if not isinstance(result, dict):
             raise PlaneError(_FORMAT_ERROR)
         return result
@@ -387,6 +395,11 @@ class PlaneClient:
         """현재 API 키 사용자의 이메일을 돌려준다."""
         data = self._request_dict("GET", "/api/v1/users/me/")
         return _required_text(data, "email")
+
+    def whoami_id(self) -> str:
+        """현재 API 키 사용자의 id를 돌려준다. 담당자 지정과 댓글 작성자 비교에 쓴다."""
+        data = self._request_dict("GET", "/api/v1/users/me/")
+        return _required_text(data, "id")
 
     def list_projects(self) -> list[dict[str, Any]]:
         return self._list_paginated(self._projects_path())
@@ -490,7 +503,8 @@ class PlaneClient:
             "external_id": external_id,
         }
         payload.update({key: value for key, value in optional.items() if value is not None})
-        return self._request_dict("POST", self._projects_path(project_id, "work-items"), payload=payload)
+        path = self._projects_path(project_id, "work-items")
+        return self._request_dict("POST", path, payload=payload, retry_transient=False)
 
     def update_item(self, project_id: str, item_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         """허용한 필드만 PATCH한다. `None` 값은 그 필드를 비운다."""
@@ -513,6 +527,7 @@ class PlaneClient:
             "POST",
             self._projects_path(project_id, "work-items", item_id, "comments"),
             payload={"comment_html": html},
+            retry_transient=False,
         )
 
     def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]:

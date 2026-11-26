@@ -659,7 +659,7 @@ class PlaneWorkWritesTest(unittest.TestCase):
         slept: list[float] = []
         client = PlaneClient(self.settings, sleep=slept.append)
         self.server.status_queue = [503, 200]
-        client.create_comment("p1", "i1", "<p>x</p>")
+        client.update_item("p1", "i1", {"state": "s1"})
         self.assertEqual(slept, [1.0])
         self.assertEqual(self.server.requests[-1].headers["X-API-Key"], TEST_TOKEN)
 
@@ -683,12 +683,174 @@ class PlaneWorkWritesTest(unittest.TestCase):
                 self.client.update_item("p1", "i1", {"state": "s1"})
 
 
+class CreateRetryPolicyTest(unittest.TestCase):
+    """생성 POST는 서버가 처리했을 수 있는 실패에서 다시 보내지 않는다(중복 방지)."""
+
+    def setUp(self) -> None:
+        self.server = FakePlaneServer()
+        self.addCleanup(self.server.close)
+        self.server.retry_after = "1"
+        self.slept: list[float] = []
+        self.client = PlaneClient(
+            PlaneSettings(base_url=self.server.base_url, workspace="forge", token=TEST_TOKEN),
+            sleep=self.slept.append,
+            notify=lambda _: None,
+        )
+
+    def _creates(self) -> tuple[tuple[str, Any], ...]:
+        return (
+            ("create_item", lambda: self.client.create_item("p1", "W", "<p>b</p>", [])),
+            ("create_comment", lambda: self.client.create_comment("p1", "i1", "<p>c</p>")),
+        )
+
+    def _stored(self, name: str) -> int:
+        if name == "create_item":
+            return len(self.server.items.get("p1", {}))
+        return len(self.server.comments.get("i1", []))
+
+    def _reset(self) -> None:
+        self.server.requests.clear()
+        self.server.items.clear()
+        self.server.comments.clear()
+        self.slept.clear()
+
+    def test_server_error_is_not_retried(self) -> None:
+        for name, call in self._creates():
+            for status in (500, 502, 503, 504):
+                with self.subTest(method=name, status=status):
+                    self._reset()
+                    self.server.status_queue = [status]
+                    with self.assertRaisesRegex(PlaneUnavailable, f"HTTP {status}$"):
+                        call()
+                    self.assertEqual((len(self.server.requests), self.slept), (1, []))
+
+    def test_lost_response_creates_exactly_once(self) -> None:
+        for name, call in self._creates():
+            with self.subTest(method=name):
+                self._reset()
+                self.server.drop_next_response = True  # 서버는 저장했지만 응답이 오지 않는다
+                with self.assertRaisesRegex(PlaneUnavailable, "Plane 연결 실패"):
+                    call()
+                self.assertEqual((len(self.server.requests), self._stored(name), self.slept), (1, 1, []))
+
+    def test_connection_errors_are_not_retried(self) -> None:
+        errors = (urllib.error.URLError(ConnectionRefusedError("refused")), TimeoutError("timed out"))
+        for name, call in self._creates():
+            for error in errors:
+                with self.subTest(method=name, error=type(error).__name__):
+                    self._reset()
+                    with mock.patch.object(self.client._opener, "open", side_effect=error) as opened:
+                        with self.assertRaisesRegex(PlaneUnavailable, "Plane 연결 실패"):
+                            call()
+                    self.assertEqual((opened.call_count, self.slept), (1, []))
+
+    def test_rate_limit_is_retried(self) -> None:
+        for name, call in self._creates():
+            with self.subTest(method=name):
+                self._reset()
+                self.server.status_queue = [429, 429]
+                call()
+                self.assertEqual((len(self.server.requests), self._stored(name), self.slept), (3, 1, [1.0, 1.0]))
+
+    def test_rate_limit_retries_are_bounded_and_later_server_error_stops(self) -> None:
+        for name, call in self._creates():
+            with self.subTest(method=name, case="계속 429"):
+                self._reset()
+                self.server.status_queue = [429] * 4
+                with self.assertRaisesRegex(PlaneUnavailable, "HTTP 429$"):
+                    call()
+                self.assertEqual(len(self.server.requests), 4)
+            with self.subTest(method=name, case="429 뒤 500"):
+                self._reset()
+                self.server.status_queue = [429, 500]
+                with self.assertRaisesRegex(PlaneUnavailable, "HTTP 500$"):
+                    call()
+                self.assertEqual(len(self.server.requests), 2)
+
+    def test_reads_and_updates_still_retry_server_errors(self) -> None:
+        for name, call in (
+            ("list_comments", lambda: self.client.list_comments("p1", "i1")),
+            ("update_item", lambda: self.client.update_item("p1", "i1", {"state": "s1"})),
+        ):
+            with self.subTest(method=name):
+                self._reset()
+                self.server.status_queue = [500, 200]
+                call()
+                self.assertEqual((len(self.server.requests), self.slept), (2, [1.0]))
+
+
+class WhoamiIdTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.server = FakePlaneServer()
+        self.addCleanup(self.server.close)
+        self.client = PlaneClient(
+            PlaneSettings(base_url=self.server.base_url, workspace="forge", token=TEST_TOKEN), sleep=lambda _: None
+        )
+
+    def test_returns_user_id_from_users_me(self) -> None:
+        self.server.me = {"id": "u-42", "email": "tester@example.com"}
+        self.assertEqual(self.client.whoami_id(), "u-42")
+        self.assertEqual((self.server.requests[-1].method, self.server.requests[-1].path), ("GET", "/api/v1/users/me/"))
+        self.assertEqual(self.client.whoami(), "tester@example.com")
+
+    def test_missing_id_is_format_error(self) -> None:
+        for me in ({"email": "tester@example.com"}, {"id": ""}, {"id": 7}):
+            with self.subTest(me=me):
+                self.server.me = dict(me)
+                with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                    self.client.whoami_id()
+
+    def test_fake_server_and_fake_plane_use_comment_actor_id(self) -> None:
+        comment = self.client.create_comment("p1", "i1", "<p>x</p>")
+        self.assertEqual(self.client.whoami_id(), comment["actor"])
+        fake = FakePlane()
+        pid = fake.create_project("작업", "FL")["id"]
+        item = fake.create_item(pid, "W", "", [])
+        self.assertEqual(fake.whoami_id(), fake.create_comment(pid, item["id"], "<p>x</p>")["actor"])
+
+
+class CommentTouchesItemTest(unittest.TestCase):
+    """댓글을 달면 항목의 updated_at이 바뀐다. 이전 시각으로 하는 수정은 충돌이다."""
+
+    def test_fake_server(self) -> None:
+        server = FakePlaneServer()
+        self.addCleanup(server.close)
+        client = PlaneClient(
+            PlaneSettings(base_url=server.base_url, workspace="forge", token=TEST_TOKEN), sleep=lambda _: None
+        )
+        item = client.create_item("p1", "W", "<p>b</p>", [])
+        other = client.create_item("p1", "O", "<p>b</p>", [])
+        comment = client.create_comment("p1", item["id"], "<p>c</p>")
+        after = client.get_item("p1", item["id"])
+        self.assertNotEqual(after["updated_at"], item["updated_at"])
+        self.assertEqual(after["updated_at"], comment["created_at"])
+        self.assertEqual(client.get_item("p1", other["id"])["updated_at"], other["updated_at"])
+        with self.assertRaises(PlaneConflict):
+            client.update_item_description("p1", item["id"], "<p>n</p>", expected_updated_at=item["updated_at"])
+        client.update_item_description("p1", item["id"], "<p>n</p>", expected_updated_at=after["updated_at"])
+
+    def test_fake_plane(self) -> None:
+        fake = FakePlane()
+        pid = fake.create_project("작업", "FL")["id"]
+        item = fake.create_item(pid, "W", "<p>b</p>", [])
+        other = fake.create_item(pid, "O", "<p>b</p>", [])
+        comment = fake.create_comment(pid, item["id"], "<p>c</p>")
+        after = fake.get_item(pid, item["id"])
+        self.assertNotEqual(after["updated_at"], item["updated_at"])
+        self.assertEqual(after["updated_at"], comment["created_at"])
+        self.assertEqual(fake.get_item(pid, other["id"])["updated_at"], other["updated_at"])
+        with self.assertRaises(PlaneConflict):
+            fake.update_item_description(pid, item["id"], "<p>n</p>", expected_updated_at=item["updated_at"])
+        fake.update_item_description(pid, item["id"], "<p>n</p>", expected_updated_at=after["updated_at"])
+
+
 class WorkTrackerTest(unittest.TestCase):
     def test_protocol_members(self) -> None:
         self.assertEqual(
             _members(WorkTracker),
             {
                 "whoami",
+                "whoami_id",
                 "resolve_code",
                 "update_item",
                 "list_comments",
