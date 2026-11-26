@@ -145,7 +145,11 @@ class HooksTest(unittest.TestCase):
             new_entry("작업", source="manual", env={**env, "FORGE_LEDGER_PLANE_WORKSPACE": "forge"}, now=NOW)
         )
         out = io.StringIO()
-        with patch.dict(os.environ, env, clear=True), patch.object(session_start, "_spawn_detached"), redirect_stdout(out):
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "_spawn_detached"),
+            redirect_stdout(out),
+        ):
             self.assertEqual(session_start.main(), 0)
         self.assertIn("작업 일지 미전송 1건", out.getvalue())
 
