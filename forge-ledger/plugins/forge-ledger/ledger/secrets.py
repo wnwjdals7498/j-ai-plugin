@@ -31,24 +31,21 @@ _ASSIGNMENT_REGEX = (
     r"|(?P<bare>[^\s\"'`,;]*))"
 )
 
-# `이름: 값` 대신 쌍으로 적는다. 토큰 패턴 이름 줄이 이 파일의 secret_assignment 검사에 걸리지 않게 한다.
-PATTERNS: dict[str, str] = dict(
-    [
-        ("ipv4", r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),
-        ("ipv6", r"(?<![0-9A-Za-z])[0-9A-Fa-f:]*:[0-9A-Fa-f:]*:[0-9A-Fa-f:.]*(?![0-9A-Za-z])"),
-        ("plane_token", _PLANE_REGEX),
-        ("github_token", _GITHUB_REGEX),
-        ("gitlab_token", _GITLAB_REGEX),
-        ("figma_token", _FIGMA_REGEX),
-        ("telegram_bot_token", _TELEGRAM_REGEX),
-        ("home_path", _HOME_PATH_REGEX),
-        ("email", _EMAIL_REGEX),
-        ("internal_host", _INTERNAL_HOST_REGEX),
-        ("private_key", _PRIVATE_KEY_REGEX),
-        ("jwt", _JWT_REGEX),
-        ("secret_assignment", _ASSIGNMENT_REGEX),
-    ]
-)
+PATTERNS: dict[str, str] = {
+    "ipv4": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+    "ipv6": r"(?<![0-9A-Za-z])[0-9A-Fa-f:]*:[0-9A-Fa-f:]*:[0-9A-Fa-f:.]*(?![0-9A-Za-z])",
+    "plane_token": _PLANE_REGEX,
+    "github_token": _GITHUB_REGEX,
+    "gitlab_token": _GITLAB_REGEX,
+    "figma_token": _FIGMA_REGEX,
+    "telegram_bot_token": _TELEGRAM_REGEX,
+    "home_path": _HOME_PATH_REGEX,
+    "email": _EMAIL_REGEX,
+    "internal_host": _INTERNAL_HOST_REGEX,
+    "private_key": _PRIVATE_KEY_REGEX,
+    "jwt": _JWT_REGEX,
+    "secret_assignment": _ASSIGNMENT_REGEX,
+}
 
 PATTERN_NAMES: tuple[str, ...] = tuple(PATTERNS)
 
@@ -56,25 +53,11 @@ _ALLOWED_IPV4 = frozenset({"127.0.0.1", str(ipaddress.IPv4Address(0))})
 _ALLOWED_IPV6 = frozenset({ipaddress.IPv6Address("::1"), ipaddress.IPv6Address("::")})
 
 _MIN_ASSIGNED_LENGTH = 8
-# 값 전체가 아래 구문일 때만 변수 참조·자리표시로 보고 제외한다. 값의 글자 모양으로는 제외하지 않는다.
-_REFERENCE_SYNTAX = (
-    r"\$(?:env:)?[A-Za-z_]\w*"  # $VAR, $env:VAR
-    r"|\$\{[A-Za-z_]\w*(?::?-|:?\?[^{}]*)?\}"  # ${VAR}, ${VAR:-}(빈 기본값), ${VAR:?오류 문구}
-    r"|\$\([^()]*\)"  # $(명령)
-    r"|\$?\{\{[^{}]*\}\}"  # {{ 템플릿 }}, ${{ 식 }}
-    r"|\{[A-Za-z_][\w.]*\}"  # f-string·format 자리
-    r"|%[A-Za-z_]\w*%"  # %VAR%
-    r"|<[^<>]*>"  # <자리표시>
-)
-_QUOTED_REFERENCE = re.compile(_REFERENCE_SYNTAX)
-# 따옴표 없는 값은 코드 구문도 참조다. 공백·따옴표에서 잘린 앞부분과 뒤에 붙은 닫는 기호를 허용한다.
-_BARE_REFERENCE = re.compile(
-    rf"(?:{_REFERENCE_SYNTAX}"
-    r"|\$\(.*"
-    r"|[A-Za-z_][\w.]*[(\[].*"  # 호출·첨자: os.getenv(, os.environ[
-    r"|(?:self|cls|this|process\.env|os\.environ)\.[A-Za-z_][\w.]*"  # 객체·환경 속성
-    r")(?:[)\]}.:]|</[^<>]*>)*"
-)
+# 아래 두 제외는 따옴표 없는 값에만 적용한다. 따옴표 값은 길이만 본다.
+# 명시적 참조·자리표시의 시작 글자: $VAR, ${VAR}, <자리표시>, {{ 템플릿 }}, %VAR%
+_REFERENCE_PREFIXES = ("$", "<", "{{", "%")
+# 코드의 이름 참조: 식별자·점 경로 뒤에 호출·첨자 또는 닫는 기호. 숫자 없는 ASCII일 때만 참조로 본다.
+_NAME_REFERENCE = re.compile(r"[A-Za-z_]+(?:\.[A-Za-z_]+)*(?:[(\[].*|(?:[)\]}.:]|</[A-Za-z]+>)*)")
 
 
 def _is_forbidden_ipv4(match: re.Match[str]) -> bool:
@@ -106,11 +89,12 @@ def _is_literal_assignment(match: re.Match[str]) -> bool:
     for group in ("escaped_double", "escaped_single", "double", "single"):
         quoted = match.group(group)
         if quoted is not None:
-            return len(quoted) >= _MIN_ASSIGNED_LENGTH and _QUOTED_REFERENCE.fullmatch(quoted) is None
-    # 따옴표 없는 값에 붙은 한글 조사·설명은 값이 아니다.
-    ascii_prefix = re.match(r"[!-~]*", match.group("bare"))
-    value = ascii_prefix.group() if ascii_prefix else ""
-    return len(value.rstrip(")]}")) >= _MIN_ASSIGNED_LENGTH and _BARE_REFERENCE.fullmatch(value) is None
+            return len(quoted) >= _MIN_ASSIGNED_LENGTH
+    value = match.group("bare")
+    if len(value.rstrip(")]}")) < _MIN_ASSIGNED_LENGTH or value.startswith(_REFERENCE_PREFIXES):
+        return False
+    is_digit_free_ascii = value.isascii() and not any(ch.isdigit() for ch in value)
+    return not (is_digit_free_ascii and _NAME_REFERENCE.fullmatch(value))
 
 
 # 정규식에 걸린 것 중 실제 노출만 남기는 판정. 없는 패턴은 걸리면 곧 노출이다.

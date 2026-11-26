@@ -110,12 +110,10 @@ class TestSecrets(unittest.TestCase):
                 'client_secret = "abcd1234efgh"',
                 '{"api_key": "abcd1234efgh"}',
                 "export DB_PASSWD='p@ss-w0rd-1'",
-                "PASSWORD=correcthorsebattery",
                 "(password=hunter2hunter2)",
             ],
             [
                 "TOKEN=${PLANE_TOKEN}",
-                'TOKEN="$PLANE_TOKEN"',
                 "token = os.environ[...]",
                 "PASSWORD=",
                 "PASSWORD=short1",
@@ -126,21 +124,26 @@ class TestSecrets(unittest.TestCase):
                 "token == expected1234",
                 "Client(token=get_token())",
                 "`TOKEN=`·`PASSWORD:`처럼 비밀값을 대입하는 줄",
-                "secret: <REDACTED>",
             ],
         )
 
-    def test_secret_assignment_does_not_exclude_by_value_shape(self):
+    def test_secret_assignment_ruling_cases(self):
+        for text, expected in (
+            ("token=settings_token", []),
+            ("password=한글비밀번호입니다", ["secret_assignment"]),
+            ("api_key=abc123def456", ["secret_assignment"]),
+            ('token="two words here"', ["secret_assignment"]),
+            ("TOKEN=${PLANE_TOKEN}", []),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(find_exposures(text), expected)
+
+    def test_secret_assignment_flags_every_long_quoted_value(self):
         self.assert_each(
             "secret_assignment",
             [
                 'PASSWORD="CORRECT_HORSE_BATTERY"',
                 '_ENV_TOKEN = "FORGE_LEDGER_GITEA_TOKEN"',
-                "PASSWORD=CORRECT_HORSE_BATTERY",
-                "password: correct_horse_battery",
-                "password=correctHorseBattery",
-                "token=settings_token",
-                "password=correct.horse.battery",
                 'password = "correct horse battery"',
                 "password: 'my pass phrase'",
                 '{"password": "abc def ghi"}',
@@ -148,47 +151,73 @@ class TestSecrets(unittest.TestCase):
                 r'password = "ab\"cdefghij"',
                 'password = "비밀번호 여덟 글자 이상"',
                 'password = "$ecret-Pa55!"',
-                'password = "<REDACTED>"',
-                'password = "{abc}defghij"',
                 'password = "get_token()x y"',
-                "PASSWORD=$abc!defghij",
-                "PASSWORD=${abc}defghij",
-                'TOKEN="<REDACTED>"',
+                'TOKEN="$PLANE_TOKEN"',
+                'TOKEN="${PLANE_TOKEN}"',
+                'TOKEN: "${PLANE_TOKEN:-}"',
+                'TOKEN="$(cat token-file)"',
+                'token: "${{ secrets.PLANE_TOKEN }}"',
+                'password: "{{ vault_password }}"',
+                'headers = {"token": "{settings.token}"}',
+                'api_token = "<발급받은 토큰>"',
+                'token = "settings_token"',
             ],
-            [],
+            ['password = "short1"', 'token = ""', 'token: "일곱글자값임"'],
         )
 
-    def test_secret_assignment_excludes_explicit_references(self):
+    def test_secret_assignment_unquoted_references(self):
         self.assert_each(
             "secret_assignment",
             [],
             [
                 "TOKEN=$PLANE_API_TOKEN",
-                "TOKEN=${PLANE_TOKEN}",
-                'TOKEN="${PLANE_TOKEN}"',
-                'TOKEN: "${PLANE_TOKEN:-}"',
-                'TOKEN: "<REDACTED> 설정하세요}"',
+                "TOKEN=${PLANE_TOKEN_V2}",
                 '{"TOKEN": ${PLANE_TOKEN}}',
                 "<code>TOKEN=$PLANE_TOKEN</code>",
                 "TOKEN=$(cat token-file)",
-                'TOKEN="$(cat token-file)"',
                 "$env:API_TOKEN = $env:PLANE_TOKEN",
                 "token: ${{ secrets.PLANE_TOKEN }}",
-                'token: "${{ secrets.PLANE_TOKEN }}"',
-                'password: "{{ vault_password }}"',
+                "token={{vault_token}}",
                 "TOKEN=%PLANE_TOKEN%",
-                'token = f"{self._settings.token}"',
-                'headers = {"token": "{settings.token}"}',
                 "api_token: <your-plane-token>",
-                'api_token = "<발급받은 토큰>"',
-                "token = os.environ[...]",
-                'token = os.environ["PLANE_TOKEN"]',
-                "token = os.getenv('PLANE_TOKEN')",
+                "token=settings_token",
+                "PASSWORD=CORRECT_HORSE_BATTERY",
+                "PASSWORD=correcthorsebattery",
+                "token=workspaceToken",
+                "token=cfg.token",
                 "token=process.env.PLANE_TOKEN",
                 "token = self._settings.token",
                 "self.token = this.settings.token",
+                "token=get_token()",
                 "Client(token=get_token())",
+                "client(token=TEST_TOKEN)",
+                '{"TOKEN": TEST_TOKEN}',
+                "def run(secret: SecretStr):",
+                "token: Optional[str]=None",
+                'token = os.environ["PLANE_TOKEN"]',
+                "token = os.getenv('PLANE_TOKEN')",
+                "<code>token=settings_token</code>",
             ],
+        )
+
+    def test_secret_assignment_unquoted_literals(self):
+        self.assert_each(
+            "secret_assignment",
+            [
+                "api_key=abc123def456",
+                "token=settings_token2",
+                "token=cfg.v2.token",
+                "token=parts[12345]",
+                "password=hunter2(abc)",
+                "password=correct-horse-battery",
+                "password=p@ssword!",
+                "password=abc!$defghij",
+                "password={abc}defghij",
+                "password=한글비밀번호입니다",
+                "password: 아홉글자한글비밀값",
+                "token=settings_token을",
+            ],
+            ["password=한글일곱글자임", "token=abc123)", "password: 짧은값"],
         )
 
     def test_names_keep_definition_order_without_duplicates(self):
