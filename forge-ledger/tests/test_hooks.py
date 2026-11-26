@@ -358,7 +358,7 @@ class HooksTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
 
     def test_block_ipv6_and_allow_non_ipv6(self) -> None:
-        p = {"tool_name": "Write", "tool_input": {"file_path": "/r/.ledger/design/data.md", "content": "2001:db8::42"}}
+        p = {"tool_name": "Write", "tool_input": {"file_path": "/r/.ledger/design/data.md", "content": "fd00::42"}}
         blocked = should_block(p)
         self.assertIsNotNone(blocked)
         assert blocked is not None

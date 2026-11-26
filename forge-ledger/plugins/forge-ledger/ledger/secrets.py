@@ -51,6 +51,11 @@ PATTERN_NAMES: tuple[str, ...] = tuple(PATTERNS)
 
 _ALLOWED_IPV4 = frozenset({"127.0.0.1", str(ipaddress.IPv4Address(0))})
 _ALLOWED_IPV6 = frozenset({ipaddress.IPv6Address("::1"), ipaddress.IPv6Address("::")})
+# 문서용 대역(RFC 5737, RFC 3849)은 실제 환경을 가리키지 않으므로 어디에 있어도 허용한다.
+_DOCUMENTATION_IPV4 = tuple(
+    ipaddress.IPv4Network(block) for block in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")
+)
+_DOCUMENTATION_IPV6 = ipaddress.IPv6Network("2001:db8::/32")
 
 _MIN_ASSIGNED_LENGTH = 8
 # 아래 두 제외는 따옴표 없는 값에만 적용한다. 따옴표 값은 길이만 본다.
@@ -61,7 +66,14 @@ _NAME_REFERENCE = re.compile(r"[A-Za-z_]+(?:\.[A-Za-z_]+)*(?:[(\[].*|(?:[)\]}.:]
 
 
 def _is_forbidden_ipv4(match: re.Match[str]) -> bool:
-    return match.group() not in _ALLOWED_IPV4
+    value = match.group()
+    if value in _ALLOWED_IPV4:
+        return False
+    try:
+        addr = ipaddress.IPv4Address(value)
+    except ValueError:
+        return True  # 주소로 읽히지 않는 점 4자리 숫자는 이전처럼 걸어 둔다
+    return not any(addr in block for block in _DOCUMENTATION_IPV4)
 
 
 def _is_forbidden_ipv6(match: re.Match[str]) -> bool:
@@ -72,7 +84,7 @@ def _is_forbidden_ipv6(match: re.Match[str]) -> bool:
         addr = ipaddress.IPv6Address(token)
     except ValueError:
         return False
-    return addr not in _ALLOWED_IPV6
+    return addr not in _ALLOWED_IPV6 and addr not in _DOCUMENTATION_IPV6
 
 
 def _is_forbidden_email(match: re.Match[str]) -> bool:

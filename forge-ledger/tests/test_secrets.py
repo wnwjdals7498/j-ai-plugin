@@ -10,7 +10,7 @@ class TestSecrets(unittest.TestCase):
     def test_detects_each_pattern(self):
         cases = {
             "ipv4": "server 10.1.2.3 down",
-            "ipv6": "server 2001:db8::42 down",
+            "ipv6": "server fd00::42 down",
             "plane_token": "plane_api_" + "a" * 32,
             "github_token": "ghp_" + "A" * 36,
             "gitlab_token": "glpat-" + "x" * 20,
@@ -32,9 +32,9 @@ class TestSecrets(unittest.TestCase):
         self.assertEqual(find_secrets("http://127.0.0.1:18090 0.0.0.0 ::1 :: http://[::1]:8080"), [])
 
     def test_ipv6_detection_and_exclusions(self):
-        self.assertEqual(find_secrets("2001:db8::42"), ["ipv6"])
+        self.assertEqual(find_secrets("fd00::42"), ["ipv6"])
         self.assertEqual(find_secrets("fe80::1%eth0 앞부분"), ["ipv6"])
-        self.assertEqual(find_secrets("http://[2001:db8::42]:8080/api"), ["ipv6"])
+        self.assertEqual(find_secrets("http://[fd00::42]:8080/api"), ["ipv6"])
         self.assertEqual(find_secrets("10:30:00"), [])
         self.assertEqual(find_secrets("std::vector"), [])
         self.assertEqual(find_secrets("::1"), [])
@@ -51,6 +51,24 @@ class TestSecrets(unittest.TestCase):
         for text in negatives:
             with self.subTest(negative=text):
                 self.assertEqual(find_exposures(text), [])
+
+    def test_documentation_ranges_allowed(self):
+        # RFC 5737(IPv4)·RFC 3849(IPv6) 문서용 대역은 실제 환경을 가리키지 않는다.
+        for text in (
+            "192.0.2.10",
+            "2001:db8::1",
+            "192.0.2.0/24 198.51.100.0/24 203.0.113.255",
+            "https://198.51.100.7:8765/health",
+            "2001:db8::/32 http://[2001:db8:ffff::1]:8080/api",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(find_exposures(text), [])
+
+    def test_addresses_outside_documentation_ranges_detected(self):
+        self.assert_each("ipv4", ["10.20.30.40", "192.0.1.255", "192.0.3.0", "198.51.101.1", "203.0.114.1"], [])
+        self.assert_each("ipv6", ["2001:db7:ffff::1", "2001:db9::1"], [])
+        self.assertEqual(find_exposures("192.0.2.10 10.20.30.40"), ["ipv4"])
+        self.assertEqual(find_exposures("2001:db8::1 2001:db9::1"), ["ipv6"])
 
     def test_home_path(self):
         self.assert_each(

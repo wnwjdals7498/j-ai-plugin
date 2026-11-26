@@ -177,12 +177,12 @@ class CheckTest(unittest.TestCase):
         self.assertNotIn("10.1.2.3", raw)
 
         docs2 = {("APP", c): FILLED[c] for c in ("PRD", "IMPL2", "IMPL3", "IMPL5", "IMPL7")}
-        docs2[("APP", "DECISION")] = "<h2>D-261123-0001 결정</h2><p>2001:db8::42</p>"
+        docs2[("APP", "DECISION")] = "<h2>D-261123-0001 결정</h2><p>fd00::42</p>"
         rep2 = run_check(self.filled_repo, ["APP"], DictSource(docs2))
         raw2 = rep2.to_json()
         self.assertEqual(rep2.exit_code, 1)
         self.assertIn("비밀값: ipv6", raw2)
-        self.assertNotIn("2001:db8::42", raw2)
+        self.assertNotIn("fd00::42", raw2)
 
         sec_path = self.filled_repo / ".ledger" / "design" / "security.md"
         orig_sec = sec_path.read_text(encoding="utf-8")

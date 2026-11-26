@@ -179,6 +179,36 @@ class TestAllMode(_RepoCase):
         self.assertIn(".exposure-allow:1", err)
 
 
+class TestShippedExampleConfig(_RepoCase):
+    """저장소의 실제 허용 목록은 설정 예시에 새로 들어온 주소를 가리지 않는다."""
+
+    _EXAMPLE = "pmt-server/templates/host-config.example.json"
+
+    def setUp(self) -> None:
+        super().setUp()
+        top = ROOT.parent
+        _write(self.repo / ".exposure-allow", (top / ".exposure-allow").read_text(encoding="utf-8"))
+        self.example = (top / self._EXAMPLE).read_text(encoding="utf-8")
+
+    def _scan_example(self, text: str) -> tuple[int, str]:
+        _write(self.repo / self._EXAMPLE, text)
+        _git(self.repo, "add", "-A")
+        rc, out, _ = self.run_main("--all")
+        return rc, out
+
+    def test_shipped_example_is_clean(self) -> None:
+        rc, out = self._scan_example(self.example)
+        self.assertEqual(rc, 0, out)
+
+    def test_real_form_address_in_another_field_is_reported(self) -> None:
+        original = '"https://host.example.invalid:8765"'
+        self.assertEqual(self.example.count(original), 1)
+        changed = self.example.replace(original, '"https://10.20.30.40:8765"')
+        line = next(no for no, text in enumerate(changed.split("\n"), start=1) if "public_url" in text)
+        rc, out = self._scan_example(changed)
+        self.assertEqual((rc, out.splitlines()), (1, [f"{self._EXAMPLE}:{line}:ipv4"]))
+
+
 class TestStagedMode(_RepoCase):
     def test_scans_index_content_not_worktree(self) -> None:
         _write(self.repo / "old.md", "10.1.2.3\n")

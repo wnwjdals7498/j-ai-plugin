@@ -65,14 +65,11 @@ proj-mgmt-tool/tests/client_setup/test_d2_connect.py	secret_assignment	시험용
 proj-mgmt-tool/tests/client_setup/test_e2_switch.py	email	시험용 가짜 값
 proj-mgmt-tool/tests/client_setup/test_e2_switch.py	secret_assignment	시험용 가짜 값
 proj-mgmt-tool/tests/server_admin/test_e1_operations.py	ipv4	시험용 가짜 값
-proj-mgmt-tool/tests/server_admin/test_e1_operations.py	ipv6	시험용 가짜 값
 proj-mgmt-tool/tests/server_admin/test_e1_operations.py	secret_assignment	시험용 가짜 값
-proj-mgmt-tool/tests/server_admin/test_server_admin.py	ipv4	예시 설정 시험의 RFC 5737 문서용 대역
 proj-mgmt-tool/tests/server_admin/test_server_admin.py	internal_host	시험용 가짜 값
 proj-mgmt-tool/tests/server_admin/test_server_admin.py	secret_assignment	시험용 가짜 값
 proj-mgmt-tool/tests/test_acceptance_matrix.py	secret_assignment	시험용 가짜 값
 proj-mgmt-tool/tests/test_cli_integration.py	secret_assignment	시험용 가짜 값
-proj-mgmt-tool/tests/test_easy_setup.py	ipv4	시험용 가짜 값
 proj-mgmt-tool/tests/test_hooks.py	secret_assignment	시험용 가짜 값
 proj-mgmt-tool/tests/test_lifecycle.py	email	시험용 가짜 값
 proj-mgmt-tool/tests/test_lifecycle_extensions.py	secret_assignment	시험용 가짜 값
@@ -97,6 +94,3 @@ proj-mgmt-tool/tests/test_phase5_handoff.py	email	시험용 가짜 값
 
 # proj-mgmt-tool 코드
 proj-mgmt-tool/src/pmt/migration.py	secret_assignment	해시 앞에 붙이는 접두 문자열(비밀값 아님)
-
-# pmt-server 설정 예시
-pmt-server/templates/host-config.example.json	ipv4	설정 검증을 통과해야 하는 예시의 RFC 5737 문서용 대역(실제 환경과 무관)
