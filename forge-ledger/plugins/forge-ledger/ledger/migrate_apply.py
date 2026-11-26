@@ -31,6 +31,7 @@ from ledger.migrate import (
     load_manifest,
     load_resource,
     manifest_path,
+    parse_comment_time,
     render_preview,
     resolve_source_dir,
 )
@@ -78,7 +79,7 @@ class AppliedEntry:
 @dataclass(frozen=True)
 class Outcome:
     key: str
-    action: str  # created | updated | same | conflict
+    action: str  # created | updated | same | same-unmarked(표식 없는 같은 글 댓글) | conflict
     target: str
 
 
@@ -584,6 +585,10 @@ def _visible_marker(key: str) -> str:
     return f"<p>{_VISIBLE_MARKER}{html.escape(key, quote=False)}</p>"
 
 
+def _same_text(comment: Mapping[str, Any], body: str) -> bool:
+    return _plain_text(str(comment.get("comment_html", ""))) == _plain_text(body)
+
+
 def _marker_keys(comment_html: str) -> set[str]:
     """댓글의 원천 키. 속성 표식과, 마지막 글 줄에 보이는 표식을 읽는다."""
     keys = {html.unescape(a or b) for a, b in _MARKER_ATTRIBUTE_RE.findall(comment_html)}
@@ -611,15 +616,25 @@ class _PlaneRun:
         self._items = {str(item["id"]): item for item in tracker.list_items(project_id)}
         self.states = tracker.list_states(project_id)
         self._label_ids = {str(label["name"]): str(label["id"]) for label in tracker.list_labels(project_id)}
-        self._ids: dict[str, str] = {}  # 원천 키 → 항목 id. 자식·댓글을 붙일 수 있는 것만
-        self._clean: set[str] = set()  # 충돌이 아닌 항목. 댓글을 단 뒤 수정 시각을 다시 기록해도 된다.
+        self._ids: dict[str, str] = {}  # 원천 키 → 항목 id. 자식을 붙이고 댓글을 읽을 수 있는 것만
+        self._desired: dict[str, _Desired] = {}  # 원천 키 → 쓰려는 내용
+        self._clean: set[str] = set()  # 충돌이 아닌 항목. 이 항목에만 댓글을 쓴다.
         self._pending: set[str] = set()  # 댓글을 쓰는 중이라고 표시한 항목
+        self.disturbed: set[str] = set()  # 댓글을 쓰는 사이에 다른 곳에서 고친 항목
+        self._stand_ins: set[str] = set()  # 이번 실행에서 어떤 레코드의 것으로 본 표식 없는 댓글 id
         self._comments: dict[str, list[dict[str, Any]]] = {}  # 항목 id별
         self._visible_only = False  # 서버가 표식 속성을 지우는 것을 확인했다.
 
     # 항목
 
     def item(self, record: Mapping[str, Any], desired: _Desired) -> Outcome:
+        self._desired[record["key"]] = desired
+        outcome = self._judge_item(record, desired)
+        if outcome.action != "conflict":
+            self._clean.add(outcome.key)
+        return outcome
+
+    def _judge_item(self, record: Mapping[str, Any], desired: _Desired) -> Outcome:
         key = record["key"]
         link_to = record.get("link_to")
         wanted = _manifest_digest(record, desired)
@@ -638,10 +653,7 @@ class _PlaneRun:
         if (applied is not None and applied.target != item_id) or (link_to and item_id != link_to):
             return Outcome(key, "conflict", item_id)
         self._ids[key] = item_id
-        outcome = self._existing(key, found, desired, mode, wanted, applied)
-        if outcome.action != "conflict":
-            self._clean.add(key)
-        return outcome
+        return self._existing(key, found, desired, mode, wanted, applied)
 
     def _existing(
         self,
@@ -660,20 +672,21 @@ class _PlaneRun:
         if applied is not None and recorded_mode != mode:  # `link_to`를 붙이거나 뗐다.
             return conflict
         fresh = applied is not None and recorded_wanted == wanted
-        pending = applied is not None and not applied.remote_updated_at
         unchanged = applied is not None and applied.remote_updated_at == updated_at
-        if fresh and unchanged:
+        if fresh and unchanged:  # 매니페스트도 Plane도 그대로다.
             return Outcome(key, "same", item_id)
-        # 기록이 없거나, 옛 값이거나, 쓰는 도중이었다. 지금 내용이 쓰려는 것과 같으면 이어받는다.
-        if (not fresh or pending) and (mode == "link" or self._matches(found, desired)):
+        # 저장 내용 그대로인가. 서버가 저장하며 글을 다듬었어도 알아본다.
+        as_stored = applied is not None and _item_digest(found) == stored
+        # 관리 필드가 매니페스트와 같으면 수정 시각과 상관없이 같다. 쓰지 않고 기록만 맞춘다.
+        # `link_to` 항목에서 관리하는 것은 원천 표식뿐이고, 여기까지 왔으면 표식은 맞다.
+        if mode == "link" or self._matches(found, desired) or (fresh and as_stored):
             _remember(self._state, key, item_id, f"{mode}:{wanted}:{_item_digest(found)}", updated_at)
             return Outcome(key, "same", item_id)
-        if not (unchanged or pending) or _item_digest(found) != stored:
-            return conflict
-        if fresh:  # 댓글을 쓰다가 멈췄고 항목 내용은 그대로다.
-            _remember(self._state, key, item_id, f"{mode}:{wanted}:{stored}", updated_at)
-            return Outcome(key, "same", item_id)
-        return self._update(key, found, desired, wanted)
+        # 다르다. 마지막으로 기록한 뒤 손대지 않았을 때만 갱신한다.
+        # 댓글을 쓰다가 멈춘 기록은 시각이 없으므로 저장 내용이 그대로인지로 본다.
+        if unchanged or (applied is not None and not applied.remote_updated_at and as_stored):
+            return self._update(key, found, desired, wanted)
+        return conflict
 
     def _matches(self, found: Mapping[str, Any], desired: _Desired) -> bool:
         parent = self._ids.get(desired.parent_key) if desired.parent_key else None
@@ -712,7 +725,7 @@ class _PlaneRun:
             external_source=_SOURCE,
             external_id=key,
         )
-        return Outcome(key, "created", self._written(key, created, "item", wanted))
+        return self._written(key, "created", created, "item", wanted)
 
     def _link(self, key: str, link_to: str, wanted: str) -> Outcome:
         """기존 항목에는 원천 표식만 단다. 다른 표식이 이미 있으면 덮어쓰지 않는다."""
@@ -723,9 +736,9 @@ class _PlaneRun:
         self._ids[key] = link_to
         if self._dry_run:
             self._items[link_to] = {**target, **marker}  # 같은 대상을 고른 다음 레코드가 충돌이 되게 한다.
-        else:
-            self._written(key, self._tracker.update_item(self._project_id, link_to, dict(marker)), "link", wanted)
-        return Outcome(key, "updated", link_to)
+            return Outcome(key, "updated", link_to)
+        response = self._tracker.update_item(self._project_id, link_to, dict(marker))
+        return self._written(key, "updated", response, "link", wanted)
 
     def _update(self, key: str, found: Mapping[str, Any], desired: _Desired, wanted: str) -> Outcome:
         """적용한 뒤 Plane에서 손대지 않은 항목에 바뀐 매니페스트를 쓴다."""
@@ -745,26 +758,37 @@ class _PlaneRun:
             "parent": self._ids.get(desired.parent_key),
             "description_html": desired.description_html,
         }
-        self._written(key, self._tracker.update_item(self._project_id, item_id, fields), "item", wanted)
-        return Outcome(key, "updated", item_id)
+        response = self._tracker.update_item(self._project_id, item_id, fields)
+        return self._written(key, "updated", response, "item", wanted)
 
-    def _written(self, key: str, response: dict[str, Any], mode: str, wanted: str) -> str:
-        """쓴 항목을 먼저 '쓰는 도중'으로 남기고, 다시 읽은 내용과 수정 시각으로 마무리한다."""
+    def _written(self, key: str, action: str, response: dict[str, Any], mode: str, wanted: str) -> Outcome:
+        """쓴 항목을 먼저 '쓰는 도중'으로 남기고, 다시 읽어 우리가 쓴 그대로면 수정 시각을 기록한다.
+
+        다르면 그사이에 다른 곳에서 고친 것이다. 시각을 기록하지 않고 충돌로 알린다.
+        """
         item_id = str(response["id"])
-        _remember(self._state, key, item_id, f"{mode}:{wanted}:{_item_digest(response)}", "")
+        saved = _item_digest(response)
+        _remember(self._state, key, item_id, f"{mode}:{wanted}:{saved}", "")
+        self._ids[key] = item_id
         current = self._tracker.get_item(self._project_id, item_id)
         self._items[item_id] = current
+        if not self._as_written(key, current, mode, saved):
+            return Outcome(key, "conflict", item_id)
         _remember(self._state, key, item_id, f"{mode}:{wanted}:{_item_digest(current)}", str(current["updated_at"]))
-        self._ids[key] = item_id
-        self._clean.add(key)
-        return item_id
+        return Outcome(key, action, item_id)
+
+    def _as_written(self, key: str, current: dict[str, Any], mode: str, saved: str) -> bool:
+        """다시 읽은 항목의 관리 필드가 우리가 보낸 내용이나 저장된 내용(`saved`) 그대로인가."""
+        if match_external([current], _SOURCE, key) is None:
+            return False
+        return mode == "link" or _item_digest(current) == saved or self._matches(current, self._desired[key])
 
     # 댓글
 
     def comments(self, records: list[dict[str, Any]]) -> list[Outcome]:
         """대상 항목별로 시각순으로 쓰고, 항목 하나가 끝날 때마다 그 항목의 수정 시각을 다시 기록한다."""
         by_item: dict[str, list[dict[str, Any]]] = {}
-        for record in sorted(records, key=lambda r: str(r["at"]).replace(" ", "T")):
+        for record in sorted(records, key=lambda r: parse_comment_time(r["at"])):
             by_item.setdefault(record["item"], []).append(record)
         outcomes = []
         for item_key, group in by_item.items():
@@ -791,17 +815,17 @@ class _PlaneRun:
                 _remember(self._state, key, str(comment["id"]), digest)
                 return Outcome(key, "same", str(comment["id"]))
 
-        unmarked = self._unmarked_copy(key, body, existing, recorded)
-        if unmarked is not None:  # 만들었는데 표식이 지워진 채 멈췄다. 표식만 마저 단다.
-            comment_id = str(unmarked["id"])
-            if _plain_text(str(unmarked.get("comment_html", ""))) != _plain_text(body):
-                return Outcome(key, "conflict", comment_id)
-            if not self._dry_run:
-                self._before_comment_write(item_key)
-                self._reserve_comment(key, comment_id)
-                self._save_visible_marker(key, item_id, comment_id, body)
-                _remember(self._state, key, comment_id, digest)
-            return Outcome(key, "updated", comment_id)
+        reserved = None
+        if recorded is not None:  # 만들고 표식을 확인하기 전에 멈춘 댓글
+            reserved = next((c for c in existing if str(c["id"]) == recorded.target), None)
+        if reserved is not None and not _same_text(reserved, body):
+            return Outcome(key, "conflict", str(reserved["id"]))
+        unmarked = reserved or self._unclaimed_copy(body, existing)
+        if unmarked is not None:  # 이미 있는 표식 없는 댓글은 누가 만든 것이든 고치지 않고, 또 만들지도 않는다.
+            self._stand_ins.add(str(unmarked["id"]))
+            return Outcome(key, "same-unmarked", str(unmarked["id"]))
+        if item_key not in self._clean:
+            return Outcome(key, "conflict", "")
 
         if self._dry_run:
             return Outcome(key, "created", "")
@@ -821,23 +845,13 @@ class _PlaneRun:
             self._comments[item_id] = self._tracker.list_comments(self._project_id, item_id)
         return self._comments[item_id]
 
-    def _unmarked_copy(
-        self, key: str, body: str, existing: list[dict[str, Any]], recorded: Optional[AppliedEntry]
-    ) -> Optional[dict[str, Any]]:
-        """표식 없이 남은 이 레코드의 댓글. 예약한 id가 먼저고, 없으면 주인 없는 같은 글을 찾는다.
-
-        뒤의 경우는 생성 응답을 받지 못했는데 서버가 표식 속성을 지운 때다.
-        """
-        if recorded is not None:
-            for comment in existing:
-                if str(comment["id"]) == recorded.target:
-                    return comment
-        claimed = {entry.target for k in self._comment_keys if (entry := self._state.get(k)) is not None}
+    def _unclaimed_copy(self, body: str, existing: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+        """표식이 없고 다른 레코드의 것도 아닌 같은 글의 댓글. 댓글 하나는 레코드 하나만 대신한다."""
+        entries = (self._state.get(key) for key in self._comment_keys)
+        claimed = self._stand_ins | {entry.target for entry in entries if entry is not None}
         for comment in existing:
-            text = str(comment.get("comment_html", ""))
-            if str(comment["id"]) in claimed or _marker_keys(text):
-                continue
-            if _plain_text(text) == _plain_text(body):
+            marked = _marker_keys(str(comment.get("comment_html", "")))
+            if str(comment["id"]) not in claimed and not marked and _same_text(comment, body):
                 return comment
         return None
 
@@ -853,24 +867,30 @@ class _PlaneRun:
         return updated
 
     def _before_comment_write(self, item_key: str) -> None:
-        """댓글은 항목의 수정 시각을 바꾼다. 멈춰도 내 변경으로 알아보게 '쓰는 도중'으로 남긴다.
-
-        충돌인 항목의 기록은 건드리지 않는다. 그래야 다음 실행에서도 충돌이다.
-        """
+        """댓글은 항목의 수정 시각을 바꾼다. 멈춰도 내 변경으로 알아보게 '쓰는 도중'으로 남긴다."""
         entry = self._state.get(item_key)
-        if item_key in self._clean and item_key not in self._pending and entry is not None:
+        if item_key not in self._pending and entry is not None:
             self._state.put(item_key, replace(entry, remote_updated_at=""))
             self._state.checkpoint()
             self._pending.add(item_key)
 
     def _settle(self, item_key: str) -> None:
-        """댓글까지 쓴 항목의 수정 시각을 다시 읽어 기록한다. 저장한 내용의 기록은 바꾸지 않는다."""
+        """댓글까지 쓴 항목을 다시 읽어, 관리 필드가 우리가 쓴 그대로일 때만 새 수정 시각을 기록한다.
+
+        다르면 댓글을 쓰는 사이에 다른 곳에서 고친 것이다. 기록은 시각 없이 남아 다음 실행도 충돌이다.
+        """
         entry = self._state.get(item_key)
-        if item_key in self._pending and entry is not None:
-            current = self._tracker.get_item(self._project_id, entry.target)
-            self._state.put(item_key, replace(entry, remote_updated_at=str(current["updated_at"])))
-            self._state.checkpoint()
-            self._pending.discard(item_key)
+        if item_key not in self._pending or entry is None:
+            return
+        self._pending.discard(item_key)
+        current = self._tracker.get_item(self._project_id, entry.target)
+        mode, _, saved = entry.digest.split(":")
+        if not self._as_written(item_key, current, mode, saved):
+            self._clean.discard(item_key)
+            self.disturbed.add(item_key)
+            return
+        self._state.put(item_key, replace(entry, remote_updated_at=str(current["updated_at"])))
+        self._state.checkpoint()
 
 
 def apply_plane(m: Manifest, tracker: PlaneLike, project_id: str, state: AppliedState) -> list[Outcome]:
@@ -909,7 +929,8 @@ def _run_plane(
     outcomes += run.comments([r for r in comments if r["item"] not in backlog_keys])
     outcomes += [run.item(r, desired[r["key"]]) for r in backlog]
     outcomes += run.comments([r for r in comments if r["item"] in backlog_keys])
-    return outcomes
+    # 댓글을 쓴 뒤에야 알게 된 충돌은 앞에서 낸 항목 결과를 바꾼다.
+    return [replace(o, action="conflict") if o.key in run.disturbed else o for o in outcomes]
 
 
 # --- 미리 보기와 `migrate apply` ---
@@ -929,7 +950,13 @@ def plan_apply(
     outcomes = _run_git(m, repo, tracker, preview, env, dry_run=True)
     outcomes += _run_plane(m, tracker, project_id, preview, dry_run=True)
     plan = ApplyPlan()
-    lists = {"created": plan.create, "updated": plan.update, "same": plan.skip, "conflict": plan.conflict}
+    lists = {
+        "created": plan.create,
+        "updated": plan.update,
+        "same": plan.skip,
+        "same-unmarked": plan.skip,
+        "conflict": plan.conflict,
+    }
     for outcome in outcomes:
         lists[outcome.action].append(outcome.key)
     return plan
@@ -956,13 +983,17 @@ def _render_result(m: Manifest, outcomes: list[Outcome]) -> str:
     kinds = {r["key"]: r["kind"] for r in m.records}
     lines = ["종류 | 새로 만듦 | 바꿈 | 그대로 | 충돌", "--- | --- | --- | --- | ---"]
     for kind in dict.fromkeys(kinds[o.key] for o in outcomes):
-        actions = [o.action for o in outcomes if kinds[o.key] == kind]
+        actions = [o.action.replace("same-unmarked", "same") for o in outcomes if kinds[o.key] == kind]
         counts = [str(actions.count(action)) for action in ("created", "updated", "same", "conflict")]
         lines.append(" | ".join([kind, *counts]))
     conflicts = [o for o in outcomes if o.action == "conflict"]
     if conflicts:
         lines += ["", "충돌(덮어쓰지 않음)"]
         lines += [f"- {o.key} → {o.target}" if o.target else f"- {o.key}" for o in conflicts]
+    unmarked = [o for o in outcomes if o.action == "same-unmarked"]
+    if unmarked:
+        lines += ["", "표식 없는 같은 글 댓글이 있어 건너뜀(그대로에 포함, 고치지 않음)"]
+        lines += [f"- {o.key} → {o.target} (same-unmarked)" for o in unmarked]
     return "\n".join(lines)
 
 

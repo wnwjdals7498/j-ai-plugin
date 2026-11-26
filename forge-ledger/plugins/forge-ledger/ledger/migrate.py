@@ -261,12 +261,19 @@ def _is_date(value: str) -> bool:
     return True
 
 
+def parse_comment_time(value: str) -> datetime:
+    """댓글의 `at`을 시간대가 있는 시각으로 읽는다. 시간대가 없으면 이 컴퓨터의 현지 시각이다."""
+    # Python 3.10까지의 fromisoformat은 `Z`를 읽지 못한다.
+    text = f"{value[:-1]}+00:00" if value.endswith("Z") else value
+    return datetime.fromisoformat(text).astimezone()
+
+
 def _is_time(value: str) -> bool:
     if not _TIME_RE.fullmatch(value):
         return False
     try:
-        datetime.strptime(value[:16].replace(" ", "T"), "%Y-%m-%dT%H:%M")
-    except ValueError:
+        parse_comment_time(value)
+    except (ValueError, OverflowError, OSError):
         return False
     return True
 

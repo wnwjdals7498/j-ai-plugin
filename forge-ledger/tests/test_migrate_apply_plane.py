@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import time
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -147,6 +148,11 @@ class _PlaneCase(_ApplyCase):
 
     def touch(self, item: dict[str, Any]) -> None:
         item["updated_at"] = "2026-11-30T00:00:00Z"
+
+    def edit_in_plane(self, item: dict[str, Any]) -> None:
+        """사람이 Plane에서 설명을 고친다. 내용과 수정 시각이 함께 바뀐다."""
+        item["description_html"] = "<p>Plane에서 고침</p>"
+        self.touch(item)
 
     def method_calls(self, name: str) -> list[tuple[Any, ...]]:
         return [c for c in self.plane.calls if c[0] == name]
@@ -350,8 +356,17 @@ class ResumeTest(_PlaneCase):
                         actions = self.apply_actions()
                         self.assertNotIn("conflict", actions.values(), actions)
                         self.assert_exact_result()
-                        self.assert_all_same()
+                        self.assert_settled(strip)
         self.assertGreater(total, 60)
+
+    def assert_settled(self, strip: bool) -> None:
+        """다음 실행은 아무것도 쓰지 않는다. 표식 없는 댓글은 속성을 지우는 서버에서만 남을 수 있다."""
+        before = self.snapshot_plane()
+        actions = self.apply_actions()
+        unmarked = {key for key, action in actions.items() if action == "same-unmarked"}
+        self.assertEqual({a for k, a in actions.items() if k not in unmarked}, {"same"}, actions)
+        self.assertLessEqual(unmarked, set(_COMMENT_KEYS) if strip else set(), actions)
+        self.assertEqual(self.snapshot_plane(), before)
 
     def fail_nth(self, method: str, nth: int, after: bool) -> bool:
         """`method`의 nth번째 호출을 실패시키며 한 번 실행한다. 그 호출이 있었으면 True.
@@ -391,7 +406,7 @@ class ResumeTest(_PlaneCase):
                     actions = self.apply_actions()
                     self.assertNotIn("conflict", actions.values(), actions)
                     self.assert_exact_result()
-                    self.assert_all_same()
+                    self.assert_settled(strip)
             self.assertGreater(nth, 30)
 
     def test_any_single_failure_while_updating_and_linking_converges(self) -> None:
@@ -516,9 +531,39 @@ class ConflictTest(_PlaneCase):
             self.assert_all_same(**{key: "conflict"})
             self.assertEqual((self.snapshot_plane(), self.writes()), (before, []))
 
-    def test_later_updated_at_is_a_conflict(self) -> None:
-        self.touch(self.by_key(_I1))
+    def test_later_updated_at_with_changed_content_is_a_conflict(self) -> None:
+        self.edit_in_plane(self.by_key(_I1))
         self.assert_conflict_stays(_I1)
+
+    def test_only_updated_at_changed_is_same_and_the_new_time_is_recorded(self) -> None:
+        self.touch(self.by_key(_I1))
+        before = self.snapshot_plane()
+        self.assert_all_same()
+        self.assertEqual((self.snapshot_plane(), self.writes()), (before, []))
+        entry = AppliedState.load(self.state_path).get(_I1)
+        assert entry is not None
+        self.assertEqual(entry.remote_updated_at, self.by_key(_I1)["updated_at"])
+        # 시각을 새로 기록했으므로, 그 뒤에 바뀐 매니페스트는 손대지 않은 항목에 대한 갱신이다.
+        _record(self.data, _I1)["description_html"] = "<p>새 설명</p>"
+        self.assert_all_same(**{_I1: "updated"})
+
+    def test_content_saved_differently_by_the_server_is_same_when_only_the_time_changed(self) -> None:
+        self.setUp_with_rewriting_server()
+        self.touch(self.by_key(_I1))
+        self.plane.calls.clear()
+        self.assert_all_same()
+        self.assertEqual(self.writes(), [])
+
+    def setUp_with_rewriting_server(self) -> None:
+        """저장하면서 설명의 글을 바꾸는 서버로 처음부터 다시 적용한다."""
+        _PlaneCase.setUp(self)
+        real = self.plane.create_item
+
+        def rewriting(project_id: str, name: str, description: str, labels: list[str], **kw: Any) -> dict[str, Any]:
+            return real(project_id, name, description.replace("설명", "정리된 설명"), labels, **kw)
+
+        with patch.object(self.plane, "create_item", rewriting):
+            self.run_plane()
 
     def test_item_edited_in_plane_is_not_overwritten_even_if_the_manifest_changed(self) -> None:
         for field, value in (
@@ -564,8 +609,7 @@ class ConflictTest(_PlaneCase):
             self.assertEqual(self.apply_actions()[_I1], "conflict")
         self.assertEqual(self.by_key(_I1)["description_html"], "<p>목록을 읽은 뒤 고침</p>")
 
-    def test_edit_absorbed_while_comments_were_written_is_not_overwritten_later(self) -> None:
-        # 항목을 확인한 뒤 댓글을 쓰는 사이에 고치면, 다시 읽은 수정 시각에는 그 수정이 이미 들어 있다.
+    def test_edit_made_while_comments_are_written_is_reported_and_stays_a_conflict(self) -> None:
         extra = f"{_I1}#c11"
         self.data["records"].append(_comment(extra, _I1, "2026-11-25T10:00", "나중 댓글"))
         real = self.plane.create_comment
@@ -575,17 +619,39 @@ class ConflictTest(_PlaneCase):
             return real(*args)
 
         with patch.object(self.plane, "create_comment", edit_then_comment):
-            self.run_plane()
+            self.assert_all_same(**{_I1: "conflict", extra: "created"})
+        # 매니페스트를 바꾸지 않은 재실행도 계속 충돌이다. 그 뒤에 바꿔도 덮어쓰지 않는다.
+        self.assert_conflict_stays(_I1)
         _record(self.data, _I1)["description_html"] = "<p>매니페스트도 바뀜</p>"
-        self.assertEqual(self.apply_actions()[_I1], "conflict")
+        self.assert_conflict_stays(_I1)
         self.assertEqual(self.by_key(_I1)["description_html"], "<p>댓글을 쓰는 사이에 고침</p>")
 
-    def test_new_comment_on_an_edited_item_is_added_but_the_item_stays_a_conflict(self) -> None:
-        self.touch(self.by_key(_I1))
+    def test_edit_made_between_an_item_write_and_the_reread_is_a_conflict(self) -> None:
+        _record(self.data, _I1)["description_html"] = "<p>새 설명</p>"
+        real = self.plane.update_item
+
+        def update_then_edit(*args: Any) -> dict[str, Any]:
+            response = real(*args)
+            self.edit_in_plane(self.by_key(_I1))
+            return response
+
+        with patch.object(self.plane, "update_item", update_then_edit):
+            self.assertEqual(self.apply_actions()[_I1], "conflict")
+        self.assert_conflict_stays(_I1)
+        _record(self.data, _I1)["description_html"] = "<p>또 바뀜</p>"
+        self.assert_conflict_stays(_I1)
+
+    # --- 지적 2 (Ruling 14 앞부분) ---
+
+    def test_conflicted_item_gets_no_new_comment(self) -> None:
+        self.edit_in_plane(self.by_key(_I1))
         extra = f"{_I1}#c11"
         self.data["records"].append(_comment(extra, _I1, "2026-11-25T10:00", "나중 댓글"))
-        self.assert_all_same(**{_I1: "conflict", extra: "created"})
-        self.assert_all_same(**{_I1: "conflict"})
+        before = self.snapshot_plane()
+        for _ in range(2):
+            self.plane.calls.clear()
+            self.assert_all_same(**{_I1: "conflict", extra: "conflict"})
+            self.assertEqual((self.snapshot_plane(), self.writes()), (before, []))
 
     def test_deleted_item_is_not_recreated_and_cannot_take_new_records(self) -> None:
         project = self.plane._project_by_id(self.pid)
@@ -639,6 +705,41 @@ class LinkToTest(_PlaneCase):
         self.assertEqual(self.comments(_W1)[0], "<p>원래 댓글</p>")
         self.assertIn("Work 댓글", self.comments(_W1)[1])
         self.assert_all_same()
+
+    def test_linked_item_edited_in_plane_stays_same_and_takes_new_comments(self) -> None:
+        self.run_plane()
+        self.edit_in_plane(self.linked())
+        extra = f"{_W1}#c2"
+        self.data["records"].append(_comment(extra, _W1, "2026-11-25T10:00", "나중 댓글"))
+        self.assert_all_same(**{extra: "created"})
+        self.assertEqual(self.linked()["description_html"], "<p>Plane에서 고침</p>")
+        self.assert_all_same()
+
+    # --- 지적 1 (Ruling 13) ---
+
+    def test_unmarked_existing_comment_with_the_same_text_is_never_modified(self) -> None:
+        text = "<p>2026-11-24T09:00</p><p>Work 댓글</p>"  # 매니페스트 댓글이 쓰려는 글과 같다
+        self.plane.create_comment(self.pid, self.existing["id"], text)
+        self.plane.calls.clear()
+        planned = self.plan()
+        self.assertIn(_CW, planned.skip)
+        for _ in range(2):
+            self.assertEqual(self.apply_actions()[_CW], "same-unmarked")
+        self.assertEqual(self.comments(_W1), ["<p>원래 댓글</p>", text])
+        self.assertEqual(self.method_calls("update_comment"), [])
+        self.assertIsNone(AppliedState.load(self.state_path).get(_CW))
+
+    def test_one_unmarked_comment_stands_in_for_only_one_record(self) -> None:
+        text = "<p>2026-11-24T09:00</p><p>Work 댓글</p>"
+        self.plane.create_comment(self.pid, self.existing["id"], text)
+        twin = f"{_W1}#c2"
+        self.data["records"].append(_comment(twin, _W1, "2026-11-24T09:00", "Work 댓글"))
+        actions = self.apply_actions()
+        self.assertEqual((actions[_CW], actions[twin]), ("same-unmarked", "created"))
+        self.assertEqual(self.comments(_W1)[1], text)
+        self.assertEqual(len(self.comments(_W1)), 3)
+        actions = self.apply_actions()
+        self.assertEqual((actions[_CW], actions[twin]), ("same-unmarked", "same"))
 
     def test_changing_or_removing_the_link_after_apply_is_a_conflict(self) -> None:
         self.run_plane()
@@ -739,6 +840,33 @@ class CommentMarkerTest(_PlaneCase):
         self.assertEqual(sum("첫째" in c for c in self.comments(_I1)), 2)
 
 
+class CommentTimeOrderTest(_PlaneCase):
+    def use_timezone(self, name: str) -> None:
+        self.addCleanup(time.tzset)  # 환경을 되돌린 뒤에 부르도록 먼저 등록한다
+        patcher = patch.dict(os.environ, {"TZ": name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        time.tzset()
+
+    def test_comments_are_ordered_by_instant_and_naive_times_are_local(self) -> None:
+        self.use_timezone("KST-9")  # POSIX 표기로 UTC+9
+        _record(self.data, _C1).update(at="2026-11-22T10:00+09:00", body_html="<p>첫째</p>")  # 01:00Z
+        _record(self.data, _C2).update(at="2026-11-22 10:30", body_html="<p>둘째</p>")  # 현지 10:30 = 01:30Z
+        _record(self.data, _C10).update(at="2026-11-22T02:00:00Z", body_html="<p>열째</p>")
+        self.run_plane()
+        words = [next(w for w in ("첫째", "둘째", "열째") if w in text) for text in self.comments(_I1)]
+        self.assertEqual(words, ["첫째", "둘째", "열째"])
+        self.assertIn("<p>2026-11-22 10:30</p>", self.comments(_I1)[1])  # 첫 줄은 원래 표기 그대로다
+
+    def test_unreadable_time_fails_the_check_before_any_write(self) -> None:
+        for value in ("2026-11-22T10:00+99:00", "2026-11-22T10:00:99"):
+            with self.subTest(value=value):
+                _record(self.data, _C1)["at"] = value
+                with self.assertRaisesRegex(FlowError, "매니페스트 검사 실패: 1건"):
+                    self.run_plane()
+                self.assertEqual(self.writes(), [])
+
+
 class PlanApplyTest(_PlaneCase):
     def plan(self) -> ApplyPlan:
         manifest = load_manifest(self.manifest_file())
@@ -770,7 +898,7 @@ class PlanApplyTest(_PlaneCase):
         _record(self.data, _I3)["description_html"] = "<p>새 설명</p>"
         _record(self.data, _F1)["text"] = "고친 사실"
         _record(self.data, _PROJECT)["body_md"] = "# 새 목표\n"
-        self.touch(self.by_key(_I4))
+        self.edit_in_plane(self.by_key(_I4))
         before = self.everything()
         self.plane.calls.clear()
         plan = self.plan()
@@ -852,7 +980,7 @@ class CliTest(_PlaneCase):
 
     def test_conflict_is_listed_and_exits_3(self) -> None:
         self.cli("apply")
-        self.touch(self.by_key(_I1))
+        self.edit_in_plane(self.by_key(_I1))
         before = self.snapshot_plane()
         rc, out, _ = self.cli("apply")
         self.assertEqual(rc, 3, out)
@@ -873,6 +1001,19 @@ class CliTest(_PlaneCase):
                 self.assertNotIn("alice", out + err)
                 self.assertEqual(self.writes(), [])
                 self.assertFalse(self.applied.exists())
+
+    def test_unmarked_comment_is_counted_as_same_and_listed(self) -> None:
+        self.cli("apply")
+        project = self.plane._project_by_id(self.pid)
+        comment = project.comments[self.by_key(_W1)["id"]][0]
+        comment["comment_html"] = "<p>2026-11-24T09:00</p><p>Work 댓글</p>"  # 표식이 지워졌다
+        applied = AppliedState.load(self.applied)
+        self.applied.unlink()
+        self.assertIsNotNone(applied.get(_CW))
+        rc, out, _ = self.cli("apply")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.row(out, "comment"), [0, 0, 5, 0])
+        self.assertIn(f"- {_CW} → {comment['id']} (same-unmarked)", out.splitlines())
 
     def test_plane_failure_exits_2_and_the_next_run_resumes(self) -> None:
         with patch.object(self.plane, "create_comment", side_effect=PlaneUnavailable("Plane 요청 실패: HTTP 503")):
