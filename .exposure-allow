@@ -37,6 +37,11 @@ forge-ledger/tests/test_flows.py	ipv4	시험용 가짜 값
 forge-ledger/tests/test_hooks.py	ipv4	시험용 가짜 값
 forge-ledger/tests/test_hooks.py	ipv6	시험용 가짜 값
 forge-ledger/tests/test_hooks.py	secret_assignment	시험용 가짜 값
+forge-ledger/tests/test_migrate.py	ipv4	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	home_path	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	email	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	internal_host	매니페스트 노출 검사 시험용 가짜 값
+forge-ledger/tests/test_migrate.py	secret_assignment	매니페스트 노출 검사 시험용 가짜 값
 forge-ledger/tests/test_plane.py	secret_assignment	시험용 가짜 값
 forge-ledger/tests/test_ratelimit.py	secret_assignment	시험용 가짜 값
 

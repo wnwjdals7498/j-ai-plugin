@@ -11,6 +11,7 @@ from ledger import flows
 from ledger.check import CheckReport, run_check
 from ledger.config import load_config
 from ledger.hubcli import HUB_COMMANDS, add_hub_parsers, run_hub
+from ledger.migrate import check_manifest, load_manifest, resolve_source_dir
 from ledger.miniyaml import MiniYamlError
 from ledger.plane import (
     PlaneAuthError,
@@ -83,6 +84,11 @@ def _build_parser() -> _ArgumentParser:
     p_decide.add_argument("--project", required=True, help="대상 프로젝트 키 또는 *")
     p_decide.add_argument("--body-file", required=True, dest="body_file", help="결정 본문 HTML 파일 경로")
 
+    migrate_parser = sub.add_parser("migrate", parents=[repo_parent], help="PMT 이전 명령")
+    migrate_sub = migrate_parser.add_subparsers(dest="migrate_command", required=True)
+    m_check = migrate_sub.add_parser("check", parents=[repo_parent], help="매니페스트 형식·노출 검사")
+    m_check.add_argument("file", help="매니페스트 JSON 경로")
+
     add_hub_parsers(sub, repo_parent)
 
     return parser
@@ -129,6 +135,19 @@ def _run_plan_check(
     return report.exit_code
 
 
+def _run_migrate_check(path: Path, env: Mapping[str, str]) -> int:
+    """매니페스트만 읽는다. Plane 설정이나 작업 저장소가 필요 없다."""
+    manifest = load_manifest(path)
+    problems = check_manifest(manifest, resolve_source_dir(manifest, env))
+    if problems:
+        for problem in problems:
+            print(f"{problem.key}: {problem.message}")
+        print(f"문제 {len(problems)}건")
+        return 1
+    print(f"검사 통과: 레코드 {len(manifest.records)}건")
+    return 0
+
+
 def main(
     argv: Optional[list[str]] = None,
     env: Optional[Mapping[str, str]] = None,
@@ -147,6 +166,13 @@ def main(
 
     if args.command in HUB_COMMANDS:
         return run_hub(args, effective_env, out=sys.stdout, err=sys.stderr)
+
+    if args.command == "migrate":
+        try:
+            return _run_migrate_check(Path(args.file), effective_env)
+        except (OSError, ValueError) as exc:
+            _emit_error(str(exc), token)
+            return 1
 
     try:
         if args.command == "init" and args.repo:
