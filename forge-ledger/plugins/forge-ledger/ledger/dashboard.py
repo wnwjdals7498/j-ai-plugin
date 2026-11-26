@@ -20,6 +20,8 @@ from ledger.hubstore import HubStore
 from ledger.hubsync import json_logger
 from ledger.hubview import health, repo_summary, summary, worklog_view
 
+API_MAX_DAYS = 62
+
 _COOKIE_NAME = "fl_dash"
 _JSON_TYPE = "application/json; charset=utf-8"
 _STATIC_ROUTES = {
@@ -145,12 +147,12 @@ class _Handler(BaseHTTPRequestHandler):
         store, now, interval_s = self.app.store, self.app.now(), self.app.interval_s
         if path == "/api/v1/worklog":
             try:
-                today = now.date().isoformat()
+                today = now.astimezone().date().isoformat()
                 raw_from, raw_to = params.get("from", [today])[0], params.get("to", [today])[0]
                 if any(len(value) != 10 for value in (raw_from, raw_to)):
                     raise ValueError
                 from_, to = date.fromisoformat(raw_from), date.fromisoformat(raw_to)
-                if from_ > to or (to - from_).days >= 62:
+                if from_ > to or (to - from_).days >= API_MAX_DAYS:
                     raise ValueError
             except ValueError:
                 return _error_reply(HTTPStatus.BAD_REQUEST)

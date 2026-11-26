@@ -103,10 +103,11 @@ def _sync(store: HubStore, paths: list[str], env: Mapping[str, str], now: _Now, 
     if pm is not None:
         state_dir = default_state_dir(env)
         moment = now()
-        full = worklog_full_due(state_dir, moment)
-        outcome = sync_worklog(store, pm, env.get("FORGE_LEDGER_PLANE_URL", ""), now, json_logger(err), full)
+        pm_url = env.get("FORGE_LEDGER_PLANE_URL", "").strip()
+        full = worklog_full_due(state_dir, moment, pm_url)
+        outcome = sync_worklog(store, pm, pm_url, now, json_logger(err), full)
         if full and outcome.result == "ok":
-            mark_worklog_full(state_dir, moment)
+            mark_worklog_full(state_dir, moment, pm_url)
     return outcomes
 
 

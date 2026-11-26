@@ -4,12 +4,12 @@ import json
 import tempfile
 import unittest
 from dataclasses import asdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 from ledger.adapters import CycleInfo, IssueInfo, PullInfo, RunInfo
-from ledger.hubstore import EntityRow, HubStore, RunRow
+from ledger.hubstore import WORKSPACE_REPO_ID, EntityRow, HubStore, RunRow
 from ledger.hubview import (
     CI_WINDOW,
     PENDING_1ST,
@@ -21,6 +21,7 @@ from ledger.hubview import (
     repo_summary,
     source_state,
     summary,
+    worklog_view,
 )
 
 NOW = datetime(2026, 11, 26, 12, 0, 0, tzinfo=timezone.utc)
@@ -327,6 +328,35 @@ class RenderTest(_ViewCase):
             self.assertIn("CI 실패: 0", text)
             self.assertIn("Plane: 수집 전", text)
         self.assertEqual(len(render_session(self._summary_of("n0"), NOW, limit=100)), 100)
+
+
+class WorklogViewTest(_ViewCase):
+    def test_range_state_sort_and_user(self) -> None:
+        def attrs(at: str, author: str) -> dict[str, Any]:
+            return {
+                "at": at,
+                "date": at[:10],
+                "month": at[:7],
+                "author": author,
+                "host": "host",
+                "source": "manual",
+                "repo": "",
+                "item": "",
+                "text": author,
+                "private": "숨김",
+            }
+
+        rows = [
+            EntityRow("worklog", "late", "open", attrs("2026-11-25T09:00:00+00:00", "첫째")),
+            EntityRow("worklog", "early", "open", attrs("2026-11-25T10:00:00+09:00", "둘째")),
+            EntityRow("worklog", "deleted", "deleted", attrs("2026-11-25T08:00:00+00:00", "삭제")),
+            EntityRow("worklog", "outside", "open", attrs("2026-11-24T08:00:00+00:00", "범위 밖")),
+        ]
+        self.store.apply_kind(self.plane, WORKSPACE_REPO_ID, "worklog", rows, _iso(NOW), False)
+        result = worklog_view(self.store, date(2026, 11, 25), date(2026, 11, 25), None)
+        self.assertEqual([e["author"] for e in result["entries"]], ["둘째", "첫째"])
+        self.assertTrue(all("private" not in row for row in result["entries"]))
+        self.assertEqual(len(worklog_view(self.store, date(2026, 11, 25), date(2026, 11, 25), "첫째")["entries"]), 1)
 
 
 if __name__ == "__main__":

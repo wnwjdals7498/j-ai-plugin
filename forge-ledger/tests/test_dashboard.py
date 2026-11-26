@@ -55,6 +55,7 @@ class DashboardServerTest(unittest.TestCase):
         self.addCleanup(redirect.__exit__, None, None, None)
         self.bodies: list[bytes] = []
         app = DashboardApp(self.store, _TOKEN, 600, _STATIC, lambda: _NOW)
+        self.app = app
         server = make_server(app, "127.0.0.1", 0)
         thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
         thread.start()
@@ -192,14 +193,66 @@ class DashboardServerTest(unittest.TestCase):
             "item": "",
             "text": "본문",
         }
-        self.store.apply_kind(source, WORKSPACE_REPO_ID, "worklog", [EntityRow("worklog", "one", "open", attrs)], "now")
+        outside = {**attrs, "at": "2026-11-01T09:00:00+00:00", "date": "2026-11-01"}
+        deleted = {**attrs, "text": "삭제"}
+        rows = [
+            EntityRow("worklog", "one", "open", attrs),
+            EntityRow("worklog", "outside", "open", outside),
+            EntityRow("worklog", "deleted", "deleted", deleted),
+        ]
+        self.store.apply_kind(source, WORKSPACE_REPO_ID, "worklog", rows, "now")
         self.assertEqual(self._request("/api/v1/worklog")[0], 401)
-        status, _, body = self._request("/api/v1/worklog?from=2026-11-01&to=2026-11-25", _bearer())
+        status, _, body = self._request("/api/v1/worklog?from=2026-11-02&to=2026-11-25", _bearer())
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)["entries"], [attrs])
+        default = json.loads(self._request("/api/v1/worklog", _bearer())[2])
+        local_today = _NOW.astimezone().date().isoformat()
+        self.assertEqual((default["from"], default["to"]), (local_today, local_today))
+        self.assertEqual(self._request("/api/v1/worklog?from=2026-09-25&to=2026-11-25", _bearer())[0], 200)
         self.assertEqual(json.loads(self._request("/api/v1/worklog?user=other", _bearer())[2])["entries"], [])
         for query in ("from=2026-09-24&to=2026-11-25", "from=bad", "from=2026-11-26&to=2026-11-25"):
             self.assertEqual(self._request("/api/v1/worklog?" + query, _bearer())[0], 400)
+
+    def test_worklog_default_uses_local_midnight_date(self) -> None:
+        import time
+
+        original = os.environ.get("TZ")
+        try:
+            os.environ["TZ"] = "Asia/Seoul"
+            time.tzset()
+            object.__setattr__(self.app, "now", lambda: datetime(2026, 11, 30, 23, tzinfo=timezone.utc))
+            status, _, body = self._request("/api/v1/worklog", _bearer())
+            data = json.loads(body)
+            self.assertEqual((status, data["from"], data["to"]), (200, "2026-12-01", "2026-12-01"))
+        finally:
+            if original is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = original
+            time.tzset()
+
+    def test_worklog_changed_source_api_has_no_duplicates(self) -> None:
+        from ledger.hubsync import sync_worklog
+        from ledger.worklog import Entry, RemoteEntry
+
+        class Logs:
+            def list_entries(self, from_, to, user=None):
+                return [
+                    RemoteEntry(
+                        Entry("id", "2026-11-25T09:00:00+00:00", "host", "manual", "본문", "ws"), "작성자", "comment"
+                    )
+                ]
+
+        pm = Logs()
+
+        def now() -> datetime:
+            return _NOW
+
+        sync_worklog(self.store, pm, "http://old.invalid", now, lambda event: None, True)
+        sync_worklog(self.store, pm, "http://new.invalid", now, lambda event: None, True)
+        status, _, body = self._request("/api/v1/worklog?from=2026-11-25&to=2026-11-25", _bearer())
+        self.assertEqual(status, 200)
+        self.assertEqual(len(json.loads(body)["entries"]), 1)
 
     def test_repo_endpoint_404_for_unknown(self) -> None:
         for path in ("/api/v1/repos/o/none", "/api/v1/repos/none/n"):

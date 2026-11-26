@@ -336,6 +336,15 @@ class HubStore:
             conn.executemany("UPDATE entity SET state = 'deleted', updated_at = ? WHERE id = ?", deleted)
             return len(deleted)
 
+    def retire_other_worklog_sources(self, source_id: int, now: str) -> None:
+        """전체 수집이 성공한 뒤 이전 소스의 열린 일지를 삭제 상태로 바꾼다."""
+        with self._write() as conn:
+            conn.execute(
+                "UPDATE entity SET state = 'deleted', updated_at = ? "
+                "WHERE repo_id = ? AND kind = 'worklog' AND state = 'open' AND source_id != ?",
+                (now, WORKSPACE_REPO_ID, source_id),
+            )
+
     def close_other_sources(self, source_id: int, repo_id: int, kind: str, now: str) -> None:
         """서버 주소가 바뀌기 전의 같은 종류 소스에 남은, 이 저장소·kind의 열린 행을 닫는다."""
         with self._write() as conn:
