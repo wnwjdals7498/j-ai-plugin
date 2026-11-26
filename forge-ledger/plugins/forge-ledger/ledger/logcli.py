@@ -24,6 +24,11 @@ class SyncResult:
     sent: int
     pending: int
     other_workspace: int
+    failed: int = 0
+
+
+class LogInputError(Exception):
+    """사용자 입력에 대한 고정 안내."""
 
 
 def make_worklog_store(env: Mapping[str, str]) -> Optional[WorklogStore]:
@@ -36,16 +41,32 @@ def make_worklog_store(env: Mapping[str, str]) -> Optional[WorklogStore]:
     return PlaneWorklog(client, env.get("FORGE_LEDGER_WORKLOG_PROJECT", "").strip() or "WLOG", workspace)
 
 
-def sync_pending(local: LocalLog, store: WorklogStore, workspace: str) -> SyncResult:
+def sync_pending(
+    local: LocalLog,
+    store: WorklogStore,
+    workspace: str,
+    *,
+    on_error: Optional[Callable[[Exception], None]] = None,
+) -> SyncResult:
     sent = 0
+    failed = 0
     for entry in local.pending(workspace):
         try:
             comment_id = store.post_entry(entry)
-        except (PlaneUnavailable, OSError, IncompleteRead):
+        except PlaneAuthError:
+            raise
+        except (PlaneUnavailable, OSError, IncompleteRead) as exc:
+            if on_error:
+                on_error(exc)
             break
+        except PlaneError as exc:
+            failed += 1
+            if on_error:
+                on_error(exc)
+            continue
         local.mark_sent(entry.id, comment_id)
         sent += 1
-    return SyncResult(sent, len(local.pending(workspace)), local.pending_other(workspace))
+    return SyncResult(sent, len(local.pending(workspace)), local.pending_other(workspace), failed)
 
 
 def add_log_parser(sub: argparse._SubParsersAction[Any]) -> None:
@@ -71,11 +92,14 @@ def add_log_parser(sub: argparse._SubParsersAction[Any]) -> None:
 
 def _dates(args: argparse.Namespace, today: date) -> tuple[date, date]:
     if args.date and (args.from_ or args.to) or bool(args.from_) != bool(args.to):
-        raise ValueError("날짜는 --date 또는 --from과 --to를 함께 지정하세요")
-    start = date.fromisoformat(args.date or args.from_) if args.date or args.from_ else today
-    end = date.fromisoformat(args.date or args.to) if args.date or args.to else today
+        raise LogInputError("날짜는 --date 또는 --from과 --to를 함께 지정하세요")
+    try:
+        start = date.fromisoformat(args.date or args.from_) if args.date or args.from_ else today
+        end = date.fromisoformat(args.date or args.to) if args.date or args.to else today
+    except ValueError as exc:
+        raise LogInputError("날짜 형식이 올바르지 않습니다") from exc
     if start > end:
-        raise ValueError("시작 날짜가 종료 날짜보다 늦습니다")
+        raise LogInputError("시작 날짜가 종료 날짜보다 늦습니다")
     return start, end
 
 
@@ -121,6 +145,13 @@ def _show(
             print("  " + line, file=out)
 
 
+def _print_sync_error(exc: Exception, err: TextIO) -> None:
+    cause = str(exc) if isinstance(exc, PlaneError) else type(exc).__name__
+    if isinstance(exc, PlaneAuthError) and not cause:
+        cause = "Plane 인증 실패"
+    print(f"전송 실패: {cause}", file=err)
+
+
 def run_log(
     args: argparse.Namespace,
     env: Mapping[str, str],
@@ -133,17 +164,20 @@ def run_log(
     try:
         local = LocalLog(default_state_dir(env))
         workspace = env.get("FORGE_LEDGER_PLANE_WORKSPACE", "").strip()
-        store = make_store(env)
         if args.log_command == "init":
+            store = make_store(env)
             if store is None:
                 print("Plane 토큰 없음", file=err)
                 return 1
             store.ensure_project()
             print("작업 일지 프로젝트: " + (env.get("FORGE_LEDGER_WORKLOG_PROJECT", "").strip() or "WLOG"), file=out)
         elif args.log_command == "add":
-            moment = datetime.fromisoformat(args.at) if args.at else now().astimezone()
+            try:
+                moment = datetime.fromisoformat(args.at) if args.at else now().astimezone()
+            except ValueError as exc:
+                raise LogInputError("시각 형식이 올바르지 않습니다") from exc
             if moment.utcoffset() is None:
-                raise ValueError("시각에 UTC 오프셋이 필요합니다")
+                raise LogInputError("시각에 UTC 오프셋이 필요합니다")
             root = git_toplevel(Path.cwd()) if args.repo is None else None
             repo = args.repo if args.repo is not None else re.sub(r"\s+", "-", root.name) if root else ""
             entry = new_entry(
@@ -158,32 +192,46 @@ def run_log(
             if args.at:
                 entry = replace(entry, at=moment.isoformat(timespec="seconds"))
             local.append(entry)
-            if store is not None:
-                try:
-                    sync_pending(local, store, workspace)
-                except PlaneAuthError:
-                    pass
-            sent = entry.id not in {pending.id for pending in local.pending(workspace)}
+            errors: list[Exception] = []
+            sent = False
+            try:
+                store = make_store(env)
+                if store is not None:
+                    sync_pending(local, store, workspace, on_error=errors.append)
+                sent = not errors and entry.id not in {pending.id for pending in local.pending(workspace)}
+            except Exception as exc:
+                errors.append(exc)
+            if errors:
+                _print_sync_error(errors[0], err)
             print(f"기록: {entry.id[:8]} ({'전송' if sent else '미전송'})", file=out)
         elif args.log_command == "sync":
+            store = make_store(env)
             result = (
-                sync_pending(local, store, workspace)
+                sync_pending(local, store, workspace, on_error=lambda exc: _print_sync_error(exc, err))
                 if store is not None
                 else SyncResult(0, len(local.pending(workspace)), local.pending_other(workspace))
             )
             text = f"전송 {result.sent}건, 미전송 {result.pending}건"
+            if result.failed:
+                text += f", 실패 {result.failed}건"
             if result.other_workspace:
                 text += f", 다른 워크스페이스 {result.other_workspace}건"
             print(text, file=out)
+            return 1 if result.failed else 0
         elif args.log_command == "show":
-            _show(args, local, store, workspace, now(), out)
+            _show(args, local, make_store(env), workspace, now(), out)
         return 0
     except WorklogError as exc:
         print(f"기록 거부: {exc}", file=err)
-    except PlaneAuthError:
-        print("Plane 인증 실패", file=err)
-    except PlaneError:
-        print("Plane 작업 실패", file=err)
+    except LogInputError as exc:
+        print(str(exc), file=err)
+    except PlaneAuthError as exc:
+        if args.log_command == "sync":
+            _print_sync_error(exc, err)
+        else:
+            print(f"Plane 작업 실패: {exc}", file=err)
+    except PlaneError as exc:
+        print(f"Plane 작업 실패: {exc}", file=err)
     except (ValueError, OSError, IncompleteRead) as exc:
         print(f"작업 일지 명령 실패: {type(exc).__name__}", file=err)
     return 1

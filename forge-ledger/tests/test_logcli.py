@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -9,9 +10,11 @@ from unittest.mock import patch
 from pathlib import Path
 
 from ledger.cli import _build_parser
-from ledger.logcli import run_log
+from ledger.logcli import make_worklog_store, run_log
 from ledger.plane import PlaneAuthError, PlaneError, PlaneUnavailable
 from ledger.worklog import LocalLog, RemoteEntry, new_entry
+from ledger.worklog_plane import PlaneWorklog
+from tests.fakes import FakePlane as SharedFakePlane
 
 NOW = datetime(2026, 11, 26, 12, tzinfo=timezone.utc)
 
@@ -83,10 +86,19 @@ class LogCliTest(unittest.TestCase):
     def test_resync_after_crash(self):
         entry = new_entry("작업", source="manual", env=self.env, now=NOW)
         LocalLog(Path(self.tmp.name)).append(entry)
-        self.store.comments[entry.id] = entry
+        fake = SharedFakePlane()
+        self.store = PlaneWorklog(fake, "WLOG", "forge")
+        project = self.store.ensure_project()
+        item = self.store.ensure_month_item(entry.month())
+        from ledger.worklog_plane import EXTERNAL_SOURCE, format_comment
+
+        comment = fake.create_comment(
+            project, item, format_comment(entry), external_source=EXTERNAL_SOURCE, external_id=entry.id
+        )
         self.assertEqual(self.run_cmd("sync"), 0)
-        self.assertEqual(len(self.store.comments), 1)
-        self.assertEqual(LocalLog(Path(self.tmp.name)).pending("forge"), [])
+        self.assertEqual(len(fake.list_comments(project, item)), 1)
+        sent = json.loads((Path(self.tmp.name) / "worklog" / "sent.json").read_text())
+        self.assertEqual(sent[entry.id], comment["id"])
 
     def test_add_rejects_exposure(self):
         self.assertEqual(self.run_cmd("add", "/home/alice/x"), 1)
@@ -105,8 +117,20 @@ class LogCliTest(unittest.TestCase):
         self.run_cmd("add", "보낸 기록")
         self.run_cmd("add", "남은 기록", store=False)
         self.assertEqual(self.run_cmd("show"), 0)
-        self.assertIn("보낸 기록", self.out.getvalue())
-        self.assertIn("남은 기록 (미전송)", self.out.getvalue())
+        lines = self.out.getvalue().splitlines()
+        self.assertEqual(len(lines), 2)
+        sent = next(line for line in lines if "보낸 기록" in line)
+        pending = next(line for line in lines if "남은 기록" in line)
+        self.assertNotIn("(미전송)", sent)
+        self.assertIn("(미전송)", pending)
+
+    def test_show_server_entry_missing_sent_is_not_duplicated(self):
+        entry = new_entry("중복 방지", source="manual", env=self.env, now=NOW)
+        LocalLog(Path(self.tmp.name)).append(entry)
+        self.store.comments[entry.id] = entry
+        self.assertEqual(self.run_cmd("show"), 0)
+        self.assertEqual(len(self.out.getvalue().splitlines()), 1)
+        self.assertEqual(self.out.getvalue().count("중복 방지"), 1)
 
     def test_show_offline(self):
         self.run_cmd("add", "남은 기록", store=False)
@@ -143,3 +167,53 @@ class LogCliTest(unittest.TestCase):
     def test_whitespace_in_fields_is_rejected(self):
         self.assertEqual(self.run_cmd("add", "작업", "--item", "a b", store=False), 1)
         self.assertEqual(LocalLog(Path(self.tmp.name)).pending("forge"), [])
+
+    def test_add_generic_plane_error_remains_saved(self):
+        with patch.object(self.store, "post_entry", side_effect=PlaneError("서버 거부")):
+            self.assertEqual(self.run_cmd("add", "작업"), 0)
+        self.assertIn("(미전송)", self.out.getvalue())
+        self.assertEqual(self.err.getvalue(), "전송 실패: 서버 거부\n")
+        self.assertEqual(len(LocalLog(Path(self.tmp.name)).pending("forge")), 1)
+
+    def test_add_bad_url_saves_before_store_creation(self):
+        self.env.update({"FORGE_LEDGER_PLANE_URL": "invalid", "FORGE_LEDGER_PLANE_TOKEN": "sample"})
+        args = _build_parser().parse_args(["log", "add", "작업"])
+        self.assertEqual(
+            run_log(args, self.env, now=lambda: NOW, out=self.out, err=self.err, make_store=make_worklog_store), 0
+        )
+        self.assertIn("(미전송)", self.out.getvalue())
+        self.assertIn("전송 실패: 설정 오류", self.err.getvalue())
+        self.assertEqual(len(LocalLog(Path(self.tmp.name)).pending("forge")), 1)
+
+    def test_sync_continues_after_generic_failure(self):
+        self.run_cmd("add", "첫째", store=False)
+        self.run_cmd("add", "둘째", store=False)
+        original = self.store.post_entry
+
+        def post(entry):
+            if entry.text == "첫째":
+                raise PlaneError("서버 거부")
+            return original(entry)
+
+        with patch.object(self.store, "post_entry", side_effect=post):
+            self.assertEqual(self.run_cmd("sync"), 1)
+        self.assertEqual(self.out.getvalue(), "전송 1건, 미전송 1건, 실패 1건\n")
+        self.assertEqual(self.err.getvalue(), "전송 실패: 서버 거부\n")
+        self.assertEqual(len(self.store.comments), 1)
+
+    def test_input_errors_are_fixed_and_plane_error_is_explained(self):
+        for args, message in [
+            (("add", "작업", "--at", "2026-11-26T10:00:00"), "시각에 UTC 오프셋이 필요합니다"),
+            (("add", "작업", "--at", "invalid"), "시각 형식이 올바르지 않습니다"),
+            (
+                ("show", "--date", "2026-11-26", "--from", "2026-11-26"),
+                "날짜는 --date 또는 --from과 --to를 함께 지정하세요",
+            ),
+            (("show", "--date", "invalid"), "날짜 형식이 올바르지 않습니다"),
+        ]:
+            with self.subTest(args=args):
+                self.assertEqual(self.run_cmd(*args), 1)
+                self.assertEqual(self.err.getvalue(), message + "\n")
+        with patch.object(self.store, "ensure_project", side_effect=PlaneError("서버 거부")):
+            self.assertEqual(self.run_cmd("init"), 1)
+        self.assertEqual(self.err.getvalue(), "Plane 작업 실패: 서버 거부\n")

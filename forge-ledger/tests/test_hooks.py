@@ -137,6 +137,36 @@ class HooksTest(unittest.TestCase):
         self.assertEqual(spawned[0][-2:], ["log", "sync"])
         self.assertIn("FORGE_LEDGER_WORKLOG_AUTO", " ".join(build_exports(env)))
 
+    def test_worklog_corrupt_sent_preserves_summary_and_refresh(self) -> None:
+        worklog = self.state_dir / "worklog"
+        worklog.mkdir(parents=True)
+        (worklog / "sent.json").write_text("{broken", encoding="utf-8")
+        env = {**self.state_env, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        out = io.StringIO()
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "maybe_refresh") as refresh,
+            redirect_stdout(out),
+        ):
+            self.assertEqual(session_start.main(), 0)
+        self.assertIn("forge-ledger: Plane 프로젝트", out.getvalue())
+        refresh.assert_called_once()
+
+    def test_worklog_pending_long_summary_preserves_suffix(self) -> None:
+        from ledger.worklog import LocalLog, new_entry
+
+        env = {**self.state_env, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        LocalLog(self.state_dir).append(new_entry("작업", source="manual", env=env, now=NOW))
+        out = io.StringIO()
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "hub_summary", return_value="가" * 2000),
+            redirect_stdout(out),
+        ):
+            self.assertEqual(session_start.main(), 0)
+        self.assertLessEqual(len(out.getvalue().rstrip("\n")), 1499)
+        self.assertTrue(out.getvalue().endswith("\n작업 일지 미전송 1건\n"))
+
     def test_exports_from_plugin_options(self) -> None:
         env = {
             "CLAUDE_PLUGIN_OPTION_PLANE_URL": "http://h:1",

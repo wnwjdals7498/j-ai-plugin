@@ -178,11 +178,14 @@ def main() -> int:
             for src_key, dst_key in _OPTION_EXPORTS:
                 if env.get(src_key, ""):
                     child_env[dst_key] = env[src_key]
-            state_dir = default_state_dir(child_env)
-            pending = len(LocalLog(state_dir).pending(child_env.get("FORGE_LEDGER_PLANE_WORKSPACE", "")))
+            try:
+                state_dir = default_state_dir(child_env)
+                pending = len(LocalLog(state_dir).pending(child_env.get("FORGE_LEDGER_PLANE_WORKSPACE", "")))
+            except Exception:  # 일지 손상이 기존 요약과 갱신을 막지 않는다
+                pending = 0
             pending_text = f"작업 일지 미전송 {pending}건" if pending else ""
             if pending_text:
-                text = ((text or "")[: 1499 - len(pending_text)] + "\n" if text else "") + pending_text
+                text = ((text or "")[: 1498 - len(pending_text)] + "\n" if text else "") + pending_text
             if text:
                 print(text[:1499])
             if pending and child_env.get("FORGE_LEDGER_PLANE_TOKEN", "").strip():
