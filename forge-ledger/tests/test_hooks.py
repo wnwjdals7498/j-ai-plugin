@@ -155,6 +155,34 @@ class HooksTest(unittest.TestCase):
         self.assertNotIn("plane_api_", r.stdout)
         self.assertLessEqual(len(r.stdout), 1500)
 
+    def test_next_plane_error_fails_open_with_warning(self) -> None:
+        env = {**self.state_env, **self.opts, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        out = io.StringIO()
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "default_project_id", return_value="p"),
+            patch.object(session_start, "render_next", side_effect=RuntimeError("secret")),
+        ):
+            with redirect_stdout(out):
+                self.assertEqual(session_start.main(), 0)
+        self.assertIn("Plane", out.getvalue())
+        self.assertIn("경고", out.getvalue())
+        self.assertNotIn("secret", out.getvalue())
+        self.assertLessEqual(len(out.getvalue()), 1500)
+
+    def test_next_is_appended_to_summary(self) -> None:
+        env = {**self.state_env, **self.opts, "CLAUDE_PROJECT_DIR": str(self.repo)}
+        out = io.StringIO()
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "default_project_id", return_value="p"),
+        ):
+            with patch.object(session_start, "render_next", return_value="점유 중\n- 항목"):
+                with redirect_stdout(out):
+                    self.assertEqual(session_start.main(), 0)
+        self.assertIn("점유 중\n- 항목", out.getvalue())
+        self.assertLess(out.getvalue().index("forge-ledger:"), out.getvalue().index("점유 중"))
+
     def test_summary_missing_ledger_returns_empty(self) -> None:
         empty_repo = self.tmp_path / "no-ledger"
         empty_repo.mkdir()

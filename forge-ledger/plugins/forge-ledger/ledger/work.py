@@ -10,11 +10,13 @@ import re
 import socket
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 from ledger.adapters import WorkTracker
-from ledger.flows import SecretFound
+from ledger.facts import Fact, next_fact_id, parse_facts, upsert_fact
+from ledger.flows import Repo, SecretFound
+from ledger.history import parse_history
 from ledger.migrate import parse_comment_time
 from ledger.plane import PlaneError
 from ledger.secrets import find_exposures
@@ -396,3 +398,69 @@ def end(
     except PlaneError as exc:
         raise WorkError(f"상태는 바꿨지만 [종료] 댓글을 남기지 못함. end를 다시 실행하세요: {exc}") from exc
     return f"종료: {code} ({mode})"
+
+
+def fact_add(repo: Repo, text: str, ref: str, today: date) -> str:
+    """노출 검사를 통과한 사실을 다음 ID로 기록한다."""
+    text = _line("내용", text)
+    require_clean(text, ref)
+    path = repo.root / ".ledger" / "facts.md"
+    facts = parse_facts(path.read_text(encoding="utf-8")) if path.exists() else []
+    fact_id = next_fact_id(facts)
+    upsert_fact(path, Fact(fact_id, "Active", today.isoformat(), text, ref))
+    return fact_id
+
+
+def render_next(t: WorkTracker, project_id: str, repo: Repo, now: datetime, *, limit: int = 1500) -> str:
+    """점유와 착수 가능 항목, 최근 결정과 사실을 제한된 길이로 표시한다."""
+    items = t.list_items(project_id)
+    states = {str(s["id"]): str(s.get("group", "")) for s in t.list_states(project_id)}
+    labels = {str(label["id"]): str(label["name"]) for label in t.list_labels(project_id)}
+    parents = {str(i["parent"]) for i in items if i.get("parent")}
+    sections: list[list[str]] = [[], [], [], []]
+    for item in items:
+        group = states.get(str(item.get("state")), "")
+        names = {labels.get(str(label), "") for label in item.get("labels") or []}
+        title = f"{item.get('sequence_id', '')} {item.get('name', '')}"
+        if group == "started":
+            records = _records(t, project_id, str(item["id"]))
+            active = _active(records)
+            latest_by_host = [
+                _latest_start([r for r in _starts(records) if (r.host, r.actor) == pair])
+                for pair in {(r.host, r.actor) for r in _starts(records)}
+            ]
+            latest = _latest_start([r for r in latest_by_host if r is not None and r in active])
+            notes = [r for r in active if r.kind == "인계" and (latest is None or r.at >= latest.at)]
+            owner = ", ".join(str(a) for a in item.get("assignees") or []) or "없음"
+            handoff = notes[-1].detail if notes else "없음"
+            sections[0].append(f"- {title} · 담당: {owner} · 인계: {handoff}")
+        elif group == "unstarted" and not names.intersection({"blocked", "paused"}) and str(item["id"]) not in parents:
+            sections[1].append(f"- {title}")
+    history = repo.root / ".ledger" / "history.md"
+    if history.is_file():
+        decisions = [e for e in parse_history(history.read_text(encoding="utf-8")) if e.kind == "decision"]
+        sections[2] = [f"- {e.ref_id} {e.title}" for e in sorted(decisions, key=lambda e: e.date, reverse=True)[:3]]
+    facts_path = repo.root / ".ledger" / "facts.md"
+    if facts_path.is_file():
+        facts = parse_facts(facts_path.read_text(encoding="utf-8"))
+        sections[3] = [
+            f"- {f.fact_id} {' '.join(f.text.splitlines())}"
+            for f in sorted(facts, key=lambda f: f.created, reverse=True)[:3]
+        ]
+    headings = ("점유 중", "착수 가능", "최근 결정", "최근 사실")
+    totals = [len(section) for section in sections]
+
+    def output() -> str:
+        blocks = []
+        for heading, lines, total in zip(headings, sections, totals):
+            omitted = total - len(lines)
+            blocks.append("\n".join([heading, *lines, *([f"… 외 {omitted}건"] if omitted else [])]))
+        return "\n".join(blocks)
+
+    while len(output()) > limit:
+        candidates = [i for i, lines in enumerate(sections) if lines]
+        if not candidates:
+            break
+        largest = max(candidates, key=lambda i: len(sections[i][-1]))
+        sections[largest].pop()
+    return output()

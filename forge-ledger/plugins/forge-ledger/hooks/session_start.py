@@ -17,6 +17,10 @@ if not sys.path or sys.path[0] != _PLUGIN_ROOT:
     sys.path[:] = [_PLUGIN_ROOT, *(p for p in sys.path if p != _PLUGIN_ROOT)]
 
 from ledger.config import load_config  # noqa: E402
+from ledger.flows import Repo, default_project_id  # noqa: E402
+from ledger.plane import PlaneClient, PlaneSettings  # noqa: E402
+from ledger.ratelimit import make_shared_limiter  # noqa: E402
+from ledger.work import render_next  # noqa: E402
 from ledger.history import parse_history  # noqa: E402
 from ledger.hubstore import DB_NAME, HubStore, load_registry  # noqa: E402
 from ledger.hubsync import project_root  # noqa: E402
@@ -170,8 +174,25 @@ def main() -> int:
                 text = None
             if text is None:
                 text = summary(repo_root)
+            combined_env = dict(env)
+            for src, dst in _OPTION_EXPORTS:
+                if env.get(src):
+                    combined_env[dst] = env[src]
+            if (repo_root / ".ledger").is_dir() and combined_env.get("FORGE_LEDGER_PLANE_TOKEN", "").strip():
+                try:
+                    settings = PlaneSettings.from_env(combined_env)
+                    client = PlaneClient(
+                        settings, limiter=make_shared_limiter(settings.base_url, settings.token, combined_env)
+                    )
+                    repo = Repo.at(repo_root)
+                    extra = render_next(
+                        client, default_project_id(repo, client), repo, now, limit=max(0, 1498 - len(text or ""))
+                    )
+                except Exception:
+                    extra = "경고: Plane 작업 요약을 가져오지 못했습니다"
+                text = "\n".join(part for part in (text, extra) if part)
             if text:
-                print(text)
+                print(text[:1499])
             maybe_refresh(repo_root, env, now, _spawn_detached)  # 이번 출력은 기존 값이다
     except Exception:
         return 0

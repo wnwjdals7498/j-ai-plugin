@@ -704,5 +704,73 @@ class WorkCliTest(unittest.TestCase):
         self.assertEqual([r.method for r in self.server.requests], ["GET", "GET", "POST"])
 
 
+class NextTest(unittest.TestCase):
+    def test_next_sections_and_limit(self) -> None:
+        from ledger.flows import Repo
+        from ledger.history import HistoryEntry, append_entry
+
+        t = _Tracker()
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Repo.at(Path(tmp))
+            for n in range(30):
+                t.create_item(
+                    t.project_id, "작업" + str(n) + "가" * 70, "", [], state=t.project_id + "-state-unstarted"
+                )
+            append_entry(
+                repo.root / ".ledger/history.md", HistoryEntry("2026-11-25", "decision", "D1", "FL", "최근", "")
+            )
+            append_entry(
+                repo.root / ".ledger/history.md", HistoryEntry("2020-01-01", "decision", "D2", "FL", "과거", "")
+            )
+            text = work.render_next(t, t.project_id, repo, NOW)
+            self.assertLessEqual(len(text), 1500)
+            self.assertIn("외 ", text)
+            self.assertIn("작업0", text)
+            self.assertLess(text.index("점유 중"), text.index("착수 가능"))
+            self.assertLess(text.index("착수 가능"), text.index("최근 결정"))
+            self.assertLess(text.index("최근 결정"), text.index("최근 사실"))
+            self.assertLess(text.index("D1"), text.index("D2"))
+
+    def test_claim_handoff_and_planned_filters(self) -> None:
+        from ledger.flows import Repo
+
+        t = _Tracker()
+        work.start(t, "FL-1", "alpha", NOW)
+        work.note(t, "FL-1", "완료", "다음", NOW)
+        old = t.create_item(t.project_id, "부모", "", [], state=t.project_id + "-state-unstarted")
+        t.create_item(t.project_id, "자식", "", [], parent=old["id"], state=t.project_id + "-state-unstarted")
+        blocked = t.create_label(t.project_id, "blocked", "#000000")
+        t.create_item(t.project_id, "차단항목", "", [blocked["id"]], state=t.project_id + "-state-unstarted")
+        with tempfile.TemporaryDirectory() as tmp:
+            text = work.render_next(t, t.project_id, Repo.at(Path(tmp)), NOW)
+        self.assertIn("담당: user-1", text)
+        self.assertIn("did: 완료 / next: 다음", text)
+        self.assertIn("자식", text)
+        self.assertNotIn("부모", text)
+        self.assertNotIn("차단항목", text)
+
+    def test_fact_cli_needs_no_plane_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = main(["fact", "add", "사실", "--ref", "출처", "--repo", tmp], env={})
+            self.assertEqual(code, 0)
+            self.assertEqual(out.getvalue(), "F1\n")
+
+    def test_fact_add_next_id_and_exposure(self) -> None:
+        from ledger.facts import Fact, parse_facts, upsert_fact
+        from ledger.flows import Repo
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Repo.at(Path(tmp))
+            path = repo.root / ".ledger/facts.md"
+            for n in range(1, 34):
+                upsert_fact(path, Fact(f"F{n}", "Active", "2026-11-25", "사실", ""))
+            self.assertEqual(work.fact_add(repo, "새 사실", "근거", NOW.date()), "F34")
+            self.assertEqual(parse_facts(path.read_text())[-1].text, "새 사실")
+            with self.assertRaises(SecretFound):
+                work.fact_add(repo, "/home/" + "someone", "", NOW.date())
+
+
 if __name__ == "__main__":
     unittest.main()

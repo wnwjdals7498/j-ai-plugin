@@ -94,6 +94,13 @@ def _build_parser() -> _ArgumentParser:
     m_apply = migrate_sub.add_parser("apply", parents=[repo_parent], help="매니페스트를 Plane과 .ledger/에 적용")
     m_apply.add_argument("file", help="매니페스트 JSON 경로")
 
+    sub.add_parser("next", parents=[repo_parent], help="작업 이어받기 요약")
+    fact_parser = sub.add_parser("fact", parents=[repo_parent], help="사실 기록")
+    fact_sub = fact_parser.add_subparsers(dest="fact_command", required=True)
+    fact_add = fact_sub.add_parser("add", parents=[repo_parent], help="사실 추가")
+    fact_add.add_argument("text", help="사실 내용")
+    fact_add.add_argument("--ref", default="", help="출처")
+
     _add_work_parsers(sub, repo_parent)
     add_hub_parsers(sub, repo_parent)
 
@@ -269,6 +276,9 @@ def main(
             repo = flows.Repo.at(Path(args.repo))  # `.ledger/`를 새로 만들 곳이라 위로 찾지 않는다
         else:
             repo = flows.Repo.discover(Path(args.repo) if args.repo else Path.cwd())
+        if args.command == "fact":
+            print(work.fact_add(repo, args.text, args.ref, date.today()))
+            return 0
         settings = PlaneSettings.from_env(effective_env)
         found_ws = find_secrets(settings.workspace)
         if found_ws:
@@ -278,6 +288,10 @@ def main(
             limiter=make_shared_limiter(settings.base_url, settings.token, effective_env),
         )
         today = date.today()
+
+        if args.command == "next":
+            print(work.render_next(client, flows.default_project_id(repo, client), repo, datetime.now(timezone.utc)))
+            return 0
 
         if args.command == "work":
             return _run_work(args, client)
