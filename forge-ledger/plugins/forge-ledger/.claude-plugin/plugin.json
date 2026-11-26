@@ -49,6 +49,24 @@
       "default": "127.0.0.1",
       "title": "대시보드 바인드 주소",
       "description": "로컬 대시보드 서버가 연결을 받을 주소"
+    },
+    "worklog_project_key": {
+      "type": "string",
+      "default": "WLOG",
+      "title": "작업 일지 프로젝트 키",
+      "description": "작업 일지를 저장할 Plane 프로젝트 키"
+    },
+    "worklog_host_label": {
+      "type": "string",
+      "default": "",
+      "title": "작업 일지 호스트 이름",
+      "description": "작업 기록에 표시할 컴퓨터 이름"
+    },
+    "worklog_auto": {
+      "type": "boolean",
+      "default": true,
+      "title": "작업 일지 자동 기록",
+      "description": "작업 일지 자동 기록 사용"
     }
   }
 }

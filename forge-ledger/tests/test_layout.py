@@ -23,6 +23,9 @@ class LayoutTest(unittest.TestCase):
                 "gitea_url",
                 "gitea_token",
                 "dashboard_bind",
+                "worklog_project_key",
+                "worklog_host_label",
+                "worklog_auto",
             },
         )
         self.assertTrue(uc["gitea_url"]["required"])

@@ -5,6 +5,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 import socket
 import sys
 import uuid
@@ -54,13 +55,15 @@ def validate(text: str, host: str, repo: str, item: str) -> None:
         raise WorklogError("본문이 비어 있습니다")
     if len(text) > MAX_TEXT:
         raise WorklogError(f"본문은 {MAX_TEXT}자 이하여야 합니다")
+    if any(any(char.isspace() for char in value) for value in (host, repo, item)):
+        raise WorklogError("호스트·저장소·항목에 공백을 쓸 수 없습니다")
     patterns = {name for value in (text, host, repo, item) for name in find_exposures(value)}
     if patterns:
         raise WorklogError(", ".join(sorted(patterns)))
 
 
 def host_label(env: Mapping[str, str]) -> str:
-    return env.get("FORGE_LEDGER_WORKLOG_HOST", "") or socket.gethostname().split(".")[0]
+    return re.sub(r"\s+", "-", env.get("FORGE_LEDGER_WORKLOG_HOST", "") or socket.gethostname().split(".")[0])
 
 
 def new_entry(

@@ -22,6 +22,7 @@ from ledger.hubstore import DB_NAME, HubStore, load_registry  # noqa: E402
 from ledger.hubsync import project_root  # noqa: E402
 from ledger.hubview import render_session, repo_summary  # noqa: E402
 from ledger.ratelimit import default_state_dir  # noqa: E402
+from ledger.worklog import LocalLog  # noqa: E402
 
 _REFRESH_AFTER = timedelta(seconds=600)
 _TOKEN_KEYS = ("FORGE_LEDGER_GITEA_TOKEN", "FORGE_LEDGER_PLANE_TOKEN")
@@ -33,6 +34,9 @@ _OPTION_EXPORTS: tuple[tuple[str, str], ...] = (
     ("CLAUDE_PLUGIN_OPTION_GITEA_URL", "FORGE_LEDGER_GITEA_URL"),
     ("CLAUDE_PLUGIN_OPTION_GITEA_TOKEN", "FORGE_LEDGER_GITEA_TOKEN"),
     ("CLAUDE_PLUGIN_OPTION_DASHBOARD_BIND", "FORGE_LEDGER_DASHBOARD_BIND"),
+    ("CLAUDE_PLUGIN_OPTION_WORKLOG_PROJECT_KEY", "FORGE_LEDGER_WORKLOG_PROJECT"),
+    ("CLAUDE_PLUGIN_OPTION_WORKLOG_HOST_LABEL", "FORGE_LEDGER_WORKLOG_HOST"),
+    ("CLAUDE_PLUGIN_OPTION_WORKLOG_AUTO", "FORGE_LEDGER_WORKLOG_AUTO"),
 )
 
 
@@ -170,8 +174,20 @@ def main() -> int:
                 text = None
             if text is None:
                 text = summary(repo_root)
+            child_env = dict(env)
+            for src_key, dst_key in _OPTION_EXPORTS:
+                if env.get(src_key, ""):
+                    child_env[dst_key] = env[src_key]
+            state_dir = default_state_dir(child_env)
+            pending = len(LocalLog(state_dir).pending(child_env.get("FORGE_LEDGER_PLANE_WORKSPACE", "")))
+            pending_text = f"작업 일지 미전송 {pending}건" if pending else ""
+            if pending_text:
+                text = ((text or "")[: 1499 - len(pending_text)] + "\n" if text else "") + pending_text
             if text:
-                print(text)
+                print(text[:1499])
+            if pending and child_env.get("FORGE_LEDGER_PLANE_TOKEN", "").strip():
+                script = str(Path(_PLUGIN_ROOT) / "scripts" / "ledger.py")
+                _spawn_detached([sys.executable, script, "log", "sync"], child_env)
             maybe_refresh(repo_root, env, now, _spawn_detached)  # 이번 출력은 기존 값이다
     except Exception:
         return 0

@@ -104,3 +104,4 @@ forge-ledger/docs/superpowers/plans/2026-11-26-worklog.md	internal_host	설명�
 
 forge-ledger/tests/test_worklog.py	home_path	노출 거부 시험용 가짜 경로
 forge-ledger/tests/test_worklog.py	internal_host	노출 거부 시험용 가짜 호스트
+forge-ledger/tests/test_logcli.py	home_path	노출 거부 시험용 가짜 경로

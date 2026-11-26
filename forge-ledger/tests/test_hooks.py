@@ -107,6 +107,36 @@ class HooksTest(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
+    def test_plugin_json_worklog_options(self) -> None:
+        config = json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text())["userConfig"]
+        self.assertEqual(config["worklog_project_key"]["default"], "WLOG")
+        self.assertEqual(config["worklog_host_label"]["default"], "")
+        self.assertIs(config["worklog_auto"]["default"], True)
+
+    def test_session_start_worklog_pending(self) -> None:
+        from ledger.worklog import LocalLog, new_entry
+
+        env = {
+            **self.state_env,
+            "CLAUDE_PROJECT_DIR": str(self.repo),
+            "CLAUDE_PLUGIN_OPTION_PLANE_API_KEY": "sample",
+            "CLAUDE_PLUGIN_OPTION_WORKLOG_AUTO": "true",
+        }
+        local = LocalLog(self.state_dir)
+        for _ in range(3):
+            local.append(new_entry("작업", source="manual", env=env, now=NOW))
+        out = io.StringIO()
+        spawned = []
+        with (
+            patch.dict(os.environ, env, clear=True),
+            patch.object(session_start, "_spawn_detached", lambda argv, child: spawned.append(argv)),
+            redirect_stdout(out),
+        ):
+            self.assertEqual(session_start.main(), 0)
+        self.assertIn("작업 일지 미전송 3건", out.getvalue())
+        self.assertEqual(spawned[0][-2:], ["log", "sync"])
+        self.assertIn("FORGE_LEDGER_WORKLOG_AUTO", " ".join(build_exports(env)))
+
     def test_exports_from_plugin_options(self) -> None:
         env = {
             "CLAUDE_PLUGIN_OPTION_PLANE_URL": "http://h:1",
