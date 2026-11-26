@@ -485,17 +485,20 @@ class WorkTest(unittest.TestCase):
         self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={comments[2]['id']}")
         self.assertEqual(len(comments), 4)
 
-    def test_same_timestamp_previous_start_end_and_new_start_selects_live_start(self) -> None:
+    def test_same_timestamp_previous_start_end_and_new_start_is_ambiguous(self) -> None:
         self.t.same_time = True
         self.t.next_ids = ["z-old", "m-end", "a-new", "n-end"]
         work.start(self.t, "FL-1", "alpha", NOW)
         work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
         work.start(self.t, "FL-1", "alpha", NOW)
-        work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
+        self.t.calls.clear()
+        with self.assertRaisesRegex(work.WorkError, "착수.*구분"):
+            work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
         comments = self.t._project_by_id(self.t.project_id).comments[self.t.item_id]
         self.assertEqual(len({c["created_at"] for c in comments}), 1)
-        self.assertEqual(self.t.group(), "unstarted")
-        self.assertEqual(self.t.lines()[-1], "[종료] pause ref=a-new")
+        self.assertEqual(self.t.group(), "started")
+        self.assertEqual(len(comments), 3)
+        self.assertEqual(self.t.writes(), [])
 
     def test_simultaneous_live_starts_on_same_host_are_ambiguous(self) -> None:
         self.t.add("[착수] alpha 2026-11-26T12:00:00+00:00", NOW, ME, "z-start")
@@ -564,6 +567,19 @@ class WorkTest(unittest.TestCase):
             work.start(self.t, "FL-1", "alpha", self._later(minute))
             work.end(self.t, "FL-1", "pause", self._later(minute + 1), HEAD, host="alpha")
         self.assertEqual([line.split()[0] for line in self.t.lines()], ["[착수]", "[종료]"] * 2)
+
+    def test_repeated_start_then_end_rerun_uses_latest_start(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        work.start(self.t, "FL-1", "alpha", self._later(1))
+        work.end(self.t, "FL-1", "done", self._later(2), HEAD, host="alpha", result="완료", unverified="사유")
+        before = (self.t.item(), self.t.lines())
+        self.assertEqual(before[1][-1], f"[종료] done result: 완료 / unverified: 사유 ref={self.t.ids()[1]}")
+        self.t.calls.clear()
+        work.end(self.t, "FL-1", "done", self._later(3), HEAD, host="alpha", result="완료", unverified="사유")
+        with self.assertRaisesRegex(work.WorkError, "done.*start"):
+            work.end(self.t, "FL-1", "pause", self._later(4), HEAD, host="alpha")
+        self.assertEqual(self.t.writes(), [])
+        self.assertEqual((self.t.item(), self.t.lines()), before)
 
     def test_start_comment_failure_surfaces_and_changes_nothing(self) -> None:
         self.t.fail_on["create_comment"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")

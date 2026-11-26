@@ -284,11 +284,8 @@ def _is_verified(records: list[_Record], head: str) -> bool:
 
 
 def _current_start(records: list[_Record], me: str, host: str) -> Optional[_Record]:
-    """유효한 내 착수를 우선 찾고, 없으면 종료 재실행 판정에 쓸 착수를 찾는다."""
-    mine = [r for r in _starts(records) if (r.host, r.actor) == (host, me)]
-    ended = {r.ref for r in records if r.kind == "종료" and r.ref}
-    live = [r for r in mine if r.comment_id not in ended]
-    return _latest_start(live if live else mine)
+    """내 최신 착수는 이전 착수를 대체하며, 종료됐어도 재실행 판정에 쓴다."""
+    return _latest_start([r for r in _starts(records) if (r.host, r.actor) == (host, me)])
 
 
 def _latest_start(starts: list[_Record]) -> Optional[_Record]:
