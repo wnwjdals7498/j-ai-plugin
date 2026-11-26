@@ -354,8 +354,8 @@ def end(
     `head`는 `done`에서만 쓴다. 상태·라벨을 먼저 바꾸고 `[종료]`를 나중에 남긴다. `[종료]`는 점유를 풀기 때문에
     상태를 바꾸지 못했으면 남기지 않는다.
 
-    `[종료]`는 끝내는 착수를 `ref=`로 가리킨다. 내 착수가 없으면 아직 끝나지 않은 마지막 착수이고, 그것도 없으면
-    붙이지 않는다. 내 착수를 같은 방식으로 이미 끝냈으면 아무것도 바꾸지 않고 성공하며, 방식이 다르면 거부한다.
+    `[종료]`는 내 현재 착수를 `ref=`로 가리킨다. 내 착수를 같은 방식으로 이미 끝냈으면
+    아무것도 바꾸지 않고 성공하며, 방식이 다르면 거부한다.
     그 밖에 이미 목표 상태면 댓글만 쓴다. 내 착수 뒤에 다른 컴퓨터가 착수했으면 거부한다.
     `host`를 주지 않으면 이 컴퓨터의 짧은 이름이다.
     """
@@ -379,12 +379,16 @@ def end(
     me = t.whoami_id()
     mine = _current_start(records, me, host)
     _require_not_superseded(records, me, host, mine, detail)
+    current = _latest_start([r for r in _active(records) if r.kind == "착수"])
+    if current is not None and (current.actor, current.host) != (me, host):
+        raise WorkError("end 거부: 다른 사용자 또는 컴퓨터가 점유 중입니다")
     if mine is not None:
         recorded = _recorded_end(records, mine, mode)
         if recorded is not None:
             return f"종료 기록이 이미 있어 아무것도 바꾸지 않음: {code} ([종료] {recorded.detail})"
-    target = mine or _latest_start([r for r in _active(records) if r.kind == "착수"])
-    line = f"[종료] {detail}" if target is None else f"[종료] {detail} ref={target.comment_id}"
+    if current is None or current != mine:
+        raise WorkError("end 거부: 이 컴퓨터의 유효한 착수가 없습니다")
+    line = f"[종료] {detail} ref={current.comment_id}"
     require_clean(line)
     if mode == "done" and not unverified and not _is_verified(records, head):
         raise WorkError(
@@ -414,14 +418,35 @@ def fact_add(repo: Repo, text: str, ref: str, today: date) -> str:
 def render_next(t: WorkTracker, project_id: str, repo: Repo, now: datetime, *, limit: int = 1500) -> str:
     """점유와 착수 가능 항목, 최근 결정과 사실을 제한된 길이로 표시한다."""
     items = t.list_items(project_id)
+    project = next((p for p in t.list_projects() if str(p.get("id")) == project_id), None)
+    if project is None or not project.get("identifier"):
+        raise WorkError("Plane 프로젝트 식별자를 찾을 수 없습니다")
+    identifier = str(project["identifier"])
     states = {str(s["id"]): str(s.get("group", "")) for s in t.list_states(project_id)}
     labels = {str(label["id"]): str(label["name"]) for label in t.list_labels(project_id)}
     parents = {str(i["parent"]) for i in items if i.get("parent")}
+    sources: dict[str, list[Mapping[str, Any]]] = {}
+    for item in items:
+        if item.get("external_source") == "forge-ledger-pmt" and item.get("external_id"):
+            sources.setdefault(str(item["external_id"]), []).append(item)
+
+    def blocked(item: Mapping[str, Any], names: set[str]) -> bool:
+        first = _first_line(str(item.get("description_html") or ""))
+        if not first.startswith("차단: "):
+            return "blocked" in names
+        keys = [key.strip() for key in first[len("차단: ") :].split(",")]
+        return not keys or any(
+            not key
+            or len(sources.get(key, [])) != 1
+            or states.get(str(sources[key][0].get("state"))) not in ("completed", "cancelled")
+            for key in keys
+        )
+
     sections: list[list[str]] = [[], [], [], []]
     for item in items:
         group = states.get(str(item.get("state")), "")
         names = {labels.get(str(label), "") for label in item.get("labels") or []}
-        title = f"{item.get('sequence_id', '')} {item.get('name', '')}"
+        title = f"{identifier}-{item.get('sequence_id', '')} {item.get('name', '')}"
         if group == "started":
             records = _records(t, project_id, str(item["id"]))
             active = _active(records)
@@ -434,7 +459,12 @@ def render_next(t: WorkTracker, project_id: str, repo: Repo, now: datetime, *, l
             owner = ", ".join(str(a) for a in item.get("assignees") or []) or "없음"
             handoff = notes[-1].detail if notes else "없음"
             sections[0].append(f"- {title} · 담당: {owner} · 인계: {handoff}")
-        elif group == "unstarted" and not names.intersection({"blocked", "paused"}) and str(item["id"]) not in parents:
+        elif (
+            group == "unstarted"
+            and "paused" not in names
+            and not blocked(item, names)
+            and str(item["id"]) not in parents
+        ):
             sections[1].append(f"- {title}")
     history = repo.root / ".ledger" / "history.md"
     if history.is_file():

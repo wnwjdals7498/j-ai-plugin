@@ -115,6 +115,29 @@ class WorkTest(unittest.TestCase):
 
     # 정상 흐름
 
+    def test_end_refuses_other_user_or_host_before_writing(self) -> None:
+        for actor, host in ((OTHER, "beta"), (ME, "beta")):
+            with self.subTest(actor=actor, host=host):
+                t = _Tracker()
+                t.assign(actor)
+                t.add(f"[착수] {host} 2026-11-26T11:59:00+00:00", NOW - timedelta(minutes=1), actor)
+                before = (t.item(), t.lines())
+                t.calls.clear()
+                with self.assertRaises(work.WorkError):
+                    work.end(t, "FL-1", "pause", NOW, "", host="alpha")
+                self.assertEqual((t.item(), t.lines()), before)
+                self.assertEqual(t.writes(), [])
+
+    def test_end_refuses_when_current_claim_was_transferred(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        self.t.add("[착수] beta 2026-11-26T12:01:00+00:00", NOW + timedelta(minutes=1), OTHER)
+        before = (self.t.item(), self.t.lines())
+        self.t.calls.clear()
+        with self.assertRaises(work.WorkError):
+            work.end(self.t, "FL-1", "pause", NOW + timedelta(minutes=2), "", host="alpha")
+        self.assertEqual((self.t.item(), self.t.lines()), before)
+        self.assertEqual(self.t.writes(), [])
+
     def test_full_cycle(self) -> None:
         work.start(self.t, "FL-1", "alpha", NOW)
         self.assertEqual(self.t.group(), "started")
@@ -345,6 +368,7 @@ class WorkTest(unittest.TestCase):
     # 종료
 
     def test_done_requires_verify_of_current_head(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
         work.verify(self.t, "FL-1", "pytest", 0, OTHER_HEAD, NOW)
         self.t.calls.clear()
         with self.assertRaisesRegex(work.WorkError, "unverified"):
@@ -352,7 +376,9 @@ class WorkTest(unittest.TestCase):
         self.assertEqual(self.t.writes(), [])
 
         work.end(self.t, "FL-1", "done", self._later(1), HEAD, host="alpha", result="완료", unverified="문서만 수정")
-        self.assertEqual(self.t.lines()[-1], "[종료] done result: 완료 / unverified: 문서만 수정")
+        self.assertEqual(
+            self.t.lines()[-1], f"[종료] done result: 완료 / unverified: 문서만 수정 ref={self.t.ids()[0]}"
+        )
         self.assertEqual(self.t.group(), "completed")
 
     def test_end_modes_map_to_state_and_label(self) -> None:
@@ -364,8 +390,11 @@ class WorkTest(unittest.TestCase):
         for mode, fields, group, labels, line in cases:
             with self.subTest(mode=mode):
                 t = _Tracker()
+                work.start(t, "FL-1", "alpha", NOW)
                 work.end(t, "FL-1", mode, NOW, "", host="alpha", **fields)  # type: ignore[arg-type]
-                self.assertEqual((t.group(), t.label_names(), t.lines()), (group, labels, [line]))
+                self.assertEqual(
+                    (t.group(), t.label_names(), t.lines()[-1]), (group, labels, f"{line} ref={t.ids()[0]}")
+                )
 
     def test_status_labels_are_replaced_and_others_kept(self) -> None:
         keep = self.t.create_label(self.t.project_id, "blocked", "#000000")
@@ -405,6 +434,8 @@ class WorkTest(unittest.TestCase):
         self.assertEqual(self.t.lines()[1:], [f"[종료] pause ref={self.t.ids()[0]}"])
 
     def test_end_comment_failure_asks_for_rerun_which_writes_only_the_comment(self) -> None:
+        work.start(self.t, "FL-1", "alpha", NOW)
+        self.t.calls.clear()
         self.t.fail_on["create_comment"] = PlaneUnavailable("Plane 요청 실패: HTTP 500")
         with self.assertRaisesRegex(work.WorkError, "end를 다시 실행.*HTTP 500"):
             work.end(self.t, "FL-1", "pause", NOW, HEAD, host="alpha")
@@ -414,7 +445,7 @@ class WorkTest(unittest.TestCase):
         self.t.calls.clear()
         work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="alpha")
         self.assertEqual(self.t.writes(), ["create_comment"])
-        self.assertEqual(self.t.lines(), ["[종료] pause"])
+        self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={self.t.ids()[0]}")
 
     def _end_with_lost_response(self) -> None:
         work.start(self.t, "FL-1", "alpha", NOW)
@@ -442,19 +473,9 @@ class WorkTest(unittest.TestCase):
         self.assertEqual(self.t.item(), before)
         self.assertEqual([line.split()[0] for line in self.t.lines()], ["[착수]", "[종료]"])
 
-    def test_end_rerun_without_a_start_rewrites_only_the_comment_and_is_refused_after_a_new_start(self) -> None:
-        self.t.lose_response = True
-        with self.assertRaises(work.WorkError):
+    def test_end_without_a_start_is_refused(self) -> None:
+        with self.assertRaisesRegex(work.WorkError, "유효한 착수"):
             work.end(self.t, "FL-1", "skip", NOW, "", reason="불필요", host="alpha")
-        self.t.calls.clear()
-        work.end(self.t, "FL-1", "skip", self._later(1), "", reason="불필요", host="alpha")
-        self.assertEqual(self.t.writes(), ["create_comment"])
-        self.assertEqual(self.t.lines(), ["[종료] skip reason: 불필요"] * 2)
-
-        work.start(self.t, "FL-1", "beta", self._later(2))
-        self.t.calls.clear()
-        with self.assertRaisesRegex(work.WorkError, "beta"):
-            work.end(self.t, "FL-1", "skip", self._later(3), "", reason="불필요", host="alpha")
         self.assertEqual(self.t.writes(), [])
 
     def test_cancelled_attempt_by_another_host_does_not_block_end(self) -> None:
@@ -551,16 +572,14 @@ class WorkTest(unittest.TestCase):
             work.end(self.t, "FL-1", "pause", self._later(2), HEAD)  # 이 컴퓨터의 착수를 알아본다
         self.assertEqual(self.t.writes(), [])
 
-    def test_end_from_a_computer_without_a_start_references_the_live_start(self) -> None:
+    def test_only_starting_computer_can_end(self) -> None:
         work.start(self.t, "FL-1", "alpha", NOW)
-        work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="beta")
-        self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={self.t.ids()[0]}")
-
         self.t.calls.clear()
-        work.end(self.t, "FL-1", "pause", self._later(2), HEAD, host="alpha")
-        with self.assertRaisesRegex(work.WorkError, "pause"):
-            work.end(self.t, "FL-1", "skip", self._later(2), "", host="alpha", reason="불필요")
+        with self.assertRaises(work.WorkError):
+            work.end(self.t, "FL-1", "pause", self._later(1), HEAD, host="beta")
         self.assertEqual(self.t.writes(), [])
+        work.end(self.t, "FL-1", "pause", self._later(2), HEAD, host="alpha")
+        self.assertEqual(self.t.lines()[-1], f"[종료] pause ref={self.t.ids()[0]}")
 
     def test_next_cycle_on_the_same_host_can_end_again(self) -> None:
         for minute in (0, 2):
@@ -674,6 +693,7 @@ class WorkCliTest(unittest.TestCase):
         self.assertEqual(self._comments(), [])
 
     def test_cli_errors(self) -> None:
+        self.assertEqual(self._run("start", "FL-1")[0], 0)
         code, _, err = self._run("end", "FL-1", "--done", "--result", "완료")
         self.assertEqual(code, 1)
         self.assertIn("unverified", err)
@@ -684,11 +704,12 @@ class WorkCliTest(unittest.TestCase):
             ("end", "FL-1", "--done", "--pause"),
         ):
             self.assertEqual(self._run(*args)[0], 1, args)
-        self.assertEqual(self._comments(), [])
+        self.assertEqual(len(self._comments()), 1)
 
     def test_pause_works_outside_git_and_done_does_not(self) -> None:
         self.repo = self.repo.parent / "plain"
         self.repo.mkdir()
+        self.assertEqual(self._run("start", "FL-1")[0], 0)
         self.assertEqual(self._run("end", "FL-1", "--pause")[0], 0)
         code, _, err = self._run("end", "FL-1", "--done", "--result", "완료")
         self.assertEqual(code, 1)
@@ -705,6 +726,17 @@ class WorkCliTest(unittest.TestCase):
 
 
 class NextTest(unittest.TestCase):
+    def test_next_code_can_be_used_to_start_the_item(self) -> None:
+        from ledger.flows import Repo
+
+        t = _Tracker()
+        t.update_item(t.project_id, t.item_id, {"state": t.project_id + "-state-unstarted"})
+        with tempfile.TemporaryDirectory() as tmp:
+            text = work.render_next(t, t.project_id, Repo.at(Path(tmp)), NOW)
+        code = next(line.split()[1] for line in text.splitlines() if line.startswith("- "))
+        self.assertEqual(code, "FL-1")
+        self.assertIn("FL-1", work.start(t, code, "alpha", NOW))
+
     def test_next_sections_and_limit(self) -> None:
         from ledger.flows import Repo
         from ledger.history import HistoryEntry, append_entry

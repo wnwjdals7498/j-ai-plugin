@@ -870,6 +870,7 @@ class WorkTrackerTest(unittest.TestCase):
                 "create_comment",
                 "list_states",
                 "list_items",
+                "list_projects",
                 "list_labels",
                 "create_label",
             },

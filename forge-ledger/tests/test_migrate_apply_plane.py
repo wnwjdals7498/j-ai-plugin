@@ -173,6 +173,69 @@ class _PlaneCase(_ApplyCase):
         self.assertEqual(len(names), len(set(names)), names)
 
 
+class FinalReviewIntegrationTest(_PlaneCase):
+    def test_migrated_blocked_item_follows_prerequisite_state(self) -> None:
+        from datetime import datetime, timezone
+        from ledger.work import render_next, start, end
+
+        now = datetime.now(timezone.utc)
+        self.data["records"] = [
+            _item(_W1, "work", "Planned", "선행", ["work"]),
+            _item(_W2, "work", "Planned", "부모", ["work"]),
+            _item(_I1, "item", "Planned", "후속", [], parent=_W2, blocked_by=[_W1]),
+        ]
+        self.run_plane()
+        code = f"SAMPM-{self.by_key(_W1)['sequence_id']}"
+        self.assertNotIn("후속", render_next(self.plane, self.pid, self.repo, now))
+        self.plane.update_item(self.pid, self.by_key(_I1)["id"], {"labels": []})
+        self.assertNotIn("후속", render_next(self.plane, self.pid, self.repo, now))
+        start(self.plane, code, "alpha", now)
+        self.assertNotIn("후속", render_next(self.plane, self.pid, self.repo, now))
+        end(self.plane, code, "done", now, "a" * 40, result="완료", unverified="사유", host="alpha")
+        self.assertIn("후속", render_next(self.plane, self.pid, self.repo, now))
+        self.plane.update_item(self.pid, self.by_key(_W1)["id"], {"state": self.pid + "-state-cancelled"})
+        self.assertIn("후속", render_next(self.plane, self.pid, self.repo, now))
+        self.by_key(_W1)["external_id"] = "missing"
+        self.assertNotIn("후속", render_next(self.plane, self.pid, self.repo, now))
+
+    def test_marker_without_record_does_not_hide_changed_comment(self) -> None:
+        self.run_plane()
+        project = self.plane._project_by_id(self.pid)
+        comment = project.comments[self.by_key(_W1)["id"]][0]
+        comment["comment_html"] = comment["comment_html"].replace("Work 댓글", "고친 댓글")
+        self.state_path.unlink()
+        before = self.snapshot_plane()
+        self.plane.calls.clear()
+        self.assertEqual(self.apply_actions()[_CW], "conflict")
+        self.assertEqual(self.snapshot_plane(), before)
+        self.assertEqual(self.writes(), [])
+
+    def test_applied_comments_conflict_on_remote_or_manifest_changes(self) -> None:
+        for change in ("delete", "edit", "format", "manifest", "marker"):
+            with self.subTest(change=change):
+                self.setUp()
+                self.run_plane()
+                project = self.plane._project_by_id(self.pid)
+                comments = project.comments[self.by_key(_W1)["id"]]
+                if change == "delete":
+                    comments.clear()
+                elif change == "edit":
+                    comments[0]["comment_html"] = comments[0]["comment_html"].replace("Work 댓글", "변경 댓글")
+                elif change == "format":
+                    comments[0]["comment_html"] = comments[0]["comment_html"].replace(
+                        "<p>Work 댓글</p>", "<p><b>Work 댓글</b></p>"
+                    )
+                elif change == "marker":
+                    comments[0]["comment_html"] = "<p>2026-11-24T09:00</p><p>Work 댓글</p>"
+                else:
+                    _record(self.data, _CW)["body_html"] = "<p>변경 댓글</p>"
+                before = self.snapshot_plane()
+                self.plane.calls.clear()
+                self.assertEqual(self.apply_actions()[_CW], "conflict")
+                self.assertEqual(self.snapshot_plane(), before)
+                self.assertEqual(self.writes(), [])
+
+
 class StatusMapTest(unittest.TestCase):
     def test_every_status_maps_to_the_agreed_group_and_label(self) -> None:
         self.assertEqual(
@@ -271,7 +334,9 @@ class FullSampleTest(_PlaneCase):
             self.assert_all_same()
         save.assert_not_called()  # 달라진 것이 없으면 적용 기록도 다시 쓰지 않는다.
         self.assertEqual(self.snapshot_plane(), before)
-        self.assertEqual(sorted(c[0] for c in self.plane.calls), ["list_items", "list_labels", "list_states"])
+        self.assertEqual(
+            sorted(c[0] for c in self.plane.calls), ["list_comments"] * 3 + ["list_items", "list_labels", "list_states"]
+        )
 
     def test_recorded_time_is_read_after_the_last_comment(self) -> None:
         self.run_plane()
@@ -476,7 +541,7 @@ class ResumeTest(_PlaneCase):
         self.assertEqual((self.snapshot_plane(), self.writes()), (before, []))
         self.plane.calls.clear()
         self.assert_all_same()
-        self.assertEqual(self.method_calls("list_comments"), [])  # 기록이 복구됐다
+        self.assertEqual(len(self.method_calls("list_comments")), 3)  # 기록 복구 뒤에도 원격 댓글을 확인한다
 
     def interrupt_first_comment(self) -> None:
         """첫 댓글(I1의 것)에서 멈춘다. I1의 기록은 '쓰는 도중'으로 남는다."""
@@ -689,7 +754,7 @@ class ConflictTest(_PlaneCase):
         comments[0]["comment_html"] = "<p>고친 댓글</p>"
         del comments[1]
         self.plane.calls.clear()
-        self.assert_all_same()
+        self.assert_all_same(**{_C1: "conflict", _C2: "conflict"})
         self.assertEqual(self.writes(), [])
         self.assertEqual(len(self.comments(_I1)), 2)
 

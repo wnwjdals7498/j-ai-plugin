@@ -588,6 +588,15 @@ def _same_text(comment: Mapping[str, Any], body: str) -> bool:
     return _plain_text(str(comment.get("comment_html", ""))) == _plain_text(body)
 
 
+def _same_marked_text(comment: Mapping[str, Any], body: str, key: str) -> bool:
+    """맨 끝 표식만 제거하고 본문 전체를 비교한다."""
+    actual = str(comment.get("comment_html", "")).strip()
+    marker = re.search(r"<p\b[^>]*>[^<]*</p>\s*$", actual, re.IGNORECASE)
+    if marker is None or key not in _marker_keys(marker.group()):
+        return False
+    return actual[: marker.start()].strip() == body.strip()
+
+
 def _marker_keys(comment_html: str) -> set[str]:
     """댓글의 원천 키. 속성 표식과, 마지막 글 줄에 보이는 표식을 읽는다."""
     keys = {html.unescape(a or b) for a, b in _MARKER_ATTRIBUTE_RE.findall(comment_html)}
@@ -798,9 +807,11 @@ class _PlaneRun:
     def _comment(self, record: Mapping[str, Any], item_key: str) -> Outcome:
         key = record["key"]
         recorded = self._state.get(key)
-        if recorded is not None and recorded.digest:  # 적용한 댓글은 Plane에서 고치거나 지워도 그대로 둔다.
-            return Outcome(key, "same", recorded.target)
         item_id = self._ids.get(item_key)
+        if item_id is None and recorded is not None and recorded.digest:
+            item_entry = self._state.get(item_key)
+            if item_entry is not None and item_entry.target in self._items:
+                item_id = item_entry.target
         if item_id is None:
             return Outcome(key, "conflict", "")
         if item_id.startswith(_NEW_ID):
@@ -809,10 +820,16 @@ class _PlaneRun:
         body = f"<p>{record['at']}</p>{record['body_html']}"
         digest = _sha(body.encode("utf-8"))
         existing = self._comment_list(item_id)
-        for comment in existing:
-            if key in _marker_keys(str(comment.get("comment_html", ""))):
-                _remember(self._state, key, str(comment["id"]), digest)
-                return Outcome(key, "same", str(comment["id"]))
+        marked = [c for c in existing if key in _marker_keys(str(c.get("comment_html", "")))]
+        if recorded is not None and recorded.digest:
+            if recorded.digest != digest or len(marked) != 1 or str(marked[0]["id"]) != recorded.target:
+                return Outcome(key, "conflict", recorded.target)
+        if marked:
+            if len(marked) != 1 or not _same_marked_text(marked[0], body, key):
+                return Outcome(key, "conflict", str(marked[0]["id"]))
+            return _repair(self._state, key, str(marked[0]["id"]), digest)
+        if recorded is not None and recorded.digest:
+            return Outcome(key, "conflict", recorded.target)
 
         reserved = None
         if recorded is not None:  # 만들고 표식을 확인하기 전에 멈춘 댓글
