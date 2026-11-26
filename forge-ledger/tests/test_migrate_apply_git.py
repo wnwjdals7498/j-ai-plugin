@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import subprocess
@@ -523,6 +524,172 @@ class IdRecoveryTest(_ApplyCase):
         self.state_path.unlink()
         again = self.apply()
         self.assertEqual([(o.action, o.target) for o in again], [("same", resumed[0].target)])
+
+
+class RemoteSectionTest(_ApplyCase):
+    """적용한 결정도 Plane 절의 글이 달라졌으면 충돌이다."""
+
+    def decision_html(self) -> str:
+        return self.plane.item_html("SAMPM", "[계획서] 결정")
+
+    def set_decision_html(self, html: str) -> None:
+        pid = next(p["id"] for p in self.plane.list_projects() if p["identifier"] == "SAMPM")
+        item = next(i for i in self.plane.list_items(pid) if i["name"] == "[계획서] 결정")
+        self.plane.update_item(pid, item["id"], {"description_html": html})
+        self.plane.calls.clear()
+
+    def edit_section(self, old: str, new: str) -> None:
+        html = self.decision_html()
+        self.assertEqual(html.count(old), 1, old)
+        self.set_decision_html(html.replace(old, new))
+
+    def assert_conflict_only_for_d2(self) -> None:
+        before = (self.snapshot(), self.decision_html())
+        for _ in range(2):  # 다시 실행해도 계속 충돌이다.
+            self.plane.calls.clear()
+            self.assert_only(self.apply(), {_D2: "conflict"})
+            self.assertEqual((self.snapshot(), self.decision_html()), before)
+            self.assertEqual(self.writes(), [])
+
+    def test_changed_section_text_is_a_conflict_until_restored(self) -> None:
+        self.apply()
+        original = self.decision_html()
+        self.edit_section("둘째 결정의 근거", "Plane에서 고친 근거")
+        self.assert_conflict_only_for_d2()
+        self.set_decision_html(original)
+        self.assert_only(self.apply(), {})
+
+    def test_changed_heading_added_text_and_removed_section_are_conflicts(self) -> None:
+        for label in ("제목 수정", "문단 추가", "절 삭제"):
+            with self.subTest(case=label):
+                self.setUp()
+                self.apply()
+                ref_id = self.entry("D2").ref_id
+                if label == "제목 수정":
+                    self.edit_section(f"<h2>{ref_id} 둘째 결정</h2>", f"<h2>{ref_id} 이름을 바꿈</h2>")
+                elif label == "문단 추가":
+                    self.edit_section(f"<h2>{ref_id} 둘째 결정</h2>", f"<h2>{ref_id} 둘째 결정</h2><p>덧붙인 말</p>")
+                else:
+                    section = split_html_sections(self.decision_html())[ref_id]
+                    self.edit_section(f"<h2>{ref_id} 둘째 결정</h2>{section}", "")
+                self.assert_conflict_only_for_d2()
+
+    def test_markup_only_changes_and_new_sections_are_not_conflicts(self) -> None:
+        self.apply()
+        html = self.decision_html().replace("<p>", '<p class="editor-paragraph">').replace("<br>", "<br/>\n")
+        self.set_decision_html(html + "<p></p><h2>D-261126-abcd 따로 더한 결정</h2><p>새 결정</p>")
+        self.assert_only(self.apply(), {})
+
+    def test_server_rewriting_text_on_save_is_not_a_false_conflict(self) -> None:
+        # 서버가 저장하며 글을 바꿔도, 저장 응답의 글을 기준으로 기록하므로 다음 실행은 같다.
+        real = self.plane.update_item_description
+
+        def normalizing(project_id: str, item_id: str, html: str, expected_updated_at: str) -> dict[str, Any]:
+            return real(project_id, item_id, html.replace("의 근거", "의  판단 근거"), expected_updated_at)
+
+        with patch.object(self.plane, "update_item_description", normalizing):
+            self.apply()
+        self.assertIn("판단 근거", self.decision_html())
+        self.assert_only(self.apply(), {})
+        self.edit_section("둘째 결정의  판단 근거", "다시 고친 근거")
+        self.assert_only(self.apply(), {_D2: "conflict"})
+
+    def test_decision_item_is_read_once_per_rerun(self) -> None:
+        self.apply()
+        self.plane.calls.clear()
+        self.assert_only(self.apply(), {})
+        self.assertEqual([c[0] for c in self.plane.calls].count("get_item"), 1)
+
+    def test_hand_added_note_on_history_line_is_still_a_conflict(self) -> None:
+        self.apply()
+        entry = self.entry("D2")
+        path = self.ledger("history.md")
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text.replace(entry.detail, f"{entry.detail} · 손으로 단 메모"), encoding="utf-8")
+        self.assert_only(self.apply(), {_D2: "conflict"})
+        self.state_path.unlink()
+        self.assert_only(self.apply(), {_D2: "conflict"})
+
+
+class StateSaveFailureTest(_ApplyCase):
+    """대상은 썼는데 적용 기록 저장이 실패해도, 다시 실행하면 같다고 보고 기록을 복구한다."""
+
+    def fail_next_save(self) -> None:
+        with patch.object(AppliedState, "save", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                self.apply()
+
+    def recorded_digest(self, key: str) -> str:
+        entry = AppliedState.load(self.state_path).get(key)
+        assert entry is not None
+        return entry.digest
+
+    def change(self, key: str) -> None:
+        if key == _PROJECT:
+            _record(self.data, _PROJECT)["body_md"] = "# 새 목표\n"
+        elif key == _F1:
+            _record(self.data, _F1)["text"] = "고친 사실"
+        else:
+            self.source.write_bytes(b"new bytes\n")
+
+    def test_update_written_but_not_recorded_is_repaired(self) -> None:
+        for key in (_PROJECT, _F1, _RESOURCE):
+            with self.subTest(key=key):
+                self.setUp()
+                self.apply()
+                old = self.recorded_digest(key)
+                self.change(key)
+                self.fail_next_save()
+                written = self.snapshot()
+                self.assertEqual(self.recorded_digest(key), old)  # 기록은 옛 값이다.
+
+                self.assert_only(self.apply(), {})
+                self.assertEqual(self.snapshot(), written)
+                self.assertNotEqual(self.recorded_digest(key), old)
+                self.assert_only(self.apply(), {})
+
+    def test_repaired_record_still_protects_later_hand_edits(self) -> None:
+        self.apply()
+        self.change(_PROJECT)
+        self.fail_next_save()
+        self.apply()
+        self.ledger("project.md").write_text("손으로 고침\n", encoding="utf-8")
+        self.assert_only(self.apply(), {_PROJECT: "conflict"})
+        self.assertEqual(self.ledger("project.md").read_text(encoding="utf-8"), "손으로 고침\n")
+
+    def test_content_that_matches_neither_old_nor_wanted_is_a_conflict(self) -> None:
+        self.apply()
+        self.change(_PROJECT)
+        self.fail_next_save()
+        _record(self.data, _PROJECT)["body_md"] = "# 그 사이에 또 바뀐 목표\n"
+        self.assert_only(self.apply(), {_PROJECT: "conflict"})
+
+    def test_current_equal_to_wanted_is_same_even_after_a_manual_change(self) -> None:
+        self.apply()
+        self.change(_PROJECT)
+        self.ledger("project.md").write_bytes("# 새 목표\n".encode())  # 사람이 같은 내용으로 먼저 고침
+        self.assert_only(self.apply(), {})
+        self.assertEqual(self.recorded_digest(_PROJECT), hashlib.sha256("# 새 목표\n".encode()).hexdigest())
+
+    def test_decision_written_but_not_recorded_is_repaired(self) -> None:
+        real = AppliedState.save
+        saves: list[int] = []
+
+        def failing_after_first_decision(state: AppliedState, path: Path) -> None:
+            entry = state.get(_D1)
+            if entry is not None and entry.digest and not saves:
+                saves.append(1)
+                raise OSError("disk full")
+            real(state, path)
+
+        with patch.object(AppliedState, "save", failing_after_first_decision):
+            with self.assertRaises(OSError):
+                self.apply()
+        self.assertEqual(self.recorded_digest(_D1), "")  # 예약만 남았다.
+        actions = self.actions(self.apply())
+        self.assertEqual((actions[_D1], actions[_D2]), ("same", "created"))
+        self.assertTrue(self.recorded_digest(_D1))
+        self.assert_only(self.apply(), {})
 
 
 class AppliedStateTest(unittest.TestCase):

@@ -1,6 +1,7 @@
 """PMT 이전 매니페스트의 git 쪽(project·결정·사실·resources)을 `.ledger/`에 쓴다.
 
 원칙: 같은 매니페스트를 다시 적용해도 중복되지 않고, 적용 뒤 바뀐 내용은 덮어쓰지 않고 충돌로 알린다.
+다만 지금 내용이 쓰려는 내용과 같으면 `same`으로 보고 적용 기록을 복구한다(쓴 뒤 기록 저장 전에 멈춘 경우).
 결정은 Plane '[계획서] 결정'에도 절이 생긴다. 모든 확인을 끝낸 뒤에 쓰기를 시작한다.
 """
 
@@ -19,12 +20,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 from ledger.facts import Fact, format_row, normalize_fact, parse_facts, upsert_fact
-from ledger.flows import FlowError, Repo, SecretFound, decision_item, plane_ref, record_decision
+from ledger.flows import FlowError, Repo, SecretFound, append_decision, decision_item, plane_ref
 from ledger.history import HistoryEntry, append_entry, format_entry, new_decision_id, parse_history
 from ledger.migrate import Manifest, check_manifest, load_resource, resolve_source_dir
 from ledger.plane import PlaneLike
 from ledger.secrets import find_secrets
-from ledger.sections import split_html_sections
+from ledger.sections import split_html_headings, split_html_sections
 
 _PROJECT_FILE = ".ledger/project.md"
 _FACTS_FILE = ".ledger/facts.md"
@@ -35,11 +36,14 @@ _DECISION_PROJECTS = "*"  # 저장소 전체 결정. Plane에서는 기본 프�
 # 첫머리 표지 바로 뒤의 `상태: … · 대체: <새 ID>`만 읽는다(`.match`).
 _REPLACEMENT_PATTERN = r" 상태: (?:승인|대체|폐기) · 대체: (D-[0-9]{6}-[0-9a-f]{4})"
 _TAG_RE = re.compile(r"<[^>]+>")
+_PLANE_REF_PATTERN = r" · plane:[^\s·]+@[^\s·]+"  # `plane_ref`가 만드는 모양 하나만
 
 
 @dataclass(frozen=True)
 class AppliedEntry:
     """적용 기록 한 건. `digest`는 쓴 직후의 내용, `remote_updated_at`은 Plane 레코드에만 쓴다.
+
+    결정의 `digest`는 이력 줄, 매니페스트 내용, Plane이 저장한 절의 글(태그 제거)을 함께 담는다.
 
     `digest`와 `applied_at`이 비어 있으면 결정의 새 ID(`target`)만 예약하고 아직 쓰지 않은 것이다.
     """
@@ -103,6 +107,14 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _repair(state: AppliedState, key: str, target: str, digest: str) -> Outcome:
+    """지금 내용이 맞으므로 `same`이다. 적용 기록이 없거나 옛 값이면 지금 값으로 고친다."""
+    entry = state.get(key)
+    if entry is None or (entry.target, entry.digest) != (target, digest):
+        _remember(state, key, target, digest)
+    return Outcome(key, "same", target)
+
+
 def _remember(state: AppliedState, key: str, target: str, digest: str) -> None:
     applied_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     state.put(key, AppliedEntry(target=target, applied_at=applied_at, digest=digest))
@@ -144,18 +156,15 @@ def _apply_file(repo: Repo, state: AppliedState, key: str, relative: str, conten
     if path.exists() and not path.is_file():
         return conflict
     current = path.read_bytes() if path.is_file() else None
+    if current == content:
+        return _repair(state, key, relative, _sha(content))
     recorded = state.get(key)
     if recorded is not None:
         if recorded.target != relative or current is None or _sha(current) != recorded.digest:
             return conflict
-        if current == content:
-            return Outcome(key, "same", relative)
         action = "updated"
     elif current is None:
         action = "created"
-    elif current == content:
-        _remember(state, key, relative, _sha(content))  # 기록을 잃었어도 내용이 같으면 이어받는다.
-        return Outcome(key, "same", relative)
     else:
         return conflict
     try:
@@ -186,19 +195,16 @@ def _apply_fact(repo: Repo, state: AppliedState, key: str, wanted: Fact) -> Outc
     target = f"{_FACTS_FILE}#{wanted.fact_id}"
     current = _read_facts(repo).get(wanted.fact_id)
     digest = _sha(format_row(wanted).encode("utf-8"))
+    if current == wanted:
+        return _repair(state, key, target, digest)
     recorded = state.get(key)
     if recorded is not None:
         if recorded.target != target or current is None:
             return Outcome(key, "conflict", target)
         if _sha(format_row(current).encode("utf-8")) != recorded.digest:
             return Outcome(key, "conflict", target)
-        if current == wanted:
-            return Outcome(key, "same", target)
     elif current is not None:
-        if current != wanted:
-            return Outcome(key, "conflict", target)
-        _remember(state, key, target, digest)
-        return Outcome(key, "same", target)
+        return Outcome(key, "conflict", target)
     action = upsert_fact(repo.root / _FACTS_FILE, wanted)
     _remember(state, key, target, digest)
     return Outcome(key, action, target)
@@ -215,10 +221,23 @@ class _Decision:
     body_html: str
     replaced_by: str  # 대체한 결정의 원천 키. 없으면 빈 문자열
 
-    def digest(self, line: HistoryEntry) -> str:
-        """이력의 한 줄과 매니페스트 내용을 함께 담는다. 어느 쪽이 바뀌어도 값이 달라진다."""
+    def digest(self, line: HistoryEntry, section: str) -> str:
+        """이력 한 줄, 매니페스트 내용, Plane 절의 글을 함께 담는다. 어느 것이 바뀌어도 값이 달라진다."""
         source = [self.wanted.date, self.wanted.title, self.wanted.detail, self.body_html, self.replaced_by]
-        return _sha(f"{format_entry(line)}\n{json.dumps(source, ensure_ascii=False)}".encode())
+        return _sha(f"{format_entry(line)}\n{json.dumps([*source, section], ensure_ascii=False)}".encode())
+
+    def expected_section(self) -> str:
+        """보낸 그대로 저장됐을 때의 절 글(`_section_texts`의 모양)."""
+        return _normalized(f"{self.wanted.ref_id} {self.wanted.title} {_plain_text(self.body_html)}")
+
+    def matches(self, line: HistoryEntry, section: str) -> bool:
+        """이력 줄과 Plane 절이 지금 매니페스트로 쓰려는 것과 같은가."""
+        wanted = self.wanted
+        return (
+            (line.date, line.projects, line.title) == (wanted.date, wanted.projects, wanted.title)
+            and re.fullmatch(re.escape(wanted.detail) + _PLANE_REF_PATTERN, line.detail) is not None
+            and section == self.expected_section()
+        )
 
 
 def _one_line(text: str) -> str:
@@ -228,6 +247,13 @@ def _one_line(text: str) -> str:
 
 def _plain_text(fragment: str) -> str:
     return " ".join(html.unescape(_TAG_RE.sub(" ", fragment)).split())
+
+
+def _section_texts(item_html: str) -> dict[str, str]:
+    """결정 ID마다 절의 제목과 본문 글(태그 제거, 공백 정리)."""
+    headings = split_html_headings(item_html)
+    bodies = split_html_sections(item_html)
+    return {ref_id: _normalized(f"{headings[ref_id]} {_plain_text(body)}") for ref_id, body in bodies.items()}
 
 
 def _decision_body(meta: str, detail: str) -> str:
@@ -300,21 +326,25 @@ def _read_history(repo: Repo) -> dict[str, HistoryEntry]:
     return {entry.ref_id: entry for entry in parse_history(path.read_text(encoding="utf-8"))}
 
 
-def _plane_sections(repo: Repo, client: PlaneLike) -> dict[str, str]:
+def _decision_html(repo: Repo, client: PlaneLike) -> str:
     item = decision_item(repo, client, _DECISION_PROJECTS)[3]
-    return split_html_sections(str(item.get("description_html", "")))
+    return str(item.get("description_html", ""))
 
 
 def _plan_decisions(
     m: Manifest, records: list[dict[str, Any]], repo: Repo, client: PlaneLike, state: AppliedState
 ) -> tuple[list[_Decision], dict[str, str]]:
-    """두 단계의 첫째: 모든 결정의 새 ID를 정한 뒤 대체 관계를 새 ID로 잇는다. 아무것도 쓰지 않는다."""
+    """두 단계의 첫째: 모든 결정의 새 ID를 정한 뒤 대체 관계를 새 ID로 잇는다. 아무것도 쓰지 않는다.
+
+    '[계획서] 결정'은 여기서 한 번만 읽는다. 둘째 값은 결정 ID별 절의 글이다.
+    """
     if not records:
         return [], {}
     prefix = f"pmt:{m.slug}/"
     originals = {r["key"]: _one_line(r["key"][len(prefix) :]) for r in records}
     markers = {key: f"원래 ID: {m.slug} {original} · " for key, original in originals.items()}
-    sections = _plane_sections(repo, client)
+    item_html = _decision_html(repo, client)
+    sections = split_html_sections(item_html)
     ids = _assign_ids(records, markers, state, _read_history(repo), sections)
 
     decisions = []
@@ -330,7 +360,7 @@ def _plan_decisions(
             raise SecretFound(f"비밀값 감지: {', '.join(found)}")
         wanted = HistoryEntry(record["date"], "decision", ids[key], _DECISION_PROJECTS, title, meta)
         decisions.append(_Decision(key, markers[key], wanted, body, record.get("replaced_by") or ""))
-    return decisions, sections
+    return decisions, _section_texts(item_html)
 
 
 def _reserve_ids(decisions: list[_Decision], state: AppliedState) -> None:
@@ -348,37 +378,30 @@ def _reserve_ids(decisions: list[_Decision], state: AppliedState) -> None:
         state.checkpoint()
 
 
-def _same_section(decision: _Decision, sections: Mapping[str, str]) -> bool:
-    section = sections.get(decision.wanted.ref_id)
-    return section is not None and _plain_text(section) == _plain_text(decision.body_html)
-
-
 def _apply_decision(
-    decision: _Decision, sections: Mapping[str, str], repo: Repo, client: PlaneLike, state: AppliedState
+    decision: _Decision, texts: Mapping[str, str], repo: Repo, client: PlaneLike, state: AppliedState
 ) -> Outcome:
-    """결정은 한 번 쓰면 고치지 않는다. 매니페스트·이력·절이 달라졌으면 충돌로 알린다."""
+    """결정은 한 번 쓰면 고치지 않는다. 매니페스트·이력·Plane 절이 달라졌으면 충돌로 알린다."""
     key, wanted = decision.key, decision.wanted
     ref_id = wanted.ref_id
+    conflict = Outcome(key, "conflict", ref_id)
     line = _read_history(repo).get(ref_id)
+    section = texts.get(ref_id)
     recorded = state.get(key)
-    if recorded is not None and recorded.digest:
-        unchanged = line is not None and decision.digest(line) == recorded.digest
-        return Outcome(key, "same" if unchanged else "conflict", ref_id)
+    applied = recorded is not None and bool(recorded.digest)
 
-    if line is not None:  # 적용 기록을 잃었다. 이력과 Plane 절이 모두 같을 때만 이어받는다.
-        matches = (
-            (line.date, line.projects, line.title) == (wanted.date, wanted.projects, wanted.title)
-            and line.detail.startswith(f"{wanted.detail} · plane:")
-            and _same_section(decision, sections)
-        )
-        if not matches:
-            return Outcome(key, "conflict", ref_id)
-        _remember(state, key, ref_id, decision.digest(line))
-        return Outcome(key, "same", ref_id)
+    if line is not None and section is not None:
+        digest = decision.digest(line, section)
+        if recorded is not None and recorded.digest == digest:
+            return Outcome(key, "same", ref_id)
+        # 기록이 없거나 옛 값이어도, 지금 내용이 쓰려는 것과 같으면 이어받는다.
+        return _repair(state, key, ref_id, digest) if decision.matches(line, section) else conflict
+    if applied or line is not None:  # 적용한 뒤 이력 줄이나 Plane 절이 사라졌다.
+        return conflict
 
-    if ref_id in sections:  # Plane에는 썼고 이력을 남기기 전에 멈췄다.
-        if not _same_section(decision, sections):
-            return Outcome(key, "conflict", ref_id)
+    if section is not None:  # Plane에는 썼고 이력을 남기기 전에 멈췄다.
+        if section != decision.expected_section():
+            return conflict
         target_key, _, _, item = decision_item(repo, client, wanted.projects)
         written = HistoryEntry(
             wanted.date,
@@ -390,8 +413,10 @@ def _apply_decision(
         )
         append_entry(repo.root / _HISTORY_FILE, written)
     else:
-        written = record_decision(repo, client, wanted, decision.body_html)
-    _remember(state, key, ref_id, decision.digest(written))
+        written, stored_html = append_decision(repo, client, wanted, decision.body_html)
+        # 저장 응답의 글을 기준으로 남긴다. 서버가 글을 다듬어도 다음 실행이 충돌로 보지 않는다.
+        section = _section_texts(stored_html).get(ref_id, decision.expected_section())
+    _remember(state, key, ref_id, decision.digest(written, section))
     return Outcome(key, "created", ref_id)
 
 
@@ -432,14 +457,14 @@ def apply_git(
     ]
     if facts:
         _read_facts(repo)
-    decisions, sections = _plan_decisions(m, by_kind["decision"], repo, client, state)
+    decisions, section_texts = _plan_decisions(m, by_kind["decision"], repo, client, state)
 
     # 여기까지는 읽기만 했다. 아래부터 쓴다.
     _reserve_ids(decisions, state)
     outcomes = [
         _apply_file(repo, state, r["key"], _PROJECT_FILE, r["body_md"].encode("utf-8")) for r in by_kind["project"]
     ]
-    outcomes += [_apply_decision(decision, sections, repo, client, state) for decision in decisions]
+    outcomes += [_apply_decision(decision, section_texts, repo, client, state) for decision in decisions]
     outcomes += [_apply_fact(repo, state, key, fact) for key, fact in facts]
     outcomes += [_apply_file(repo, state, key, relative, data) for key, relative, data in files]
     return outcomes

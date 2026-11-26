@@ -423,6 +423,11 @@ def record_decision(repo: Repo, client: PlaneLike, entry: HistoryEntry, body_htm
 
     남긴 줄(상세 칸 뒤에 Plane 참조를 붙인 것)을 돌려준다.
     """
+    return append_decision(repo, client, entry, body_html)[0]
+
+
+def append_decision(repo: Repo, client: PlaneLike, entry: HistoryEntry, body_html: str) -> tuple[HistoryEntry, str]:
+    """`record_decision`과 같이 쓰고, Plane이 저장 응답으로 돌려준 항목 HTML도 함께 낸다."""
     _check_secrets(entry.title, entry.detail, body_html)
     format_entry(entry)  # 이력 한 줄로 쓸 수 없는 값은 Plane에 쓰기 전에 거른다.
 
@@ -438,7 +443,7 @@ def record_decision(repo: Repo, client: PlaneLike, entry: HistoryEntry, body_htm
     detail = " · ".join(part for part in (entry.detail, plane_ref(target_key, updated)) if part)
     recorded = replace(entry, detail=detail)
     append_entry(_ledger_dir(repo) / "history.md", recorded)
-    return recorded
+    return recorded, str(updated.get("description_html") or new_html)
 
 
 def decide(
