@@ -4,9 +4,10 @@ import http.client
 import socket
 import unittest
 import urllib.error
+from typing import Any
 from unittest import mock
 
-from ledger.adapters import CycleInfo, PmAdapter, ProjectInfo
+from ledger.adapters import CycleInfo, PmAdapter, ProjectInfo, WorkTracker
 from ledger.plane import (
     PlaneAuthError,
     PlaneClient,
@@ -16,7 +17,7 @@ from ledger.plane import (
     PlaneSettings,
     PlaneUnavailable,
 )
-from tests.fakes import FakePlaneServer
+from tests.fakes import FakePlane, FakePlaneServer
 
 TEST_TOKEN = "plane_api_" + "0" * 32
 
@@ -487,3 +488,275 @@ class PlaneClientTest(unittest.TestCase):
                 self.assertEqual(other.requests, [])
         self.assertEqual(client.calls, 5)
         self.assertEqual(slept, [])
+
+
+_BASE = "/api/v1/workspaces/forge/projects/"
+_UPDATE_FIELDS = (
+    "state",
+    "assignees",
+    "labels",
+    "parent",
+    "description_html",
+    "external_source",
+    "external_id",
+)
+
+
+def _page(results: list[dict[str, Any]], cursor: str = "") -> dict[str, Any]:
+    return {"results": results, "next_cursor": cursor or None, "next_page_results": bool(cursor)}
+
+
+def _members(protocol: type) -> set[str]:
+    return {name for name, value in vars(protocol).items() if callable(value) and not name.startswith("_")}
+
+
+class PlaneWorkWritesTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.server = FakePlaneServer()
+        self.addCleanup(self.server.close)
+        self.settings = PlaneSettings(base_url=self.server.base_url, workspace="forge", token=TEST_TOKEN)
+        self.client = PlaneClient(self.settings, sleep=lambda _: None)
+
+    def _last(self) -> tuple[str, str, Any]:
+        req = self.server.requests[-1]
+        return req.method, req.path.split("?")[0], req.json
+
+    def test_list_states_and_labels_follow_cursor(self) -> None:
+        for method, segment in (("list_states", "states"), ("list_labels", "labels")):
+            with self.subTest(method=method):
+                self.server.requests.clear()
+                self.server.pages = [
+                    _page([{"id": "a", "name": "Todo", "group": "unstarted"}], "c2"),
+                    _page([{"id": "b", "name": "Done", "group": "completed"}]),
+                ]
+                entries = getattr(self.client, method)("p1")
+                self.assertEqual([e["id"] for e in entries], ["a", "b"])
+                self.assertEqual(self._last()[:2], ("GET", f"{_BASE}p1/{segment}/"))
+                self.assertIn("cursor=c2", self.server.requests[-1].path)
+
+    def test_list_states_and_labels_return_stored_entries(self) -> None:
+        self.server.states["p1"] = [{"id": "s1", "name": "In Progress", "group": "started"}]
+        self.assertEqual(self.client.list_states("p1"), self.server.states["p1"])
+        self.client.create_label("p1", "계획서", "#3b82f6")
+        self.assertEqual([label["name"] for label in self.client.list_labels("p1")], ["계획서"])
+
+    def test_create_item_with_parent_state_and_external_marks(self) -> None:
+        self.client.create_item(
+            "p1",
+            "W1",
+            "<p>b</p>",
+            ["l1"],
+            parent="P",
+            state="s1",
+            external_source="forge-ledger-pmt",
+            external_id="pmt:s/W1",
+        )
+        self.assertEqual(
+            self._last(),
+            (
+                "POST",
+                f"{_BASE}p1/work-items/",
+                {
+                    "name": "W1",
+                    "description_html": "<p>b</p>",
+                    "labels": ["l1"],
+                    "parent": "P",
+                    "state": "s1",
+                    "external_source": "forge-ledger-pmt",
+                    "external_id": "pmt:s/W1",
+                },
+            ),
+        )
+
+    def test_create_item_sends_only_given_options(self) -> None:
+        self.client.create_item("p1", "W1", "<p>b</p>", [])
+        self.assertEqual(self._last()[2], {"name": "W1", "description_html": "<p>b</p>", "labels": []})
+        self.client.create_item("p1", "W2", "", [], external_id="pmt:s/W2")
+        self.assertEqual(
+            self._last()[2], {"name": "W2", "description_html": "", "labels": [], "external_id": "pmt:s/W2"}
+        )
+
+    def test_update_item_patches_allowed_fields(self) -> None:
+        fields: dict[str, Any] = {
+            "state": "s1",
+            "assignees": ["u1"],
+            "labels": ["l1"],
+            "parent": None,
+            "description_html": "<p>n</p>",
+            "external_source": "forge-ledger-pmt",
+            "external_id": "pmt:s/W1",
+        }
+        self.assertEqual(tuple(fields), _UPDATE_FIELDS)
+        updated = self.client.update_item("p1", "i1", fields)
+        self.assertEqual(self._last(), ("PATCH", f"{_BASE}p1/work-items/i1/", fields))
+        self.assertEqual(updated["state"], "s1")
+        self.assertEqual(len(self.server.requests), 1)
+
+    def test_update_item_rejects_other_keys_before_any_request(self) -> None:
+        for fields in ({"name": "x"}, {"state": "s1", "priority": "high"}, {"updated_at": "t"}):
+            with self.subTest(fields=fields):
+                with self.assertRaisesRegex(ValueError, "수정할 수 없는 필드"):
+                    self.client.update_item("p1", "i1", fields)
+        self.assertEqual(self.server.requests, [])
+
+    def test_find_item_by_external_matches_source_and_id(self) -> None:
+        entries = [
+            {"id": "a", "external_source": None, "external_id": None},
+            {"id": "b", "external_source": "other", "external_id": "pmt:s/W1"},
+            {"id": "c", "external_source": "forge-ledger-pmt", "external_id": "pmt:s/W10"},
+            {"id": "d"},
+        ]
+        match = {"id": "e", "external_source": "forge-ledger-pmt", "external_id": "pmt:s/W1"}
+        self.server.pages = [_page(entries, "c2"), _page([match])]
+        self.assertEqual(self.client.find_item_by_external("p1", "forge-ledger-pmt", "pmt:s/W1"), match)
+        self.assertEqual(self._last()[:2], ("GET", f"{_BASE}p1/work-items/"))
+        self.server.pages = [_page(entries)]
+        self.assertIsNone(self.client.find_item_by_external("p1", "forge-ledger-pmt", "pmt:s/W1"))
+
+    def test_comments_create_and_list(self) -> None:
+        created = self.client.create_comment("p1", "i1", "<p>착수</p>")
+        self.assertEqual(self._last(), ("POST", f"{_BASE}p1/work-items/i1/comments/", {"comment_html": "<p>착수</p>"}))
+        self.client.create_comment("p1", "i1", "<p>인계</p>")
+        self.client.create_comment("p1", "i2", "<p>other</p>")
+        listed = self.client.list_comments("p1", "i1")
+        self.assertEqual(self._last()[:2], ("GET", f"{_BASE}p1/work-items/i1/comments/"))
+        self.assertEqual([c["comment_html"] for c in listed], ["<p>착수</p>", "<p>인계</p>"])
+        self.assertEqual(listed[0]["id"], created["id"])
+        for comment in listed:
+            self.assertTrue({"id", "comment_html", "created_at", "actor"} <= set(comment))
+
+    def test_list_comments_follows_cursor(self) -> None:
+        self.server.pages = [_page([{"id": "c1"}], "n2"), _page([{"id": "c2"}])]
+        self.assertEqual([c["id"] for c in self.client.list_comments("p1", "i1")], ["c1", "c2"])
+        self.assertIn("cursor=n2", self.server.requests[-1].path)
+
+    def _seed_codes(self) -> None:
+        self.server.projects = {
+            "p-fl": {"id": "p-fl", "identifier": "FL", "name": "a"},
+            "p-flx": {"id": "p-flx", "identifier": "FLX", "name": "b"},
+        }
+        self.server.items = {
+            "p-fl": {"i3": {"id": "i3", "sequence_id": 3}, "i12": {"id": "i12", "sequence_id": 12}},
+            "p-flx": {"x12": {"id": "x12", "sequence_id": 12}},
+        }
+
+    def test_resolve_code_finds_project_and_item(self) -> None:
+        self._seed_codes()
+        self.assertEqual(self.client.resolve_code("FL-12"), ("p-fl", {"id": "i12", "sequence_id": 12}))
+        self.assertEqual([r.path.split("?")[0] for r in self.server.requests], [_BASE, f"{_BASE}p-fl/work-items/"])
+        self.assertEqual(self.client.resolve_code("FLX-12")[0], "p-flx")
+
+    def test_resolve_code_missing_or_malformed(self) -> None:
+        self._seed_codes()
+        for code in ("FL-99", "NO-12", "fl-12", "FL", "FL-", "-12", "FL-abc", "FL-12x", "FL-１２", ""):
+            with self.subTest(code=code):
+                with self.assertRaises(PlaneError) as ctx:
+                    self.client.resolve_code(code)
+                self.assertEqual(str(ctx.exception), f"항목 없음: {code}")
+                self.assertIs(type(ctx.exception), PlaneError)
+
+    def test_new_calls_keep_auth_retry_and_redirect_rules(self) -> None:
+        slept: list[float] = []
+        client = PlaneClient(self.settings, sleep=slept.append)
+        self.server.status_queue = [503, 200]
+        client.create_comment("p1", "i1", "<p>x</p>")
+        self.assertEqual(slept, [1.0])
+        self.assertEqual(self.server.requests[-1].headers["X-API-Key"], TEST_TOKEN)
+
+        self.server.status_queue = [401]
+        with self.assertRaises(PlaneAuthError):
+            client.update_item("p1", "i1", {"state": "s1"})
+
+        other = FakePlaneServer()
+        self.addCleanup(other.close)
+        self.server.redirect_location = f"{other.base_url}/x"
+        self.server.status_queue = [307]
+        with self.assertRaisesRegex(PlaneError, "HTTP 307$"):
+            client.list_states("p1")
+        self.assertEqual(other.requests, [])
+
+    def test_non_dict_write_response_is_format_error(self) -> None:
+        with mock.patch.object(self.client, "_request", return_value=[]):
+            with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                self.client.create_comment("p1", "i1", "<p>x</p>")
+            with self.assertRaisesRegex(PlaneError, "Plane 응답 형식 오류"):
+                self.client.update_item("p1", "i1", {"state": "s1"})
+
+
+class WorkTrackerTest(unittest.TestCase):
+    def test_protocol_members(self) -> None:
+        self.assertEqual(
+            _members(WorkTracker),
+            {
+                "whoami",
+                "resolve_code",
+                "update_item",
+                "list_comments",
+                "create_comment",
+                "list_states",
+                "list_items",
+                "list_labels",
+                "create_label",
+            },
+        )
+
+    def test_client_and_fake_provide_both_protocols(self) -> None:
+        for protocol in (WorkTracker, PlaneLike):
+            for implementation in (PlaneClient, FakePlane):
+                with self.subTest(protocol=protocol.__name__, implementation=implementation.__name__):
+                    missing = {n for n in _members(protocol) if not callable(getattr(implementation, n, None))}
+                    self.assertEqual(missing, set())
+
+
+class FakePlaneWorkTest(unittest.TestCase):
+    """메모리 대역은 실제 클라이언트와 같은 동작을 해야 뒤 작업의 시험을 믿을 수 있다."""
+
+    def setUp(self) -> None:
+        self.fake = FakePlane()
+        self.pid = self.fake.create_project("작업", "FL")["id"]
+
+    def test_whoami_and_default_states(self) -> None:
+        self.assertEqual(self.fake.whoami(), "tester@example.com")
+        self.assertEqual(
+            [state["group"] for state in self.fake.list_states(self.pid)],
+            ["backlog", "unstarted", "started", "completed", "cancelled"],
+        )
+        self.fake.create_label(self.pid, "계획서", "#3b82f6")
+        self.assertEqual([label["name"] for label in self.fake.list_labels(self.pid)], ["계획서"])
+
+    def test_items_keep_parent_state_and_external_marks(self) -> None:
+        parent = self.fake.create_item(self.pid, "W", "", [])
+        child = self.fake.create_item(
+            self.pid, "I", "", [], parent=parent["id"], state="s1", external_source="src", external_id="k"
+        )
+        found = self.fake.find_item_by_external(self.pid, "src", "k")
+        assert found is not None
+        self.assertEqual((found["id"], found["parent"], found["state"]), (child["id"], parent["id"], "s1"))
+        self.assertIsNone(self.fake.find_item_by_external(self.pid, "src", "other"))
+        self.assertIsNone(self.fake.find_item_by_external(self.pid, "other", "k"))
+        self.assertEqual(self.fake.resolve_code("FL-2"), (self.pid, found))
+        with self.assertRaisesRegex(PlaneError, "항목 없음: FL-9"):
+            self.fake.resolve_code("FL-9")
+
+    def test_update_item_and_comments(self) -> None:
+        item = self.fake.create_item(self.pid, "W", "", [])
+        updated = self.fake.update_item(self.pid, item["id"], {"assignees": ["u1"], "state": "s2"})
+        self.assertEqual((updated["assignees"], updated["state"]), (["u1"], "s2"))
+        self.assertNotEqual(updated["updated_at"], item["updated_at"])
+        updated["assignees"].append("u2")  # 돌려준 사본을 고쳐도 저장된 값은 그대로다
+        self.assertEqual(self.fake.get_item(self.pid, item["id"])["assignees"], ["u1"])
+        with self.assertRaisesRegex(ValueError, "수정할 수 없는 필드"):
+            self.fake.update_item(self.pid, item["id"], {"name": "x"})
+        first = self.fake.create_comment(self.pid, item["id"], "<p>1</p>")
+        second = self.fake.create_comment(self.pid, item["id"], "<p>2</p>")
+        listed = self.fake.list_comments(self.pid, item["id"])
+        self.assertEqual([c["id"] for c in listed], [first["id"], second["id"]])
+        self.assertLess(listed[0]["created_at"], listed[1]["created_at"])
+        self.assertTrue(listed[0]["actor"])
+        with self.assertRaisesRegex(PlaneError, "item not found"):
+            self.fake.create_comment(self.pid, "missing", "<p>x</p>")
+
+    def test_fail_on_applies_to_new_methods(self) -> None:
+        self.fake.fail_on["create_comment"] = PlaneUnavailable("down")
+        with self.assertRaises(PlaneUnavailable):
+            self.fake.create_comment(self.pid, "any", "<p>x</p>")

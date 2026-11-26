@@ -1,11 +1,11 @@
-"""PM 도구와 포지를 서비스 종류와 무관하게 읽는 연결 규격."""
+"""PM 도구와 포지를 서비스 종류와 무관하게 다루는 연결 규격."""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 
 _FRACTION_RE = re.compile(r"(?<=:\d{2})\.\d+")
 
@@ -90,6 +90,28 @@ class PmAdapter(Protocol):
     def list_project_infos(self) -> list[ProjectInfo]: ...
 
     def current_cycle(self, project_id: str) -> Optional[CycleInfo]: ...
+
+
+class WorkTracker(Protocol):
+    """작업 항목을 읽고 쓰는 규격. 항목·상태·라벨·댓글은 도구가 준 딕셔너리 그대로다."""
+
+    def whoami(self) -> str: ...
+
+    def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]: ...
+
+    def update_item(self, project_id: str, item_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_comments(self, project_id: str, item_id: str) -> list[dict[str, Any]]: ...
+
+    def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]: ...
+
+    def list_states(self, project_id: str) -> list[dict[str, Any]]: ...
+
+    def list_items(self, project_id: str) -> list[dict[str, Any]]: ...
+
+    def list_labels(self, project_id: str) -> list[dict[str, Any]]: ...
+
+    def create_label(self, project_id: str, name: str, color: str) -> dict[str, Any]: ...
 
 
 def parse_run_path(path: str) -> tuple[str, str]:
