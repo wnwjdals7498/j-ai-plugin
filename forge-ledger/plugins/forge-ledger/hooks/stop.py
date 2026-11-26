@@ -47,7 +47,7 @@ def decide(payload: dict[str, Any], env: Mapping[str, str], now: datetime, local
             content = row.get("message", {}).get("content", [])
             if not isinstance(content, list) or not any(item.get("type") == "tool_use" for item in content):
                 continue
-            if last_at is None or _timestamp(row["timestamp"]) > last_at:
+            if last_at is None or _timestamp(row["timestamp"]).replace(microsecond=0) > last_at:
                 root = env.get("CLAUDE_PLUGIN_ROOT") or _PLUGIN_ROOT
                 return (
                     f'작업 일지를 남긴 뒤 종료하라: python3 "{root}/scripts/ledger.py" '

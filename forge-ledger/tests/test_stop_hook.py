@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from hooks import stop
-from ledger.worklog import Entry, LocalLog
+from ledger.worklog import Entry, LocalLog, new_entry
 
 NOW = datetime(2026, 11, 26, 12, tzinfo=timezone.utc)
 
@@ -78,6 +78,17 @@ class StopHookTest(unittest.TestCase):
     def test_only_tool_before_or_at_log(self) -> None:
         self.add_log(NOW - timedelta(minutes=61))
         self.write_transcript([self.tool(NOW - timedelta(minutes=62)), self.tool(NOW - timedelta(minutes=61))])
+        self.assertIsNone(self.decide())
+
+    def test_tool_milliseconds_in_same_second_as_log(self) -> None:
+        logged_at = NOW - timedelta(minutes=61) + timedelta(milliseconds=500)
+        entry = new_entry("작업", source="auto", env={}, now=logged_at, session="session-one")
+        self.log_store.append(entry)
+        tool_row = self.tool(logged_at)
+        tool_row["timestamp"] = (
+            (logged_at - timedelta(milliseconds=300)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        )
+        self.write_transcript([tool_row])
         self.assertIsNone(self.decide())
 
     def test_active_and_disabled_and_missing_session(self) -> None:
