@@ -148,6 +148,16 @@ def _find_project_id(client: PlaneLike, key: str) -> str:
     raise FlowError(f"Plane 프로젝트 없음: {key}")
 
 
+def default_project_id(repo: Repo, client: PlaneLike) -> str:
+    """`ledger.yml`의 기본 프로젝트(`init`이 만든 유지보수 프로젝트)의 Plane id."""
+    cfg = _load_repo_config(repo)
+    try:
+        key = cfg.default_project().key
+    except LookupError as exc:
+        raise FlowError("기본 프로젝트가 설정되지 않음") from exc
+    return _find_project_id(client, key)
+
+
 def _find_container_item(client: PlaneLike, project_id: str, container: str) -> dict[str, Any]:
     expected_name = UNIT_ITEMS[container]
     for item in client.list_items(project_id):

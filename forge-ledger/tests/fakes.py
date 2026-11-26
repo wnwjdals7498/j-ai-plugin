@@ -302,6 +302,19 @@ class FakePlaneServer:
                     self._send_json(201, payload)
                     return
 
+                if method == "PATCH" and len(parts) >= 4 and parts[-2] == "comments":
+                    for comment in owner.comments.get(parts[-3], []):
+                        if comment["id"] == parts[-1]:
+                            if isinstance(parsed_json, dict):
+                                comment.update(parsed_json)
+                            commented = owner.items.get(parts[-5], {}).get(parts[-3])
+                            if commented is not None:
+                                commented["updated_at"] = _next_timestamp()
+                            self._send_json(200, comment)
+                            return
+                    self._send_json(404, {"detail": "comment not found"})
+                    return
+
                 if method == "PATCH":
                     pid = parts[-3] if len(parts) >= 3 else ""
                     item_id = parts[-1]
@@ -613,6 +626,16 @@ class FakePlane:
         self._project_by_id(project_id).comments.setdefault(item_id, []).append(comment)
         item["updated_at"] = comment["created_at"]
         return dict(comment)
+
+    def update_comment(self, project_id: str, item_id: str, comment_id: str, html: str) -> dict[str, Any]:
+        self._record_and_check("update_comment", project_id, item_id, comment_id)
+        item = self._stored_item(project_id, item_id)
+        for comment in self._project_by_id(project_id).comments.get(item_id, []):
+            if comment["id"] == comment_id:
+                comment["comment_html"] = html
+                item["updated_at"] = self._next_timestamp()
+                return dict(comment)
+        raise PlaneError(f"comment not found: {comment_id}")
 
     def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]:
         self._record_and_check("resolve_code", code)

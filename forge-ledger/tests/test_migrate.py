@@ -718,12 +718,12 @@ class MigrateCliTest(_ManifestCase):
         self.assertEqual(rc, 1)
         self.assertIn("매니페스트 파일을 읽을 수 없음", err)
 
-    def test_preview_and_apply_are_not_wired_yet(self) -> None:
+    def test_preview_and_apply_need_plane_settings(self) -> None:
         for command in ("preview", "apply"):
             with self.subTest(command=command):
                 rc, _, err = self.run_cli("migrate", command, str(self.write(_sample())))
-                self.assertEqual(rc, 1)
-                self.assertTrue(err)
+                self.assertEqual(rc, 2)
+                self.assertIn("설정 없음", err)
 
 
 if __name__ == "__main__":

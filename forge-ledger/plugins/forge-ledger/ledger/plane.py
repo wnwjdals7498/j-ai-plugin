@@ -144,6 +144,8 @@ class PlaneLike(Protocol):
 
     def create_comment(self, project_id: str, item_id: str, html: str) -> dict[str, Any]: ...
 
+    def update_comment(self, project_id: str, item_id: str, comment_id: str, html: str) -> dict[str, Any]: ...
+
     def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]: ...
 
     def list_items(self, project_id: str) -> list[dict[str, Any]]: ...
@@ -528,6 +530,13 @@ class PlaneClient:
             self._projects_path(project_id, "work-items", item_id, "comments"),
             payload={"comment_html": html},
             retry_transient=False,
+        )
+
+    def update_comment(self, project_id: str, item_id: str, comment_id: str, html: str) -> dict[str, Any]:
+        return self._request_dict(
+            "PATCH",
+            self._projects_path(project_id, "work-items", item_id, "comments", comment_id),
+            payload={"comment_html": html},
         )
 
     def resolve_code(self, code: str) -> tuple[str, dict[str, Any]]:

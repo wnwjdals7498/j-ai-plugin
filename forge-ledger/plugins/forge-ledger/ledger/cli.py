@@ -11,7 +11,7 @@ from ledger import flows
 from ledger.check import CheckReport, run_check
 from ledger.config import load_config
 from ledger.hubcli import HUB_COMMANDS, add_hub_parsers, run_hub
-from ledger.migrate import check_manifest, load_manifest, resolve_source_dir
+from ledger.migrate_apply import load_checked, run_apply, run_preview
 from ledger.miniyaml import MiniYamlError
 from ledger.plane import (
     PlaneAuthError,
@@ -88,6 +88,10 @@ def _build_parser() -> _ArgumentParser:
     migrate_sub = migrate_parser.add_subparsers(dest="migrate_command", required=True)
     m_check = migrate_sub.add_parser("check", parents=[repo_parent], help="매니페스트 형식·노출 검사")
     m_check.add_argument("file", help="매니페스트 JSON 경로")
+    m_preview = migrate_sub.add_parser("preview", parents=[repo_parent], help="적용 계획 미리 보기(쓰지 않음)")
+    m_preview.add_argument("file", help="매니페스트 JSON 경로")
+    m_apply = migrate_sub.add_parser("apply", parents=[repo_parent], help="매니페스트를 Plane과 .ledger/에 적용")
+    m_apply.add_argument("file", help="매니페스트 JSON 경로")
 
     add_hub_parsers(sub, repo_parent)
 
@@ -137,12 +141,8 @@ def _run_plan_check(
 
 def _run_migrate_check(path: Path, env: Mapping[str, str]) -> int:
     """매니페스트만 읽는다. Plane 설정이나 작업 저장소가 필요 없다."""
-    manifest = load_manifest(path)
-    problems = check_manifest(manifest, resolve_source_dir(manifest, env))
-    if problems:
-        for problem in problems:
-            print(f"{problem.key}: {problem.message}")
-        print(f"문제 {len(problems)}건")
+    manifest = load_checked(path, env)
+    if manifest is None:
         return 1
     print(f"검사 통과: 레코드 {len(manifest.records)}건")
     return 0
@@ -167,7 +167,7 @@ def main(
     if args.command in HUB_COMMANDS:
         return run_hub(args, effective_env, out=sys.stdout, err=sys.stderr)
 
-    if args.command == "migrate":
+    if args.command == "migrate" and args.migrate_command == "check":
         try:
             return _run_migrate_check(Path(args.file), effective_env)
         except (OSError, ValueError) as exc:
@@ -193,6 +193,10 @@ def main(
             cfg = flows.init_repo(repo, client, settings.workspace, _TEMPLATES_DIR, today)
             print(f"초기화 완료: {cfg.default_project().key} ({cfg.workspace})")
             return 0
+
+        if args.command == "migrate":
+            run_migrate = run_preview if args.migrate_command == "preview" else run_apply
+            return run_migrate(Path(args.file), repo, client, effective_env)
 
         if args.command == "plan":
             if args.plan_command == "new":

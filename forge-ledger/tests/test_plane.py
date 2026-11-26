@@ -625,6 +625,19 @@ class PlaneWorkWritesTest(unittest.TestCase):
         for comment in listed:
             self.assertTrue({"id", "comment_html", "created_at", "actor"} <= set(comment))
 
+    def test_update_comment_patches_one_comment_and_retries_5xx(self) -> None:
+        created = self.client.create_comment("p1", "i1", "<p>a</p>")
+        self.client.create_comment("p1", "i1", "<p>other</p>")
+        self.server.requests.clear()
+        self.server.status_queue = [503]  # 수정은 다시 보내도 중복이 생기지 않는다.
+        updated = self.client.update_comment("p1", "i1", created["id"], "<p>b</p>")
+        expected = ("PATCH", f"{_BASE}p1/work-items/i1/comments/{created['id']}/", {"comment_html": "<p>b</p>"})
+        self.assertEqual(self._last(), expected)
+        self.assertEqual(len(self.server.requests), 2)
+        self.assertEqual(updated["comment_html"], "<p>b</p>")
+        listed = self.client.list_comments("p1", "i1")
+        self.assertEqual([c["comment_html"] for c in listed], ["<p>b</p>", "<p>other</p>"])
+
     def test_list_comments_follows_cursor(self) -> None:
         self.server.pages = [_page([{"id": "c1"}], "n2"), _page([{"id": "c2"}])]
         self.assertEqual([c["id"] for c in self.client.list_comments("p1", "i1")], ["c1", "c2"])
