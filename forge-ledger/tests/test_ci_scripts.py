@@ -228,5 +228,140 @@ class TestShellScripts(unittest.TestCase):
         self.assertIn(f"BASE_SHA={self.base}", self._calls())
 
 
+REPO_TOP = ROOT.parent
+_HOOK_RULE = "민감값 금지, 커밋 전 검사 통과 필수, 예외는 사유와 함께 .exposure-allow에"
+# 검사에 걸리는 가짜 홈 경로. 이 파일 자신은 걸리지 않게 나눠 적는다.
+_FAKE_HOME = "/home/" + "alice/notes"
+_SCANNER_FILES = (
+    "forge-ledger/ci/scan_exposure.py",
+    "forge-ledger/plugins/forge-ledger/ledger/__init__.py",
+    "forge-ledger/plugins/forge-ledger/ledger/secrets.py",
+)
+
+
+def _isolated_env(home: Path) -> dict[str, str]:
+    """사용자의 git 설정을 읽거나 쓰지 않는 환경."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update(
+        HOME=str(home),
+        XDG_CONFIG_HOME=str(home / ".config"),
+        GIT_CONFIG_NOSYSTEM="1",
+        GIT_AUTHOR_NAME="t",
+        GIT_AUTHOR_EMAIL="t@example.com",
+        GIT_COMMITTER_NAME="t",
+        GIT_COMMITTER_EMAIL="t@example.com",
+        PYTHONDONTWRITEBYTECODE="1",
+    )
+    return env
+
+
+def _copy_into(repo: Path, rel: str) -> None:
+    (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(REPO_TOP / rel, repo / rel)  # 실행 권한도 그대로 옮긴다
+
+
+class TestPreCommitHook(unittest.TestCase):
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        base = Path(tmp.name).resolve()
+        self.repo = base / "repo"
+        self.repo.mkdir()
+        (base / "home").mkdir()
+        self.env = _isolated_env(base / "home")
+        for rel in (".githooks/pre-commit", "scripts/install-hooks.sh", *_SCANNER_FILES):
+            _copy_into(self.repo, rel)
+        self._must("git", "init", "-q")
+        self._must("git", "add", "-A")
+        self._must("git", "commit", "-q", "-m", "tools")
+
+    def _run(self, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            list(args), cwd=cwd or self.repo, env=self.env, check=False, capture_output=True, text=True
+        )
+
+    def _must(self, *args: str, cwd: Path | None = None) -> str:
+        proc = self._run(*args, cwd=cwd)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        return proc.stdout.strip()
+
+    def _head(self) -> str:
+        return self._must("git", "rev-parse", "HEAD")
+
+    def test_install_only_sets_hooks_path(self) -> None:
+        before = self._must("git", "config", "--local", "--list").splitlines()
+        self._must("bash", str(self.repo / "scripts" / "install-hooks.sh"), cwd=self.repo.parent)
+        after = self._must("git", "config", "--local", "--list").splitlines()
+        self.assertEqual(sorted(set(after) - set(before)), ["core.hookspath=.githooks"])
+        self.assertFalse((Path(self.env["HOME"]) / ".gitconfig").exists())
+
+    def test_commit_with_home_path_is_blocked_until_allowed(self) -> None:
+        self._must("bash", "scripts/install-hooks.sh")
+        head = self._head()
+        _write(self.repo / "docs" / "a.md", f"path {_FAKE_HOME}\n")
+        self._must("git", "add", "docs/a.md")
+
+        proc = self._run("git", "commit", "-q", "-m", "leak")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("docs/a.md:1:home_path", proc.stdout + proc.stderr)
+        self.assertNotIn(_FAKE_HOME, proc.stdout + proc.stderr)
+        self.assertEqual(self._head(), head)
+
+        _write(self.repo / ".exposure-allow", "docs/a.md\thome_path\t시험용 가짜 값\n")
+        self.assertNotEqual(self._run("git", "commit", "-q", "-m", "leak").returncode, 0)  # 올리기 전에는 효력 없음
+        self._must("git", "add", ".exposure-allow")
+        self._must("git", "commit", "-q", "-m", "allowed")
+        self.assertNotEqual(self._head(), head)
+
+    def test_hook_blocks_commit_started_in_subfolder(self) -> None:
+        self._must("bash", "scripts/install-hooks.sh")
+        _write(self.repo / "sub" / "a.md", f"{_FAKE_HOME}\n")
+        self._must("git", "add", "-A")
+        proc = self._run("git", "commit", "-q", "-m", "leak", cwd=self.repo / "sub")
+        self.assertNotEqual(proc.returncode, 0)
+
+    def test_hook_is_committed_executable_with_lf_endings(self) -> None:
+        self.assertTrue(os.access(REPO_TOP / ".githooks" / "pre-commit", os.X_OK))
+        attrs = (REPO_TOP / ".gitattributes").read_text(encoding="utf-8").splitlines()
+        self.assertIn(".githooks/* text eol=lf", attrs)
+
+
+class TestSecretsJobScope(unittest.TestCase):
+    def test_range_scan_covers_files_outside_forge_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base_dir = Path(tmp).resolve()
+            repo = base_dir / "repo"
+            for rel in ("forge-ledger/ci/run-checks.sh", *_SCANNER_FILES):
+                _copy_into(repo, rel)
+            env = _isolated_env(base_dir / "home")
+            bin_dir = base_dir / "bin"
+            _fake_command(bin_dir, "gitleaks", base_dir / "gitleaks.log")
+            env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+            env["CI_VENV_DIR"] = str(base_dir / "venv")
+            _git(repo, "init")
+            _git(repo, "add", "-A")
+            base = _git_commit(repo, "base")
+            _write(repo / "other-plugin" / "a.md", f"{_FAKE_HOME}\n")
+            _git(repo, "add", "-A")
+            _git_commit(repo, "head")
+            env["BASE_SHA"] = base
+            env.pop("HEAD_SHA", None)
+            proc = subprocess.run(
+                ["bash", "ci/run-checks.sh", "secrets"],
+                cwd=repo / "forge-ledger",
+                env=env,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+            self.assertIn("other-plugin/a.md:1:home_path", proc.stdout)
+
+
+class TestRepoRules(unittest.TestCase):
+    def test_agents_md_states_exposure_rule(self) -> None:
+        self.assertIn(_HOOK_RULE, (REPO_TOP / "AGENTS.md").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

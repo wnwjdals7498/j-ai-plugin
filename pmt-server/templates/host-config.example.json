@@ -30,7 +30,7 @@
   },
   "access": {
     "allowed_sources": [
-      "<HOST_ADDR>/24"
+      "<ALLOWED_SUBNET_1>/24"
     ]
   },
   "service": {

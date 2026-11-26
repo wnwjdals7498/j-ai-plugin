@@ -35,7 +35,7 @@
 | 키 | 종류 | 설명 |
 |---|---|---|
 | `python_path` | file, required | Python 3.13 이상 절대 경로 (0.4.1과 동일) |
-| `host_url` | string, required | 예: `https://<HOST_ADDR>:8765` |
+| `host_url` | string, required | 예: `https://<PMT_HOST_ADDRESS>:8765` |
 | `host_ca_file` | file | Host 공개 Root CA PEM 절대 경로. 공개 CA면 비움 |
 | `device_id` | string, required | Host가 발급한 기기 UUID |
 | `namespace_id` | string, required | Host namespace UUID |

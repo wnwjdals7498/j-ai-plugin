@@ -4,3 +4,4 @@ proj-mgmt-tool/integrations/claude/bin/pmt text eol=lf
 pmt-server/bin/pmt-server text eol=lf
 *.sh text eol=lf
 *.service text eol=lf
+.githooks/* text eol=lf

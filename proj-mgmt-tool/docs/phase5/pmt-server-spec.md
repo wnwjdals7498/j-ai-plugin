@@ -38,7 +38,7 @@
     "backup_dir": "D:\\PMT-backup"
   },
   "listen": {"host": "0.0.0.0", "port": 8765},
-  "public_url": "https://<HOST_ADDR>:8765",
+  "public_url": "https://<PMT_HOST_ADDRESS>:8765",
   "tls": {
     "cert_file": "C:\\ProgramData\\PMT\\tls\\host.crt",
     "key_file": "C:\\ProgramData\\PMT\\tls\\host.key",
@@ -50,7 +50,7 @@
     "retained": [{"key_id": "k2026a", "source": {"kind": "dpapi", "path": "...\\claim-k2026a.dpapi"}}]
   },
   "proxy": {"enabled": false, "trusted": []},
-  "access": {"allowed_sources": ["<HOST_ADDR>/24", "<HOST_ADDR>/24"]},
+  "access": {"allowed_sources": ["<ALLOWED_SUBNET_1>/24", "<ALLOWED_SUBNET_2>/24"]},
   "service": {
     "kind": "windows-task",
     "name": "PMT Host",
@@ -164,7 +164,7 @@ pmt-server tls check                                                   # S-06의
 **선택 기능 (결정 D5, `cryptography`를 `host` extra에 추가할 때)**
 ```
 pmt-server tls create-ca --name "PMT Internal CA" --apply
-pmt-server tls issue --san <HOST_ADDR> --san host.example --days 397 --apply
+pmt-server tls issue --san <PMT_HOST_ADDRESS> --san <PMT_HOST_DNS_NAME> --days 397 --apply
 ```
 CA 개인키는 Host 밖(오프라인 보관)으로 옮기도록 안내한다.
 
