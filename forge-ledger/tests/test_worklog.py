@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import io
 import json
 import multiprocessing
 import stat
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from datetime import date, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -117,3 +119,35 @@ class WorklogTest(unittest.TestCase):
         with self.assertRaises(WorklogError):
             self.log.append(entry("bad", text="/home/alice/x"))
         self.assertFalse((self.state / "worklog/2026-11.jsonl").exists())
+
+    def test_append_after_truncated_line(self) -> None:
+        path = self.state / "worklog/2026-11.jsonl"
+        path.write_bytes(b'{"text":"partial' + bytes([0xEA]))
+        value = entry("new")
+        self.log.append(value)
+        notice = io.StringIO()
+        with redirect_stderr(notice):
+            self.assertEqual(self.log.entries(date(2026, 11, 26), date(2026, 11, 26)), [value])
+        self.assertEqual(notice.getvalue(), "손상된 일지 건너뜀: 2026-11.jsonl:1\n")
+        self.assertNotIn("partial", notice.getvalue())
+
+    def test_corrupt_line_does_not_hide_valid_entries(self) -> None:
+        first = entry("first", session="s")
+        last = entry("last", "2026-12-01T00:30:00+09:00", session="s", workspace="other")
+        self.log.append(first)
+        path = self.state / "worklog/2026-11.jsonl"
+        with path.open("a", encoding="utf-8") as stream:
+            stream.write('{"text":"private-content"\n')
+        self.log.append(last)
+        for operation, expected in (
+            (lambda: self.log.entries(date(2026, 11, 1), date(2026, 12, 31)), [first, last]),
+            (lambda: self.log.entries(date(2026, 12, 1), date(2026, 12, 1)), [last]),
+            (lambda: self.log.pending("current"), [first]),
+            (lambda: self.log.pending_other("current"), 1),
+            (lambda: self.log.last_for_session("s"), last),
+        ):
+            notice = io.StringIO()
+            with redirect_stderr(notice):
+                self.assertEqual(operation(), expected)
+            self.assertEqual(notice.getvalue(), "손상된 일지 건너뜀: 2026-11.jsonl:2\n")
+            self.assertNotIn("private-content", notice.getvalue())

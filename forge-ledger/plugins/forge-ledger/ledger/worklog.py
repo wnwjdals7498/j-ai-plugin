@@ -6,6 +6,7 @@ import fcntl
 import json
 import os
 import socket
+import sys
 import uuid
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
@@ -106,15 +107,27 @@ class LocalLog:
     def append(self, entry: Entry) -> None:
         validate(entry.text, entry.host, entry.repo, entry.item)
         with self._lock():
-            fd = os.open(self._dir / f"{entry.month()}.jsonl", os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
-            with os.fdopen(fd, "a", encoding="utf-8") as stream:
-                stream.write(json.dumps(asdict(entry), ensure_ascii=False) + "\n")
+            fd = os.open(self._dir / f"{entry.month()}.jsonl", os.O_CREAT | os.O_RDWR | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "a+b") as stream:
+                stream.seek(0, os.SEEK_END)
+                if stream.tell():
+                    stream.seek(-1, os.SEEK_END)
+                    if stream.read(1) != b"\n":
+                        stream.write(b"\n")
+                stream.write((json.dumps(asdict(entry), ensure_ascii=False) + "\n").encode("utf-8"))
 
     def _entries(self) -> list[Entry]:
         result: list[Entry] = []
         for path in sorted(self._dir.glob("????-??.jsonl")):
-            with path.open(encoding="utf-8") as stream:
-                result.extend(Entry(**json.loads(line)) for line in stream)
+            with path.open("rb") as stream:
+                for number, line in enumerate(stream, 1):
+                    try:
+                        entry = Entry(**json.loads(line.decode("utf-8")))
+                        datetime.fromisoformat(entry.at)
+                    except (UnicodeDecodeError, ValueError, TypeError):
+                        print(f"손상된 일지 건너뜀: {path.name}:{number}", file=sys.stderr)
+                        continue
+                    result.append(entry)
         return sorted(result, key=lambda entry: datetime.fromisoformat(entry.at))
 
     def _sent(self) -> dict[str, str]:
