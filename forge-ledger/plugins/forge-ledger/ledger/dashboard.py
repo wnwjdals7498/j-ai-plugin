@@ -9,7 +9,7 @@ import sys
 import threading
 import urllib.parse
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from functools import partial
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,7 +18,7 @@ from typing import Any, Callable, Optional, TextIO
 
 from ledger.hubstore import HubStore
 from ledger.hubsync import json_logger
-from ledger.hubview import health, repo_summary, summary
+from ledger.hubview import health, repo_summary, summary, worklog_view
 
 _COOKIE_NAME = "fl_dash"
 _JSON_TYPE = "application/json; charset=utf-8"
@@ -139,10 +139,22 @@ class _Handler(BaseHTTPRequestHandler):
         if path in _STATIC_ROUTES:  # 허용 목록의 파일만 내준다
             name, content_type = _STATIC_ROUTES[path]
             return _Reply(HTTPStatus.OK, content_type, (self.app.static_dir / name).read_bytes())
-        return self._route_api(path)
+        return self._route_api(path, params)
 
-    def _route_api(self, path: str) -> _Reply:
+    def _route_api(self, path: str, params: dict[str, list[str]]) -> _Reply:
         store, now, interval_s = self.app.store, self.app.now(), self.app.interval_s
+        if path == "/api/v1/worklog":
+            try:
+                today = now.date().isoformat()
+                raw_from, raw_to = params.get("from", [today])[0], params.get("to", [today])[0]
+                if any(len(value) != 10 for value in (raw_from, raw_to)):
+                    raise ValueError
+                from_, to = date.fromisoformat(raw_from), date.fromisoformat(raw_to)
+                if from_ > to or (to - from_).days >= 62:
+                    raise ValueError
+            except ValueError:
+                return _error_reply(HTTPStatus.BAD_REQUEST)
+            return _json_reply(worklog_view(store, from_, to, params.get("user", [None])[0]))
         if path == "/api/v1/summary":
             return _json_reply(summary(store, now, interval_s))
         if path == "/api/v1/health":

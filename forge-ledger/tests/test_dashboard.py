@@ -177,6 +177,30 @@ class DashboardServerTest(unittest.TestCase):
         repo = json.loads(self._request("/api/v1/repos/o/n", _bearer())[2])
         self.assertEqual((repo["repo"], repo["sources"]["gitea"]["state"]), ("o/n", "never"))
 
+    def test_worklog_api(self) -> None:
+        from ledger.hubstore import EntityRow, WORKSPACE_REPO_ID
+
+        source = self.store.source_id("worklog", "")
+        attrs = {
+            "at": "2026-11-25T09:00:00+00:00",
+            "date": "2026-11-25",
+            "month": "2026-11",
+            "author": "작성자",
+            "host": "host",
+            "source": "manual",
+            "repo": "",
+            "item": "",
+            "text": "본문",
+        }
+        self.store.apply_kind(source, WORKSPACE_REPO_ID, "worklog", [EntityRow("worklog", "one", "open", attrs)], "now")
+        self.assertEqual(self._request("/api/v1/worklog")[0], 401)
+        status, _, body = self._request("/api/v1/worklog?from=2026-11-01&to=2026-11-25", _bearer())
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["entries"], [attrs])
+        self.assertEqual(json.loads(self._request("/api/v1/worklog?user=other", _bearer())[2])["entries"], [])
+        for query in ("from=2026-09-24&to=2026-11-25", "from=bad", "from=2026-11-26&to=2026-11-25"):
+            self.assertEqual(self._request("/api/v1/worklog?" + query, _bearer())[0], 400)
+
     def test_repo_endpoint_404_for_unknown(self) -> None:
         for path in ("/api/v1/repos/o/none", "/api/v1/repos/none/n"):
             self.assertEqual(self._request(path, _bearer())[0], 404, path)
@@ -362,3 +386,27 @@ class DashboardCliTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WorklogIntegrationTest(unittest.TestCase):
+    def test_sync_marks_only_successful_full_collection(self) -> None:
+        from ledger.hubsync import SyncOutcome
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"FORGE_LEDGER_STATE_DIR": tmp}
+            store = HubStore(Path(tmp))
+            fake_pm = object()
+            with (
+                patch.object(hubcli, "sync_paths", return_value=[]),
+                patch.object(hubcli, "make_worklog_store", return_value=fake_pm),
+                patch.object(hubcli, "sync_worklog") as sync,
+            ):
+                sync.return_value = SyncOutcome("workspace", "worklog", "failed", 0, "error")
+                self.assertEqual(hubcli._sync(store, [], env, lambda: _NOW, io.StringIO()), [])
+                self.assertFalse((Path(tmp) / "hub-worklog.json").exists())
+                sync.return_value = SyncOutcome("workspace", "worklog", "ok", 0, "")
+                hubcli._sync(store, [], env, lambda: _NOW, io.StringIO())
+                self.assertTrue((Path(tmp) / "hub-worklog.json").exists())
+                self.assertTrue(sync.call_args.args[-1])
+                hubcli._sync(store, [], env, lambda: _NOW, io.StringIO())
+                self.assertFalse(sync.call_args.args[-1])

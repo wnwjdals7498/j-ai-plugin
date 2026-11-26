@@ -207,3 +207,16 @@ def render_session(repo_sum: dict[str, Any], now: datetime, limit: int = 1500) -
     if len(text) <= limit:
         return text
     return text[: limit - 1] + "…"
+
+
+def worklog_view(store: HubStore, from_: date, to: date, user: Optional[str]) -> dict[str, Any]:
+    from ledger.hubstore import WORKSPACE_REPO_ID
+
+    keys = ("at", "date", "month", "author", "host", "source", "repo", "item", "text")
+    entries = [
+        {key: row.attrs[key] for key in keys}
+        for row in store.entities(WORKSPACE_REPO_ID, "worklog")
+        if from_.isoformat() <= row.attrs["date"] <= to.isoformat() and (user is None or row.attrs["author"] == user)
+    ]
+    entries.sort(key=lambda row: datetime.fromisoformat(row["at"]))
+    return {"from": from_.isoformat(), "to": to.isoformat(), "entries": entries}

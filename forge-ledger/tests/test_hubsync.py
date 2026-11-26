@@ -735,3 +735,59 @@ class LogTest(_SyncCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WorklogSyncTest(_SyncCase):
+    def test_worklog_recent_and_deleted_and_missing_project(self) -> None:
+        from ledger.hubsync import sync_worklog
+        from ledger.hubstore import WORKSPACE_REPO_ID
+        from ledger.plane import PlaneError
+        from ledger.worklog import Entry, RemoteEntry
+
+        class Logs:
+            def __init__(self) -> None:
+                self.items = [
+                    RemoteEntry(
+                        Entry(str(n), f"2026-{month}-01T12:00:00+00:00", "host", "manual", "본문", "ws"),
+                        "작성자",
+                        str(n),
+                    )
+                    for n, month in enumerate(("09", "10", "11"))
+                ]
+                self.error = False
+
+            def list_entries(self, from_, to, user=None):
+                if self.error:
+                    raise PlaneError("작업 일지 프로젝트 없음: WLOG")
+                return [item for item in self.items if from_ <= item.entry.local_date() <= to]
+
+        pm = Logs()
+        self.assertEqual(sync_worklog(self.store, pm, PM_URL, _now, self.events.append, True).result, "ok")
+        pm.items = pm.items[-1:]
+        self.assertEqual(sync_worklog(self.store, pm, PM_URL, _now, self.events.append, False).result, "ok")
+        states = {e.ext_key: e.state for e in self.store.entities(WORKSPACE_REPO_ID, "worklog", states=None)}
+        self.assertEqual(states, {"0": "open", "1": "deleted", "2": "open"})
+        pm.error = True
+        self.assertEqual(sync_worklog(self.store, pm, PM_URL, _now, self.events.append, True).result, "failed")
+        self.assertEqual(
+            states, {e.ext_key: e.state for e in self.store.entities(WORKSPACE_REPO_ID, "worklog", states=None)}
+        )
+        self.assertNotIn("본문", str(self.events))
+
+    def test_worklog_full_due(self) -> None:
+        from datetime import timedelta
+        from ledger.hubsync import mark_worklog_full, worklog_full_due
+
+        self.assertTrue(worklog_full_due(self.state_dir, _now()))
+        mark_worklog_full(self.state_dir, _now())
+        self.assertFalse(worklog_full_due(self.state_dir, _now()))
+        self.assertTrue(worklog_full_due(self.state_dir, _now() + timedelta(hours=25)))
+
+    def test_worklog_skipped_without_token(self) -> None:
+        from ledger.hubsync import sync_worklog
+        from ledger.hubstore import WORKSPACE_REPO_ID
+
+        outcomes = self._sync(self._ref())
+        self.assertEqual(sync_worklog(self.store, None, "", _now, self.events.append, True).result, "skipped")
+        self.assertEqual(outcomes["gitea"].result, "ok")
+        self.assertEqual(self.store.entities(WORKSPACE_REPO_ID, "worklog"), [])

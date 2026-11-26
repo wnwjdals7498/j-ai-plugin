@@ -13,16 +13,16 @@ import time
 import urllib.parse
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache, partial
 from pathlib import Path
 from typing import Any, Callable, Iterator, Optional, Protocol, Sequence, TextIO, TypeVar
 
-from ledger.adapters import ForgeAdapter, PmAdapter
+from ledger.adapters import ForgeAdapter, PmAdapter, WorklogStore
 from ledger.config import LedgerConfig, load_config
 from ledger.flows import Repo
 from ledger.gitea import GiteaAuthError, GiteaUnavailable
-from ledger.hubstore import LOCK_NAME, EntityRow, HubStore
+from ledger.hubstore import LOCK_NAME, WORKSPACE_REPO_ID, EntityRow, HubStore
 from ledger.plane import PlaneAuthError, PlaneUnavailable
 
 _GIT_TIMEOUT_SECONDS = 30
@@ -452,3 +452,72 @@ def json_logger(stream: TextIO) -> Callable[[dict[str, Any]], None]:
         stream.flush()
 
     return write
+
+
+HUB_FULL_EVERY_HOURS = 24
+HUB_RECENT_MONTHS = 2
+
+
+def worklog_full_due(state_dir: Path, now: datetime) -> bool:
+    try:
+        data = json.loads((state_dir / "hub-worklog.json").read_text(encoding="utf-8"))
+        previous = datetime.fromisoformat(data["at"])
+        return now - previous >= timedelta(hours=HUB_FULL_EVERY_HOURS)
+    except (OSError, ValueError, TypeError, KeyError):
+        return True
+
+
+def mark_worklog_full(state_dir: Path, now: datetime) -> None:
+    state_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = state_dir / "hub-worklog.json"
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        json.dump({"at": now.isoformat()}, stream)
+
+
+def sync_worklog(
+    store: HubStore, pm: Optional[WorklogStore], pm_url: str, now: _Now, log: _Log, full: bool
+) -> SyncOutcome:
+    source_id = store.source_id("worklog", pm_url)
+    run_id = store.start_run(source_id, WORKSPACE_REPO_ID, _stamp(now))
+    started = time.monotonic()
+    calls = 0
+    result, error_kind = "skipped", "no_token"
+    if pm is not None:
+        client = getattr(pm, "client", pm)
+        before = getattr(client, "calls", 0)
+        try:
+            today = now().date()
+            previous = today.replace(day=1) - timedelta(days=1)
+            first = date(1970, 1, 1) if full else previous.replace(day=1)
+            entries = pm.list_entries(first, today)
+            rows = []
+            for remote in entries:
+                entry = remote.entry
+                attrs = {
+                    "at": entry.at,
+                    "date": entry.local_date().isoformat(),
+                    "month": entry.month(),
+                    "author": remote.author,
+                    "host": entry.host,
+                    "source": entry.source,
+                    "repo": entry.repo,
+                    "item": entry.item,
+                    "text": entry.text,
+                }
+                rows.append(EntityRow("worklog", entry.id, "open", attrs))
+            months = {
+                row.attrs["month"]
+                for row in store.entities(WORKSPACE_REPO_ID, "worklog")
+                if first.strftime("%Y-%m") <= row.attrs["month"] <= today.strftime("%Y-%m")
+            }
+            stamp = _stamp(now)
+            store.apply_kind(source_id, WORKSPACE_REPO_ID, "worklog", rows, stamp, close_missing=False)
+            store.retire_worklog(source_id, {row.ext_key for row in rows}, months, stamp)
+            result, error_kind = "ok", ""
+        except Exception as exc:
+            result, error_kind = "failed", _error_kind(exc)
+        calls = getattr(client, "calls", 0) - before
+    store.finish_run(run_id, result, calls, error_kind, _stamp(now))
+    _emit(log, now, "worklog", result, int((time.monotonic() - started) * 1000), f"run-{run_id}", calls)
+    return SyncOutcome("workspace", "worklog", result, calls, error_kind)
