@@ -10,6 +10,8 @@ from collections import deque
 from pathlib import Path
 from typing import Callable, Mapping, Optional, Protocol
 
+from .filelock import locked
+
 _WINDOW_SECONDS = 60.0
 _MIN_SLEEP_SECONDS = 0.05
 _FALLBACK_NOTICE = "공유 호출 한도 파일을 쓸 수 없어 프로세스 안 제한만 씁니다"
@@ -59,7 +61,7 @@ class LocalRateLimiter:
 
 
 class SharedRateLimiter:
-    """잠금 파일과 상태 파일로 여러 프로세스가 호출 한도를 함께 쓰는 제한기(POSIX 전용)."""
+    """잠금 파일과 상태 파일로 여러 프로세스가 호출 한도를 함께 쓰는 제한기."""
 
     def __init__(
         self,
@@ -70,12 +72,8 @@ class SharedRateLimiter:
         clock: Callable[[], float] = time.time,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
-        import fcntl  # POSIX 전용: 없으면 ImportError를 make_shared_limiter가 받는다
-
         if per_minute < 1:
             raise ValueError("per_minute는 1 이상이어야 한다")
-        self._flock = fcntl.flock
-        self._lock_ex = fcntl.LOCK_EX
         self._per_minute = per_minute
         self._window = window
         self._clock = clock
@@ -125,14 +123,14 @@ class SharedRateLimiter:
     def _try_take(self) -> Optional[float]:
         """한도에 여유가 있으면 한 칸을 잡고 None, 아니면 기다릴 초를 돌려준다."""
         with os.fdopen(os.open(self._lock_path, os.O_RDWR | os.O_CREAT, 0o600), "a+b") as lock:
-            self._flock(lock.fileno(), self._lock_ex)
-            now = self._clock()
-            timestamps = [t for t in self._read() if now - self._window < t <= now + self._window]
-            if len(timestamps) < self._per_minute:
-                timestamps.append(now)
-                self._write(timestamps)
-                return None
-            return self._window - (now - min(timestamps))
+            with locked(lock.fileno()):
+                now = self._clock()
+                timestamps = [t for t in self._read() if now - self._window < t <= now + self._window]
+                if len(timestamps) < self._per_minute:
+                    timestamps.append(now)
+                    self._write(timestamps)
+                    return None
+                return self._window - (now - min(timestamps))
 
     def acquire(self) -> None:
         while True:

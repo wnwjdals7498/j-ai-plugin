@@ -16,17 +16,22 @@ _PLUGIN_ROOT = str(Path(__file__).resolve().parents[1])
 if not sys.path or sys.path[0] != _PLUGIN_ROOT:
     sys.path[:] = [_PLUGIN_ROOT, *(p for p in sys.path if p != _PLUGIN_ROOT)]
 
-from ledger.config import load_config  # noqa: E402
-from ledger.flows import Repo, default_project_id  # noqa: E402
-from ledger.plane import PlaneClient, PlaneSettings  # noqa: E402
-from ledger.ratelimit import make_shared_limiter  # noqa: E402
-from ledger.work import render_next  # noqa: E402
-from ledger.history import parse_history  # noqa: E402
-from ledger.hubstore import DB_NAME, HubStore, load_registry  # noqa: E402
-from ledger.hubsync import project_root  # noqa: E402
-from ledger.hubview import render_session, repo_summary  # noqa: E402
-from ledger.ratelimit import default_state_dir  # noqa: E402
-from ledger.worklog import LocalLog  # noqa: E402
+try:
+    from ledger.config import load_config  # noqa: E402
+    from ledger.flows import Repo, default_project_id  # noqa: E402
+    from ledger.plane import PlaneClient, PlaneSettings  # noqa: E402
+    from ledger.ratelimit import make_shared_limiter  # noqa: E402
+    from ledger.work import render_next  # noqa: E402
+    from ledger.history import parse_history  # noqa: E402
+    from ledger.hubstore import DB_NAME, HubStore, load_registry  # noqa: E402
+    from ledger.hubsync import project_root  # noqa: E402
+    from ledger.hubview import render_session, repo_summary  # noqa: E402
+    from ledger.ratelimit import default_state_dir  # noqa: E402
+    from ledger.worklog import LocalLog  # noqa: E402
+except Exception:  # 플러그인 모듈을 못 읽어도 세션을 막지 않는다(fail-open)
+    if __name__ == "__main__":
+        sys.exit(0)
+    raise
 
 _REFRESH_AFTER = timedelta(seconds=600)
 _TOKEN_KEYS = ("FORGE_LEDGER_GITEA_TOKEN", "FORGE_LEDGER_PLANE_TOKEN")

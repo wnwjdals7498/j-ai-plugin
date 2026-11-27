@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, Optional, Sequence
 
+from .filelock import locked
+
 WORKSPACE_REPO_ID = 0
 SCHEMA_VERSION = 1
 DB_NAME = "hub.sqlite3"
@@ -117,13 +119,11 @@ def _make_state_dir(state_dir: Path) -> None:
 
 @contextmanager
 def _exclusive_lock(path: Path) -> Iterator[None]:
-    """여러 프로세스(와 스레드)를 한 번에 하나씩 들여보낸다(POSIX 전용)."""
-    import fcntl
-
+    """여러 프로세스(와 스레드)를 한 번에 하나씩 들여보낸다."""
     fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
-        yield
+        with locked(fd):
+            yield
     finally:
         os.close(fd)  # 닫으면 잠금도 풀린다
 

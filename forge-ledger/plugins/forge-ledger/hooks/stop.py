@@ -15,8 +15,13 @@ _PLUGIN_ROOT = str(Path(__file__).resolve().parents[1])
 if not sys.path or sys.path[0] != _PLUGIN_ROOT:
     sys.path[:] = [_PLUGIN_ROOT, *(p for p in sys.path if p != _PLUGIN_ROOT)]
 
-from ledger.ratelimit import default_state_dir  # noqa: E402
-from ledger.worklog import LocalLog  # noqa: E402
+try:
+    from ledger.ratelimit import default_state_dir  # noqa: E402
+    from ledger.worklog import LocalLog  # noqa: E402
+except Exception:  # 플러그인 모듈을 못 읽어도 세션을 막지 않는다(fail-open)
+    if __name__ == "__main__":
+        sys.exit(0)
+    raise
 
 AUTO_INTERVAL_MINUTES = 60
 

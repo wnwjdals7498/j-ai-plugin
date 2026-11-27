@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fcntl
 import io
 import os
 import stat
@@ -13,6 +12,7 @@ from unittest.mock import patch
 from pathlib import Path
 
 from ledger.cli import _build_parser
+from ledger.filelock import acquire, release
 from ledger.logcli import make_worklog_store, run_log
 from ledger.plane import PlaneAuthError, PlaneError, PlaneUnavailable
 from ledger.worklog import LocalLog, RemoteEntry, new_entry
@@ -87,7 +87,7 @@ class LogCliTest(unittest.TestCase):
         lock_path = Path(self.tmp.name) / "worklog" / "sync.lock"
         fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         self.addCleanup(os.close, fd)
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        acquire(fd, blocking=False)
         self.assertEqual(self.run_cmd("add", "작업"), 0)
         self.assertIn("(미전송)", self.out.getvalue())
         self.assertEqual(self.err.getvalue(), "전송 건너뜀: 다른 전송 진행 중\n")
@@ -97,7 +97,7 @@ class LogCliTest(unittest.TestCase):
             post.assert_not_called()
         self.assertIn("다른 전송 진행 중", self.out.getvalue())
         self.assertEqual(stat.S_IMODE(lock_path.stat().st_mode), 0o600)
-        fcntl.flock(fd, fcntl.LOCK_UN)
+        release(fd)
         self.assertEqual(self.run_cmd("sync"), 0)
         self.assertEqual(len(local.pending("forge")), 0)
         self.assertEqual(stat.S_IMODE(lock_path.stat().st_mode), 0o600)
