@@ -4,10 +4,20 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Optional, Protocol
 
+from ledger.worklog import Entry, RemoteEntry
+
 _FRACTION_RE = re.compile(r"(?<=:\d{2})\.\d+")
+
+
+class WorklogStore(Protocol):
+    def ensure_project(self) -> str: ...
+    def ensure_month_item(self, month: str) -> str: ...
+    def post_entry(self, entry: Entry) -> str: ...
+    def list_entries(self, from_: date, to: date, user: Optional[str] = None) -> list[RemoteEntry]: ...
+    def current_user(self) -> str: ...
 
 
 @dataclass(frozen=True)

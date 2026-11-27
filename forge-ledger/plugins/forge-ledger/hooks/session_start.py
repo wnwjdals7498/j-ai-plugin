@@ -26,6 +26,7 @@ from ledger.hubstore import DB_NAME, HubStore, load_registry  # noqa: E402
 from ledger.hubsync import project_root  # noqa: E402
 from ledger.hubview import render_session, repo_summary  # noqa: E402
 from ledger.ratelimit import default_state_dir  # noqa: E402
+from ledger.worklog import LocalLog  # noqa: E402
 
 _REFRESH_AFTER = timedelta(seconds=600)
 _TOKEN_KEYS = ("FORGE_LEDGER_GITEA_TOKEN", "FORGE_LEDGER_PLANE_TOKEN")
@@ -37,6 +38,9 @@ _OPTION_EXPORTS: tuple[tuple[str, str], ...] = (
     ("CLAUDE_PLUGIN_OPTION_GITEA_URL", "FORGE_LEDGER_GITEA_URL"),
     ("CLAUDE_PLUGIN_OPTION_GITEA_TOKEN", "FORGE_LEDGER_GITEA_TOKEN"),
     ("CLAUDE_PLUGIN_OPTION_DASHBOARD_BIND", "FORGE_LEDGER_DASHBOARD_BIND"),
+    ("CLAUDE_PLUGIN_OPTION_WORKLOG_PROJECT_KEY", "FORGE_LEDGER_WORKLOG_PROJECT"),
+    ("CLAUDE_PLUGIN_OPTION_WORKLOG_HOST_LABEL", "FORGE_LEDGER_WORKLOG_HOST"),
+    ("CLAUDE_PLUGIN_OPTION_WORKLOG_AUTO", "FORGE_LEDGER_WORKLOG_AUTO"),
 )
 
 
@@ -174,29 +178,46 @@ def main() -> int:
                 text = None
             if text is None:
                 text = summary(repo_root)
-            combined_env = dict(env)
-            for src, dst in _OPTION_EXPORTS:
-                if env.get(src):
-                    combined_env[dst] = env[src]
-            if (repo_root / ".ledger").is_dir() and combined_env.get("FORGE_LEDGER_PLANE_TOKEN", "").strip():
+            child_env = dict(env)
+            for src_key, dst_key in _OPTION_EXPORTS:
+                if env.get(src_key, ""):
+                    child_env[dst_key] = env[src_key]
+            try:
+                state_dir = default_state_dir(child_env)
+                pending = len(LocalLog(state_dir).pending(child_env.get("FORGE_LEDGER_PLANE_WORKSPACE", "").strip()))
+            except Exception:  # 일지 손상이 기존 요약과 갱신을 막지 않는다
+                pending = 0
+            pending_text = f"작업 일지 미전송 {pending}건" if pending else ""
+            # 작업 일지 줄이 뒤에 붙을 자리를 남겨 둔다.
+            reserve = len(pending_text) + 1 if pending_text else 0
+            if (repo_root / ".ledger").is_dir() and child_env.get("FORGE_LEDGER_PLANE_TOKEN", "").strip():
                 try:
-                    settings = PlaneSettings.from_env(combined_env)
+                    settings = PlaneSettings.from_env(child_env)
                     client = PlaneClient(
-                        settings, limiter=make_shared_limiter(settings.base_url, settings.token, combined_env)
+                        settings, limiter=make_shared_limiter(settings.base_url, settings.token, child_env)
                     )
                     repo = Repo.at(repo_root)
                     extra = render_next(
-                        client, default_project_id(repo, client), repo, now, limit=max(0, 1498 - len(text or ""))
+                        client,
+                        default_project_id(repo, client),
+                        repo,
+                        now,
+                        limit=max(0, 1498 - len(text or "") - reserve),
                     )
                     if not extra:
                         extra = "ledger next: 공간 부족으로 생략"
                 except Exception:
                     extra = "경고: Plane 작업 요약을 가져오지 못했습니다"
                 # 기존 요약이 지나치게 길어도 추가 안내는 온전한 한 줄로 남긴다.
-                text = (text or "")[: max(0, 1498 - len(extra))]
+                text = (text or "")[: max(0, 1498 - len(extra) - reserve)]
                 text = "\n".join(part for part in (text, extra) if part)
+            if pending_text:
+                text = ((text or "")[: 1498 - len(pending_text)] + "\n" if text else "") + pending_text
             if text:
                 print(text[:1499])
+            if pending and child_env.get("FORGE_LEDGER_PLANE_TOKEN", "").strip():
+                script = str(Path(_PLUGIN_ROOT) / "scripts" / "ledger.py")
+                _spawn_detached([sys.executable, script, "log", "sync"], child_env)
             maybe_refresh(repo_root, env, now, _spawn_detached)  # 이번 출력은 기존 값이다
     except Exception:
         return 0

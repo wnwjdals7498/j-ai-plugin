@@ -33,6 +33,32 @@ class PlaneClientTest(unittest.TestCase):
         )
         self.client = PlaneClient(self.settings, sleep=lambda _: None)
 
+    def test_comment_409_raises_duplicate(self) -> None:
+        from ledger.plane import PlaneDuplicate
+
+        self.server.force_status = 409
+        self.server.error_body = '{"error": "duplicate", "id": "cmt-x"}'
+        with self.assertRaises(PlaneDuplicate) as caught:
+            self.client.create_comment("p1", "i1", "<p>x</p>", external_source="src", external_id="key")
+        self.assertEqual(caught.exception.existing_id, "cmt-x")
+        self.assertEqual(self.server.requests[-1].json["external_source"], "src")
+        self.assertEqual(self.server.requests[-1].json["external_id"], "key")
+
+    def test_whoami_profile(self) -> None:
+        self.server.me = {"id": "user-a", "display_name": "이름"}
+        self.assertEqual(self.client.whoami_profile(), self.server.me)
+
+    def test_409_without_string_id_is_plane_error(self) -> None:
+        from ledger.plane import PlaneDuplicate
+
+        self.server.force_status = 409
+        for body in ('{"error":"duplicate"}', '{"id":42}', "[]"):
+            with self.subTest(body=body):
+                self.server.error_body = body
+                with self.assertRaises(PlaneError) as caught:
+                    self.client.create_comment("p1", "i1", "<p>x</p>")
+                self.assertNotIsInstance(caught.exception, PlaneDuplicate)
+
     def test_create_project_forbidden_name_is_400(self) -> None:
         with self.assertRaisesRegex(PlaneError, "HTTP 400"):
             self.client.create_project("sample-app 유지보수", "APP")

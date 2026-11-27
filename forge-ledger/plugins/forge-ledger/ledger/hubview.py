@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional, Sequence
 
-from ledger.hubstore import HubStore, RepoRow, RunRow
+from ledger.hubstore import WORKSPACE_REPO_ID, HubStore, RepoRow, RunRow
 
 CI_WINDOW = 50
 PENDING_1ST = ("missing_docs", "penpot_changes", "open_alerts", "unclassified")
@@ -207,3 +207,14 @@ def render_session(repo_sum: dict[str, Any], now: datetime, limit: int = 1500) -
     if len(text) <= limit:
         return text
     return text[: limit - 1] + "…"
+
+
+def worklog_view(store: HubStore, from_: date, to: date, user: Optional[str]) -> dict[str, Any]:
+    keys = ("at", "date", "month", "author", "host", "source", "repo", "item", "text")
+    entries = [
+        {key: row.attrs[key] for key in keys}
+        for row in store.entities(WORKSPACE_REPO_ID, "worklog")
+        if from_.isoformat() <= row.attrs["date"] <= to.isoformat() and (user is None or row.attrs["author"] == user)
+    ]
+    entries.sort(key=lambda row: datetime.fromisoformat(row["at"]))
+    return {"from": from_.isoformat(), "to": to.isoformat(), "entries": entries}

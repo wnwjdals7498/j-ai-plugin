@@ -55,6 +55,7 @@ class DashboardServerTest(unittest.TestCase):
         self.addCleanup(redirect.__exit__, None, None, None)
         self.bodies: list[bytes] = []
         app = DashboardApp(self.store, _TOKEN, 600, _STATIC, lambda: _NOW)
+        self.app = app
         server = make_server(app, "127.0.0.1", 0)
         thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
         thread.start()
@@ -176,6 +177,82 @@ class DashboardServerTest(unittest.TestCase):
         self.assertEqual([item["source"] for item in health["sources"]], ["gitea", "plane"])
         repo = json.loads(self._request("/api/v1/repos/o/n", _bearer())[2])
         self.assertEqual((repo["repo"], repo["sources"]["gitea"]["state"]), ("o/n", "never"))
+
+    def test_worklog_api(self) -> None:
+        from ledger.hubstore import EntityRow, WORKSPACE_REPO_ID
+
+        source = self.store.source_id("worklog", "")
+        attrs = {
+            "at": "2026-11-25T09:00:00+00:00",
+            "date": "2026-11-25",
+            "month": "2026-11",
+            "author": "작성자",
+            "host": "host",
+            "source": "manual",
+            "repo": "",
+            "item": "",
+            "text": "본문",
+        }
+        outside = {**attrs, "at": "2026-11-01T09:00:00+00:00", "date": "2026-11-01"}
+        deleted = {**attrs, "text": "삭제"}
+        rows = [
+            EntityRow("worklog", "one", "open", attrs),
+            EntityRow("worklog", "outside", "open", outside),
+            EntityRow("worklog", "deleted", "deleted", deleted),
+        ]
+        self.store.apply_kind(source, WORKSPACE_REPO_ID, "worklog", rows, "now")
+        self.assertEqual(self._request("/api/v1/worklog")[0], 401)
+        status, _, body = self._request("/api/v1/worklog?from=2026-11-02&to=2026-11-25", _bearer())
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["entries"], [attrs])
+        default = json.loads(self._request("/api/v1/worklog", _bearer())[2])
+        local_today = _NOW.astimezone().date().isoformat()
+        self.assertEqual((default["from"], default["to"]), (local_today, local_today))
+        self.assertEqual(self._request("/api/v1/worklog?from=2026-09-25&to=2026-11-25", _bearer())[0], 200)
+        self.assertEqual(json.loads(self._request("/api/v1/worklog?user=other", _bearer())[2])["entries"], [])
+        for query in ("from=2026-09-24&to=2026-11-25", "from=bad", "from=2026-11-26&to=2026-11-25"):
+            self.assertEqual(self._request("/api/v1/worklog?" + query, _bearer())[0], 400)
+
+    def test_worklog_default_uses_local_midnight_date(self) -> None:
+        import time
+
+        original = os.environ.get("TZ")
+        try:
+            os.environ["TZ"] = "Asia/Seoul"
+            time.tzset()
+            object.__setattr__(self.app, "now", lambda: datetime(2026, 11, 30, 23, tzinfo=timezone.utc))
+            status, _, body = self._request("/api/v1/worklog", _bearer())
+            data = json.loads(body)
+            self.assertEqual((status, data["from"], data["to"]), (200, "2026-12-01", "2026-12-01"))
+        finally:
+            if original is None:
+                os.environ.pop("TZ", None)
+            else:
+                os.environ["TZ"] = original
+            time.tzset()
+
+    def test_worklog_changed_source_api_has_no_duplicates(self) -> None:
+        from ledger.hubsync import sync_worklog
+        from ledger.worklog import Entry, RemoteEntry
+
+        class Logs:
+            def list_entries(self, from_, to, user=None):
+                return [
+                    RemoteEntry(
+                        Entry("id", "2026-11-25T09:00:00+00:00", "host", "manual", "본문", "ws"), "작성자", "comment"
+                    )
+                ]
+
+        pm = Logs()
+
+        def now() -> datetime:
+            return _NOW
+
+        sync_worklog(self.store, pm, "http://old.invalid", now, lambda event: None, True)
+        sync_worklog(self.store, pm, "http://new.invalid", now, lambda event: None, True)
+        status, _, body = self._request("/api/v1/worklog?from=2026-11-25&to=2026-11-25", _bearer())
+        self.assertEqual(status, 200)
+        self.assertEqual(len(json.loads(body)["entries"]), 1)
 
     def test_repo_endpoint_404_for_unknown(self) -> None:
         for path in ("/api/v1/repos/o/none", "/api/v1/repos/none/n"):
@@ -362,3 +439,27 @@ class DashboardCliTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WorklogIntegrationTest(unittest.TestCase):
+    def test_sync_marks_only_successful_full_collection(self) -> None:
+        from ledger.hubsync import SyncOutcome
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"FORGE_LEDGER_STATE_DIR": tmp}
+            store = HubStore(Path(tmp))
+            fake_pm = object()
+            with (
+                patch.object(hubcli, "sync_paths", return_value=[]),
+                patch.object(hubcli, "make_worklog_store", return_value=fake_pm),
+                patch.object(hubcli, "sync_worklog") as sync,
+            ):
+                sync.return_value = SyncOutcome("workspace", "worklog", "failed", 0, "error")
+                self.assertEqual(hubcli._sync(store, [], env, lambda: _NOW, io.StringIO()), [])
+                self.assertFalse((Path(tmp) / "hub-worklog.json").exists())
+                sync.return_value = SyncOutcome("workspace", "worklog", "ok", 0, "")
+                hubcli._sync(store, [], env, lambda: _NOW, io.StringIO())
+                self.assertTrue((Path(tmp) / "hub-worklog.json").exists())
+                self.assertTrue(sync.call_args.args[-1])
+                hubcli._sync(store, [], env, lambda: _NOW, io.StringIO())
+                self.assertFalse(sync.call_args.args[-1])

@@ -12,6 +12,7 @@ from ledger import flows, work
 from ledger.check import CheckReport, run_check
 from ledger.config import load_config
 from ledger.hubcli import HUB_COMMANDS, add_hub_parsers, run_hub
+from ledger.logcli import add_log_parser, run_log
 from ledger.migrate_apply import load_checked, run_apply, run_preview
 from ledger.miniyaml import MiniYamlError
 from ledger.plane import (
@@ -103,6 +104,7 @@ def _build_parser() -> _ArgumentParser:
 
     _add_work_parsers(sub, repo_parent)
     add_hub_parsers(sub, repo_parent)
+    add_log_parser(sub)
 
     return parser
 
@@ -260,6 +262,9 @@ def main(
     except _CliInputError as exc:
         _emit_error(str(exc), token)
         return 1
+
+    if args.command == "log":
+        return run_log(args, effective_env, out=sys.stdout, err=sys.stderr)
 
     if args.command in HUB_COMMANDS:
         return run_hub(args, effective_env, out=sys.stdout, err=sys.stderr)

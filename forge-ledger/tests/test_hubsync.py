@@ -735,3 +735,142 @@ class LogTest(_SyncCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WorklogSyncTest(_SyncCase):
+    def test_worklog_recent_and_deleted_and_missing_project(self) -> None:
+        from ledger.hubsync import sync_worklog
+        from ledger.hubstore import WORKSPACE_REPO_ID
+        from ledger.plane import PlaneError
+        from ledger.worklog import Entry, RemoteEntry
+
+        class Logs:
+            def __init__(self) -> None:
+                self.items = [
+                    RemoteEntry(
+                        Entry(str(n), f"2026-{month}-01T12:00:00+00:00", "host", "manual", "본문", "ws"),
+                        "작성자",
+                        str(n),
+                    )
+                    for n, month in enumerate(("09", "10", "11"))
+                ]
+                self.error = False
+
+            def list_entries(self, from_, to, user=None):
+                if self.error:
+                    raise PlaneError("작업 일지 프로젝트 없음: WLOG")
+                return [item for item in self.items if from_ <= item.entry.local_date() <= to]
+
+        pm = Logs()
+        self.assertEqual(sync_worklog(self.store, pm, PM_URL, _now, self.events.append, True).result, "ok")
+        pm.items = pm.items[-1:]
+        self.assertEqual(sync_worklog(self.store, pm, PM_URL, _now, self.events.append, False).result, "ok")
+        states = {e.ext_key: e.state for e in self.store.entities(WORKSPACE_REPO_ID, "worklog", states=None)}
+        self.assertEqual(states, {"0": "open", "1": "deleted", "2": "open"})
+        pm.error = True
+        self.assertEqual(sync_worklog(self.store, pm, PM_URL, _now, self.events.append, True).result, "failed")
+        self.assertEqual(
+            states, {e.ext_key: e.state for e in self.store.entities(WORKSPACE_REPO_ID, "worklog", states=None)}
+        )
+        self.assertNotIn("본문", str(self.events))
+
+    def test_worklog_full_due(self) -> None:
+        from datetime import timedelta
+        from ledger.hubsync import mark_worklog_full, worklog_full_due
+
+        self.assertTrue(worklog_full_due(self.state_dir, _now(), PM_URL))
+        mark_worklog_full(self.state_dir, _now(), PM_URL)
+        self.assertFalse(worklog_full_due(self.state_dir, _now(), PM_URL))
+        self.assertTrue(worklog_full_due(self.state_dir, _now() + timedelta(hours=25), PM_URL))
+
+    def test_worklog_skipped_without_token(self) -> None:
+        from ledger.hubsync import sync_worklog
+        from ledger.hubstore import WORKSPACE_REPO_ID
+
+        outcomes = self._sync(self._ref())
+        self.assertEqual(sync_worklog(self.store, None, "", _now, self.events.append, True).result, "skipped")
+        self.assertEqual(outcomes["gitea"].result, "ok")
+        self.assertEqual(self.store.entities(WORKSPACE_REPO_ID, "worklog"), [])
+
+    def test_worklog_recent_only(self) -> None:
+        from ledger.hubsync import sync_worklog
+        from ledger.hubstore import WORKSPACE_REPO_ID
+        from ledger.worklog import Entry, RemoteEntry
+
+        class Logs:
+            def list_entries(self, from_, to, user=None):
+                entries = [
+                    RemoteEntry(
+                        Entry(str(n), f"2026-{month}-01T12:00:00+00:00", "host", "manual", "본문", "ws"),
+                        "작성자",
+                        str(n),
+                    )
+                    for n, month in enumerate(("09", "10", "11"))
+                ]
+                return [row for row in entries if from_ <= row.entry.local_date() <= to]
+
+        self.assertEqual(sync_worklog(self.store, Logs(), PM_URL, _now, self.events.append, False).result, "ok")
+        self.assertEqual({e.ext_key for e in self.store.entities(WORKSPACE_REPO_ID, "worklog")}, {"1", "2"})
+
+    def test_midnight_boundary(self) -> None:
+        from datetime import date
+        from ledger.hubsync import sync_worklog
+        from ledger.hubstore import WORKSPACE_REPO_ID
+        from ledger.worklog import Entry, RemoteEntry
+
+        class Logs:
+            def list_entries(self, from_, to, user=None):
+                self.bounds = (from_, to)
+                row = RemoteEntry(
+                    Entry("id", "2026-12-01T07:00:00+09:00", "host", "manual", "본문", "ws"), "작성자", "comment"
+                )
+                return [row] if from_ <= row.entry.local_date() <= to else []
+
+        pm = Logs()
+
+        def now() -> datetime:
+            return datetime(2026, 11, 30, 23, tzinfo=timezone.utc)
+
+        october = RemoteEntry(
+            Entry("old", "2026-10-01T12:00:00+00:00", "host", "manual", "본문", "ws"), "작성자", "old"
+        )
+
+        class InitialLogs:
+            def list_entries(self, from_, to, user=None):
+                return [october]
+
+        self.assertEqual(sync_worklog(self.store, InitialLogs(), PM_URL, now, self.events.append, True).result, "ok")
+        self.assertEqual(sync_worklog(self.store, pm, PM_URL, now, self.events.append, False).result, "ok")
+        self.assertEqual(pm.bounds, (date(2026, 10, 1), date(2026, 12, 1)))
+        states = {row.ext_key: row.state for row in self.store.entities(WORKSPACE_REPO_ID, "worklog", states=None)}
+        self.assertEqual(states, {"old": "deleted", "id": "open"})
+
+    def test_changed_source_requires_full_and_retires_old_only_after_success(self) -> None:
+        from datetime import date
+        from ledger.hubsync import mark_worklog_full, sync_worklog, worklog_full_due
+        from ledger.hubstore import WORKSPACE_REPO_ID
+        from ledger.hubview import worklog_view
+        from ledger.worklog import Entry, RemoteEntry
+
+        class Logs:
+            def list_entries(self, from_, to, user=None):
+                return [
+                    RemoteEntry(
+                        Entry("id", "2026-11-01T12:00:00+00:00", "host", "manual", "본문", "ws"), "작성자", "comment"
+                    )
+                ]
+
+        pm = Logs()
+        new_url = "http://new-pm.invalid"
+        sync_worklog(self.store, pm, PM_URL, _now, self.events.append, True)
+        mark_worklog_full(self.state_dir, _now(), PM_URL)
+        self.assertFalse(worklog_full_due(self.state_dir, _now(), PM_URL))
+        self.assertTrue(worklog_full_due(self.state_dir, _now(), new_url))
+        sync_worklog(self.store, pm, new_url, _now, self.events.append, False)
+        self.assertEqual(len(self.store.entities(WORKSPACE_REPO_ID, "worklog")), 2)
+        sync_worklog(self.store, pm, new_url, _now, self.events.append, True)
+        result = worklog_view(self.store, date(2026, 11, 1), date(2026, 11, 30), None)
+        self.assertEqual(len(result["entries"]), 1)
+        self.assertEqual(
+            sorted(row.state for row in self.store.entities(WORKSPACE_REPO_ID, "worklog", None)), ["deleted", "open"]
+        )

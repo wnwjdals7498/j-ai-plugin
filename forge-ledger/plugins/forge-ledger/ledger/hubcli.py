@@ -21,6 +21,9 @@ from ledger.hubsync import (
     RepoResolveError,
     SyncOutcome,
     json_logger,
+    mark_worklog_full,
+    sync_worklog,
+    worklog_full_due,
     project_root,
     register_repo,
     resolve_repo,
@@ -28,6 +31,7 @@ from ledger.hubsync import (
     sync_paths,
 )
 from ledger.hubview import render_text, summary
+from ledger.logcli import make_worklog_store
 from ledger.plane import PlaneClient, PlaneError, PlaneSettings
 from ledger.ratelimit import default_state_dir, make_shared_limiter
 
@@ -94,7 +98,17 @@ def _outcome_line(outcome: SyncOutcome) -> str:
 
 
 def _sync(store: HubStore, paths: list[str], env: Mapping[str, str], now: _Now, err: TextIO) -> list[SyncOutcome]:
-    return sync_paths(store, paths, lambda: _make_forge(env), lambda ws: _make_pm(env, ws), now, json_logger(err))
+    outcomes = sync_paths(store, paths, lambda: _make_forge(env), lambda ws: _make_pm(env, ws), now, json_logger(err))
+    pm = make_worklog_store(env)
+    if pm is not None:
+        state_dir = default_state_dir(env)
+        moment = now()
+        pm_url = env.get("FORGE_LEDGER_PLANE_URL", "").strip()
+        full = worklog_full_due(state_dir, moment, pm_url)
+        outcome = sync_worklog(store, pm, pm_url, now, json_logger(err), full)
+        if full and outcome.result == "ok":
+            mark_worklog_full(state_dir, moment, pm_url)
+    return outcomes
 
 
 def _run_sync(args: argparse.Namespace, env: Mapping[str, str], now: _Now, out: TextIO, err: TextIO) -> int:

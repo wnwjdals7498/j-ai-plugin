@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, Optional, Sequence
 
+WORKSPACE_REPO_ID = 0
 SCHEMA_VERSION = 1
 DB_NAME = "hub.sqlite3"
 REGISTRY_NAME = "hub-repos.json"
@@ -322,6 +323,27 @@ class HubStore:
                     "UPDATE entity SET state = 'closed', updated_at = ? WHERE id = ?",
                     [(now, found["id"]) for found in open_rows if found["ext_key"] not in seen],
                 )
+
+    def retire_worklog(self, source_id: int, seen: set[str], months: set[str], now: str) -> int:
+        """조회한 달에서 사라진 기록만 삭제 상태로 바꾼다."""
+        with self._write() as conn:
+            rows = conn.execute(
+                "SELECT id, ext_key, json_extract(attrs, '$.month') AS month FROM entity "
+                "WHERE source_id = ? AND repo_id = ? AND kind = 'worklog' AND state = 'open'",
+                (source_id, WORKSPACE_REPO_ID),
+            ).fetchall()
+            deleted = [(now, row["id"]) for row in rows if row["month"] in months and row["ext_key"] not in seen]
+            conn.executemany("UPDATE entity SET state = 'deleted', updated_at = ? WHERE id = ?", deleted)
+            return len(deleted)
+
+    def retire_other_worklog_sources(self, source_id: int, now: str) -> None:
+        """전체 수집이 성공한 뒤 이전 소스의 열린 일지를 삭제 상태로 바꾼다."""
+        with self._write() as conn:
+            conn.execute(
+                "UPDATE entity SET state = 'deleted', updated_at = ? "
+                "WHERE repo_id = ? AND kind = 'worklog' AND state = 'open' AND source_id != ?",
+                (now, WORKSPACE_REPO_ID, source_id),
+            )
 
     def close_other_sources(self, source_id: int, repo_id: int, kind: str, now: str) -> None:
         """서버 주소가 바뀌기 전의 같은 종류 소스에 남은, 이 저장소·kind의 열린 행을 닫는다."""
