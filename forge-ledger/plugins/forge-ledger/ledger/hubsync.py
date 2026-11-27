@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterator, Optional, Protocol, Sequence, TextIO
 
 from ledger.adapters import ForgeAdapter, PmAdapter, WorklogStore
 from ledger.config import LedgerConfig, load_config
+from ledger.filelock import acquire, release
 from ledger.flows import Repo
 from ledger.gitea import GiteaAuthError, GiteaUnavailable
 from ledger.hubstore import LOCK_NAME, WORKSPACE_REPO_ID, EntityRow, HubStore, url_digest
@@ -430,19 +431,21 @@ def sync_paths(
 
 @contextmanager
 def sync_lock(state_dir: Path) -> Iterator[bool]:
-    """대조를 한 번에 하나만 돌리는 잠금. 이미 잠겨 있으면 기다리지 않고 False를 낸다(POSIX 전용)."""
-    import fcntl
-
+    """대조를 한 번에 하나만 돌리는 잠금. 이미 잠겨 있으면 기다리지 않고 False를 낸다."""
     state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     fd = os.open(state_dir / LOCK_NAME, os.O_CREAT | os.O_RDWR, 0o600)
     try:
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            acquire(fd, blocking=False)
         except BlockingIOError:
             acquired = False
         else:
             acquired = True
-        yield acquired
+        try:
+            yield acquired
+        finally:
+            if acquired:
+                release(fd)
     finally:
         os.close(fd)  # 닫으면 잠금도 풀린다
 

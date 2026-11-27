@@ -12,7 +12,12 @@ _PLUGIN_ROOT = str(Path(__file__).resolve().parents[1])
 if not sys.path or sys.path[0] != _PLUGIN_ROOT:
     sys.path[:] = [_PLUGIN_ROOT, *(p for p in sys.path if p != _PLUGIN_ROOT)]
 
-from ledger.secrets import find_secrets  # noqa: E402
+try:
+    from ledger.secrets import find_secrets  # noqa: E402
+except Exception:  # 플러그인 모듈을 못 읽어도 세션을 막지 않는다(fail-open)
+    if __name__ == "__main__":
+        sys.exit(0)
+    raise
 
 _FILE_WRITE_TOOLS = frozenset({"Write", "Edit", "MultiEdit"})
 _PLANE_MCP_PREFIX = "mcp__plugin_forge-ledger_plane__"

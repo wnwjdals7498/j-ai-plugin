@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
 import re
@@ -15,6 +14,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Iterator, Mapping, Optional, cast
 
+from .filelock import acquire, locked, release
 from .secrets import find_exposures
 
 MAX_TEXT = 400
@@ -107,8 +107,8 @@ class LocalLog:
     def _lock(self) -> Iterator[None]:
         fd = os.open(self._lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX)
-            yield
+            with locked(fd):
+                yield
         finally:
             os.close(fd)
 
@@ -117,10 +117,13 @@ class LocalLog:
         fd = os.open(self._dir / "sync.lock", os.O_CREAT | os.O_RDWR, 0o600)
         try:
             try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquire(fd, blocking=False)
             except BlockingIOError as exc:
                 raise SyncBusy from exc
-            yield
+            try:
+                yield
+            finally:
+                release(fd)
         finally:
             os.close(fd)
 
