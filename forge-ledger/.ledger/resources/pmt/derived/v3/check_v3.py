@@ -1,17 +1,19 @@
 """forge-ledger 설계서 v3 형식 검사. 종료 코드 0이면 통과."""
+
 import re
 import sys
-import xml.etree.ElementTree as ET
+from pyexpat import ExpatError, ParserCreate
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 html = (HERE / "forge-ledger-design-v3.html").read_text(encoding="utf-8")
 fails = []
 
-ids = [f"prd-{x}" for x in ("header", "goals", "context", "strategy", "assumptions", "stories", "mockups",
-                            "questions", "out")]
-ids += [f"impl-{x}" for x in ("data", "features", "screens", "logging", "alerts", "phases", "maintenance",
-                             "deploy")]
+ids = [
+    f"prd-{x}"
+    for x in ("header", "goals", "context", "strategy", "assumptions", "stories", "mockups", "questions", "out")
+]
+ids += [f"impl-{x}" for x in ("data", "features", "screens", "logging", "alerts", "phases", "maintenance", "deploy")]
 ids += ["changes", "sources"]
 for i in ids:
     if f'id="{i}"' not in html:
@@ -36,13 +38,34 @@ for ref in set(re.findall(r'href="#([a-z0-9-]+)"', html)):
     if f'id="{ref}"' not in html:
         fails.append(f"깨진 앵커: #{ref}")
 
+
+def cell_count(path):
+    """XML 선언을 검증하고 DTD와 외부 엔티티를 거부하며 mxCell을 센다."""
+    parser = ParserCreate()
+    count = 0
+
+    def start(name, attributes):
+        nonlocal count
+        if name == "mxCell":
+            count += 1
+
+    def reject(*args):
+        raise ValueError("DTD와 엔티티는 허용하지 않음")
+
+    parser.StartElementHandler = start
+    parser.StartDoctypeDeclHandler = reject
+    parser.EntityDeclHandler = reject
+    parser.ExternalEntityRefHandler = reject
+    parser.Parse(path.read_bytes(), True)
+    return count
+
+
 for name in ("architecture", "data-model", "logging-flow"):
     path = HERE / f"{name}.drawio"
     try:
-        root = ET.parse(path).getroot()
-        if sum(1 for _ in root.iter("mxCell")) < 10:
+        if cell_count(path) < 10:
             fails.append(f"{name}.drawio 셀 수 부족")
-    except (ET.ParseError, FileNotFoundError) as exc:
+    except (ExpatError, ValueError, FileNotFoundError) as exc:
         fails.append(f"{name}.drawio 파싱 실패: {exc}")
 
 for f in fails:
